@@ -1,0 +1,29 @@
+api_host: 0.0.0.0
+api_port: 8000
+api_workers: 4
+batch_size: 100
+config_directory: demo_run/run_20250904_215351/config
+current_season: 2024
+data_directory: demo_run/run_20250904_215351/data
+data_update_frequency: daily
+database_type: sqlite
+database_url: sqlite:////home/money/CascadeProjects/nfl-betting-analyzer/demo_run/run_20250904_215351/nfl_demo.db
+enable_api: true
+ensemble_method: weighted_average
+feature_version: v1.0
+log_directory: demo_run/run_20250904_215351/logs
+max_workers: 4
+model_directory: demo_run/run_20250904_215351/models
+model_types:
+- xgboost
+- lightgbm
+- random_forest
+news_api_key: null
+prediction_horizon_days: 7
+retrain_frequency: weekly
+seasons_to_load:
+- 2023
+- 2024
+sports_api_key: null
+sqlite_path: demo_run/run_20250904_215351/nfl_demo.db
+weather_api_key: null

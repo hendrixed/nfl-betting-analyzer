@@ -1,0 +1,28 @@
+disable_existing_loggers: false
+formatters:
+  detailed:
+    datefmt: '%Y-%m-%d %H:%M:%S'
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
+  standard:
+    datefmt: '%Y-%m-%d %H:%M:%S'
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: standard
+    level: INFO
+    stream: ext://sys.stdout
+  file:
+    class: logging.FileHandler
+    filename: logs/nfl_predictions.log
+    formatter: detailed
+    level: INFO
+    mode: a
+loggers:
+  ? ''
+  : handlers:
+    - console
+    - file
+    level: INFO
+    propagate: true
+version: 1
