@@ -214,7 +214,7 @@ class PlayerDataCollector:
             self.logger.info(f"Collecting players for {season}")
             
             # Get roster data from nfl_data_py
-            rosters = nfl.import_rosters([season])
+            rosters = nfl.import_seasonal_rosters([season])
             
             # Process players
             await self._process_player_data(rosters, season)

@@ -644,30 +644,39 @@ class NeuralNetworkModel(BaseMLModel):
     
     def __init__(self, config: ModelConfig):
         super().__init__(config)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if TORCH_AVAILABLE:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        else:
+            self.device = None
         
     def train(
         self,
         X: np.ndarray,
         y: np.ndarray,
         target: PredictionTarget
-    ) -> Tuple[nn.Module, float, float]:
+    ) -> Tuple[object, float, float]:
         """Train neural network model."""
         
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch not available for neural network training")
             
         # Prepare data
-        X_tensor = torch.FloatTensor(X).to(self.device)
-        y_tensor = torch.FloatTensor(y.reshape(-1, 1)).to(self.device)
+        if TORCH_AVAILABLE:
+            X_tensor = torch.FloatTensor(X).to(self.device)
+            y_tensor = torch.FloatTensor(y.reshape(-1, 1)).to(self.device)
+        else:
+            raise ImportError("PyTorch not available")
         
         # Create model
-        model = NFLNeuralNetwork(X.shape[1], target).to(self.device)
-        
-        # Training setup
-        criterion = nn.MSELoss()
-        optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10)
+        if TORCH_AVAILABLE:
+            model = NFLNeuralNetwork(X.shape[1], target).to(self.device)
+            
+            # Training setup
+            criterion = torch.nn.MSELoss()
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10)
+        else:
+            raise ImportError("PyTorch not available")
         
         # Training loop
         model.train()

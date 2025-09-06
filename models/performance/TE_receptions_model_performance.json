@@ -1,0 +1,14 @@
+{
+  "model_type": "RandomForest",
+  "r2_score": 0.9999873193451284,
+  "mae": 0.0004190264540566952,
+  "features": [
+    "is_home",
+    "targets",
+    "receptions",
+    "rushing_attempts"
+  ],
+  "training_samples": 3968,
+  "test_samples": 992,
+  "timestamp": "2025-09-05T21:03:47.966275"
+}
