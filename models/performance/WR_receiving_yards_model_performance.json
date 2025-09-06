@@ -1,14 +1,15 @@
 {
   "model_type": "RandomForest",
-  "r2_score": 0.6504280206904693,
-  "mae": 14.923031157606758,
+  "sklearn_version": "1.7.1",
+  "r2_score": 0.4559552547615495,
+  "mae": 19.410388736407725,
   "features": [
     "is_home",
     "targets",
     "receptions",
     "rushing_attempts"
   ],
-  "training_samples": 8124,
-  "test_samples": 2032,
-  "timestamp": "2025-09-05T21:03:47.494321"
+  "training_samples": 4743,
+  "test_samples": 1186,
+  "timestamp": "2025-09-05T21:35:36.912385"
 }
