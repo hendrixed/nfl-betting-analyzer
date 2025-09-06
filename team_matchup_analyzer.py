@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-NFL Team Strength and Matchup Analysis System
-Advanced team ratings, defensive rankings, and matchup-specific predictions.
+Advanced Team Matchup Analysis System
+Comprehensive team strength ratings, defensive rankings, pace analysis, and matchup-specific predictions.
 """
 
 import sys
@@ -16,8 +16,43 @@ import json
 from datetime import datetime, timedelta
 import sqlite3
 from sqlalchemy import create_engine, text
+from dataclasses import dataclass
 import warnings
 warnings.filterwarnings('ignore')
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class TeamStrength:
+    team: str
+    offensive_rating: float
+    defensive_rating: float
+    pace_factor: float
+    home_field_advantage: float
+    recent_form: float
+    injury_impact: float
+
+@dataclass
+class DefensiveRankings:
+    team: str
+    pass_defense_rank: int
+    rush_defense_rank: int
+    red_zone_defense_rank: int
+    third_down_defense_rank: int
+    points_allowed_per_game: float
+    yards_allowed_per_game: float
+    takeaway_rate: float
+
+@dataclass
+class MatchupAnalysis:
+    home_team: str
+    away_team: str
+    projected_total: float
+    projected_spread: float
+    pace_projection: int
+    weather_impact: float
+    key_matchup_advantages: List[str]
+    betting_edges: List[str]
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')

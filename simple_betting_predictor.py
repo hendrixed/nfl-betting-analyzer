@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Simplified NFL Betting Predictor - Working Version
 Fixes all compatibility issues and provides reliable betting recommendations.
 """
 
+import os
+import sys
 import logging
 import numpy as np
+
+# Fix Windows console encoding for emojis
+if sys.platform == "win32":
+    import codecs
+    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 from sqlalchemy import create_engine, text
