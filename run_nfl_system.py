@@ -15,8 +15,9 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config_manager import get_config, load_config
-from database_models import create_all_tables
-from sqlalchemy import create_engine
+from database_models import create_all_tables, PlayerGameStats, Game
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -166,7 +167,6 @@ def train(ctx, position: Optional[str], force_retrain: bool):
             
             with Session() as session:
                 # Get all player stats - use raw SQL for better compatibility
-                from sqlalchemy import text
                 
                 # First, let's get QB stats directly since we know they exist
                 if position == 'QB':
@@ -438,6 +438,83 @@ def collect(ctx):
 
 
 @cli.command()
+@click.option('--player', help='Analyze sentiment for specific player')
+@click.pass_context
+def sentiment(ctx, player: Optional[str]):
+    """Analyze social sentiment and news impact for players."""
+    logger.info("🔍 Running sentiment analysis...")
+    
+    try:
+        from social_sentiment_analyzer import SocialSentimentAnalyzer, NewsImpactAnalyzer
+        
+        sentiment_analyzer = SocialSentimentAnalyzer()
+        news_analyzer = NewsImpactAnalyzer()
+        
+        if player:
+            # Analyze specific player
+            logger.info(f"Analyzing sentiment for {player}")
+            sentiment_data = sentiment_analyzer.analyze_player_sentiment(player)
+            multiplier = sentiment_analyzer.get_sentiment_multiplier(player)
+            
+            print(f"\nSentiment Analysis for {player}:")
+            print(f"  Sentiment Score: {sentiment_data.sentiment_score:.3f}")
+            print(f"  Mention Volume: {sentiment_data.mention_volume}")
+            print(f"  Positive/Negative/Neutral: {sentiment_data.positive_mentions}/{sentiment_data.negative_mentions}/{sentiment_data.neutral_mentions}")
+            print(f"  Trending Topics: {', '.join(sentiment_data.trending_topics)}")
+            print(f"  Sentiment Multiplier: {multiplier:.3f}")
+            
+            # Injury analysis
+            injury_analysis = sentiment_analyzer.analyze_injury_sentiment(player)
+            print(f"  Injury Concern Level: {injury_analysis['injury_concern_level']}")
+        else:
+            logger.info("Use --player option to analyze specific player sentiment")
+            
+        logger.info("✅ Sentiment analysis completed!")
+        
+    except Exception as e:
+        logger.error(f"❌ Sentiment analysis failed: {e}")
+
+
+@cli.command()
+@click.option('--player', help='Generate ultimate prediction for specific player')
+@click.option('--opponent', help='Opponent team for enhanced analysis')
+@click.option('--compare', help='Compare multiple players (comma-separated)')
+@click.pass_context
+def ultimate(ctx, player: Optional[str], opponent: Optional[str], compare: Optional[str]):
+    """Generate ultimate enhanced predictions using all analytics."""
+    logger.info("🚀 Running ultimate enhanced predictor...")
+    
+    try:
+        from ultimate_enhanced_predictor import UltimateEnhancedPredictor
+        
+        predictor = UltimateEnhancedPredictor()
+        
+        if compare:
+            # Compare multiple players
+            player_list = [p.strip() for p in compare.split(',')]
+            logger.info(f"Comparing players: {', '.join(player_list)}")
+            
+            comparison_df = predictor.compare_multiple_players(player_list)
+            if not comparison_df.empty:
+                print("\nPlayer Comparison:")
+                print(comparison_df.to_string(index=False))
+            else:
+                logger.warning("No valid comparisons generated")
+                
+        elif player:
+            # Analyze specific player
+            logger.info(f"Generating ultimate prediction for {player}")
+            predictor.display_ultimate_analysis(player, opponent)
+        else:
+            logger.info("Use --player or --compare options for ultimate analysis")
+            
+        logger.info("✅ Ultimate prediction completed!")
+        
+    except Exception as e:
+        logger.error(f"❌ Ultimate prediction failed: {e}")
+
+
+@cli.command()
 @click.pass_context
 def status(ctx):
     """Show system status and health check."""
@@ -460,8 +537,10 @@ def status(ctx):
     try:
         Session = sessionmaker(bind=engine)
         with Session() as session:
-            player_count = session.query(PlayerGameStats).distinct(PlayerGameStats.player_id).count()
-            game_count = session.query(Game).count()
+            # Fix SQLAlchemy deprecation warning by using func.count with distinct
+            from sqlalchemy import func
+            player_count = session.query(func.count(func.distinct(PlayerGameStats.player_id))).scalar()
+            game_count = session.query(func.count(Game.game_id)).scalar()
             
         logger.info(f"📊 Data: {player_count} players, {game_count} games")
         

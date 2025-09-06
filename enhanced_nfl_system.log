@@ -7663,3 +7663,8 @@
 2025-09-05 22:20:55,324 - comprehensive_betting_analyzer - INFO - Engineered features for 2401 samples
 2025-09-05 22:20:55,335 - comprehensive_betting_analyzer - INFO - Training with 2401 feature samples and 5000 target samples
 2025-09-05 22:20:55,335 - comprehensive_betting_analyzer - INFO - Training models for QB...
+2025-09-06 17:06:48,915 - numexpr.utils - INFO - Note: NumExpr detected 20 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 8.
+2025-09-06 17:06:48,915 - numexpr.utils - INFO - NumExpr defaulting to 8 threads.
+2025-09-06 17:06:50,857 - comprehensive_betting_analyzer - INFO - Comprehensive NFL Betting Analyzer initialized
+2025-09-06 17:06:50,859 - comprehensive_betting_analyzer - INFO - ✅ players: 0 records
+2025-09-06 17:06:50,859 - comprehensive_betting_analyzer - ERROR - ❌ No data found in players

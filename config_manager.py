@@ -22,6 +22,7 @@ class DatabaseConfig:
     """Database configuration settings."""
     type: str = "postgresql"
     url: Optional[str] = None
+    path: str = "data/nfl_predictions.db"  # Added to match config.yaml
     sqlite_path: str = "data/nfl_predictions.db"
     pool_size: int = 10
     max_overflow: int = 20
@@ -40,6 +41,13 @@ class DatabaseConfig:
 @dataclass
 class APIConfig:
     """API configuration and credentials."""
+    # Server configuration (from config.yaml)
+    host: str = "0.0.0.0"
+    port: int = 8000
+    workers: int = 4
+    enable: bool = True
+    
+    # API Keys
     odds_api_key: Optional[str] = field(default_factory=lambda: os.getenv("ODDS_API_KEY"))
     weather_api_key: Optional[str] = field(default_factory=lambda: os.getenv("WEATHER_API_KEY"))
     news_api_key: Optional[str] = field(default_factory=lambda: os.getenv("NEWS_API_KEY"))
@@ -59,9 +67,12 @@ class APIConfig:
 @dataclass
 class DataConfig:
     """Data collection and processing configuration."""
+    directory: str = "data"  # Added to match config.yaml
+    update_frequency: str = "daily"  # Added to match config.yaml
     seasons: List[int] = field(default_factory=lambda: [2022, 2023, 2024])
     current_season: int = 2024
     current_week: int = 1
+    seasons_to_load: List[int] = field(default_factory=lambda: [2020, 2021, 2022, 2023, 2024])  # Added to match config.yaml
     
     # Data sources
     enable_nfl_data_py: bool = True
@@ -82,7 +93,8 @@ class DataConfig:
 @dataclass
 class FeatureConfig:
     """Feature engineering configuration."""
-    version: str = "v2.0"
+    version: str = "v1.0"  # Changed to match config.yaml
+    batch_size: int = 100  # Added to match config.yaml
     lookback_windows: List[int] = field(default_factory=lambda: [3, 5, 10])
     rolling_windows: List[int] = field(default_factory=lambda: [4, 8])
     min_games_threshold: int = 3
@@ -103,10 +115,15 @@ class FeatureConfig:
 @dataclass
 class ModelConfig:
     """Machine learning model configuration."""
+    directory: str = "models"  # Added to match config.yaml
+    types: List[str] = field(default_factory=lambda: [
+        "xgboost", "lightgbm", "random_forest"
+    ])  # Changed from model_types to types to match config.yaml
     model_types: List[str] = field(default_factory=lambda: [
         "xgboost", "lightgbm", "random_forest", "gradient_boosting"
     ])
     ensemble_method: str = "weighted_average"  # simple_average, weighted_average, stacking
+    retrain_frequency: str = "weekly"  # Added to match config.yaml
     
     # Training settings
     test_size: float = 0.2
@@ -172,8 +189,40 @@ class LoggingConfig:
 
 
 @dataclass
+class PredictionConfig:
+    """Prediction configuration."""
+    horizon_days: int = 7
+
+@dataclass
+class DirectoriesConfig:
+    """Directories configuration."""
+    config: str = "config"
+    logs: str = "logs"
+    models: str = "models"
+    data: str = "data"
+
+@dataclass
+class ProcessingConfig:
+    """Processing configuration."""
+    max_workers: int = 4
+
+@dataclass
+class APIKeysConfig:
+    """API Keys configuration."""
+    news_api_key: Optional[str] = None
+    sports_api_key: Optional[str] = None
+    weather_api_key: Optional[str] = None
+
+@dataclass
+class SystemMetaConfig:
+    """System metadata configuration."""
+    version: str = "2.0.0"
+    environment: str = "development"
+
+@dataclass
 class SystemConfig:
     """Complete system configuration."""
+    system: SystemMetaConfig = field(default_factory=SystemMetaConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     api: APIConfig = field(default_factory=APIConfig)
     data: DataConfig = field(default_factory=DataConfig)
@@ -181,8 +230,12 @@ class SystemConfig:
     models: ModelConfig = field(default_factory=ModelConfig)
     pipeline: PipelineConfig = field(default_factory=PipelineConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    prediction: PredictionConfig = field(default_factory=PredictionConfig)
+    directories: DirectoriesConfig = field(default_factory=DirectoriesConfig)
+    processing: ProcessingConfig = field(default_factory=ProcessingConfig)
+    api_keys: APIKeysConfig = field(default_factory=APIKeysConfig)
     
-    # System metadata
+    # System metadata (backward compatibility)
     version: str = "2.0.0"
     environment: str = field(default_factory=lambda: os.getenv("ENVIRONMENT", "development"))
     debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")
@@ -203,25 +256,40 @@ class ConfigManager:
             
         if self.config_path.exists():
             try:
-                with open(self.config_path, 'r') as f:
+                with open(self.config_path, 'r', encoding='utf-8') as f:
                     config_dict = yaml.safe_load(f)
+                    
+                if not config_dict:
+                    raise ValueError("Configuration file is empty or invalid")
                     
                 # Convert nested dicts to dataclass instances
                 config_dict = self._convert_dict_to_config(config_dict)
                 self.config = SystemConfig(**config_dict)
                 
-                logger.info(f"Configuration loaded from {self.config_path}")
+                logger.info(f"✅ Configuration loaded from {self.config_path}")
                 
+            except yaml.YAMLError as e:
+                logger.error(f"❌ YAML parsing error in {self.config_path}: {e}")
+                logger.info("Using default configuration")
+                self.config = SystemConfig()
+            except (FileNotFoundError, PermissionError) as e:
+                logger.error(f"❌ File access error for {self.config_path}: {e}")
+                logger.info("Using default configuration")
+                self.config = SystemConfig()
             except Exception as e:
-                logger.warning(f"Failed to load config from {self.config_path}: {e}")
+                logger.error(f"❌ Unexpected error loading config from {self.config_path}: {e}")
                 logger.info("Using default configuration")
                 self.config = SystemConfig()
         else:
-            logger.info("No config file found, using default configuration")
+            logger.info("ℹ️  No config file found, using default configuration")
             self.config = SystemConfig()
             
         # Validate configuration
-        self._validate_config()
+        try:
+            self._validate_config()
+        except Exception as e:
+            logger.error(f"❌ Configuration validation failed: {e}")
+            raise
         
         return self.config
     
@@ -271,13 +339,18 @@ class ConfigManager:
         
         # Map of config sections to their dataclass types
         section_types = {
+            'system': SystemMetaConfig,
             'database': DatabaseConfig,
             'api': APIConfig,
             'data': DataConfig,
             'features': FeatureConfig,
             'models': ModelConfig,
             'pipeline': PipelineConfig,
-            'logging': LoggingConfig
+            'logging': LoggingConfig,
+            'prediction': PredictionConfig,
+            'directories': DirectoriesConfig,
+            'processing': ProcessingConfig,
+            'api_keys': APIKeysConfig
         }
         
         for key, value in config_dict.items():
