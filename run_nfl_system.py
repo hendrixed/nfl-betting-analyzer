@@ -515,6 +515,117 @@ def ultimate(ctx, player: Optional[str], opponent: Optional[str], compare: Optio
 
 
 @cli.command()
+@click.option('--player', help='Player ID for predictions')
+@click.option('--opponent', help='Opponent team')
+@click.pass_context
+def predict(ctx, player: str, opponent: str):
+    """Get ultimate predictions for a player."""
+    if not player:
+        logger.error("❌ Player ID required. Use --player option.")
+        return
+        
+    try:
+        from ultimate_enhanced_predictor import UltimateEnhancedPredictor
+        
+        logger.info(f"🔮 Generating ultimate prediction for {player}")
+        predictor = UltimateEnhancedPredictor()
+        predictor.display_ultimate_analysis(player, opponent)
+        
+    except Exception as e:
+        logger.error(f"❌ Prediction failed: {e}")
+
+
+@cli.command()
+@click.pass_context
+def interactive(ctx):
+    """Start interactive interface."""
+    try:
+        from nfl_interactive_main import main as interactive_main
+        logger.info("🚀 Starting interactive interface...")
+        interactive_main()
+        
+    except Exception as e:
+        logger.error(f"❌ Interactive interface failed: {e}")
+
+
+@cli.command()
+@click.option('--min-edge', default=0.05, help='Minimum edge for recommendations')
+@click.pass_context
+def daily_recs(ctx, min_edge: float):
+    """Get daily betting recommendations."""
+    try:
+        from ultimate_enhanced_predictor import UltimateEnhancedPredictor
+        
+        logger.info("🎯 Generating daily betting recommendations...")
+        predictor = UltimateEnhancedPredictor()
+        
+        print("🎯 DAILY BETTING RECOMMENDATIONS")
+        print("=" * 50)
+        print(f"Minimum Edge Threshold: {min_edge:.1%}")
+        print()
+        
+        # Sample players for demonstration
+        sample_players = ["pmahomes_qb", "jallen_qb", "cmccaffrey_rb", "jchase_wr", "tkelce_te"]
+        
+        recommendations = []
+        for player in sample_players:
+            try:
+                prediction = predictor.generate_ultimate_prediction(player)
+                if prediction.market_edge >= min_edge:
+                    recommendations.append({
+                        'player': player,
+                        'edge': prediction.market_edge,
+                        'confidence': prediction.confidence_score,
+                        'value_rating': prediction.value_rating,
+                        'fp_prediction': prediction.final_prediction.get('fantasy_points_ppr', 0)
+                    })
+            except:
+                continue
+        
+        if recommendations:
+            recommendations.sort(key=lambda x: x['edge'], reverse=True)
+            for i, rec in enumerate(recommendations[:5], 1):
+                print(f"{i}. {rec['player'].upper()}")
+                print(f"   Edge: {rec['edge']:+.1%} | Confidence: {rec['confidence']:.1%}")
+                print(f"   Value: {rec['value_rating']} | FP: {rec['fp_prediction']:.1f}")
+                print()
+        else:
+            print("❌ No recommendations meet the minimum edge criteria.")
+            
+    except Exception as e:
+        logger.error(f"❌ Daily recommendations failed: {e}")
+
+
+@cli.command()
+@click.option('--players', help='Comma-separated player IDs')
+@click.pass_context
+def compare(ctx, players: str):
+    """Compare multiple players."""
+    if not players:
+        logger.error("❌ No players provided. Use --players 'id1,id2,id3'")
+        return
+        
+    try:
+        from ultimate_enhanced_predictor import UltimateEnhancedPredictor
+        
+        player_list = [p.strip() for p in players.split(',')]
+        logger.info(f"📊 Comparing {len(player_list)} players...")
+        
+        predictor = UltimateEnhancedPredictor()
+        comparison_df = predictor.compare_multiple_players(player_list)
+        
+        if not comparison_df.empty:
+            print("\n📈 PLAYER COMPARISON:")
+            print("=" * 80)
+            print(comparison_df.to_string(index=False))
+        else:
+            print("❌ No comparison data available.")
+            
+    except Exception as e:
+        logger.error(f"❌ Player comparison failed: {e}")
+
+
+@cli.command()
 @click.pass_context
 def status(ctx):
     """Show system status and health check."""
