@@ -226,10 +226,26 @@ class PlayerDataCollector:
     async def _process_player_data(self, rosters: pd.DataFrame, season: int):
         """Process and store player data."""
         with self.main.Session() as session:
+            processed_count = 0
+            
+            # First, clear existing players for this season to ensure fresh data
+            if season >= 2025:  # Only clear current season data
+                session.query(Player).delete()
+                session.commit()
+                self.logger.info(f"Cleared existing player data for fresh {season} roster")
+            
             for _, row in rosters.iterrows():
                 try:
+                    # Only process active players
+                    status = row.get('status', '').upper()
+                    if status not in ['ACT', 'RES']:  # Active or Reserve
+                        continue
+                    
                     # Create player ID from name and position
                     player_id = self._generate_player_id(row)
+                    
+                    if not player_id:  # Skip players without valid names
+                        continue
                     
                     # Check if player exists
                     existing_player = session.query(Player).filter(
@@ -243,40 +259,69 @@ class PlayerDataCollector:
                         # Create new player
                         player = self._create_player_from_row(row, player_id, season)
                         session.add(player)
+                    
+                    processed_count += 1
                         
                 except Exception as e:
-                    self.logger.warning(f"Error processing player {row.get('full_name', 'Unknown')}: {e}")
+                    self.logger.warning(f"Error processing player {row.get('player_name', 'Unknown')}: {e}")
                     continue
                     
             session.commit()
-            self.logger.info(f"Processed {len(rosters)} players for {season}")
+            self.logger.info(f"Processed {processed_count} active players for {season}")
             
     def _generate_player_id(self, row: pd.Series) -> str:
         """Generate consistent player ID."""
-        name = str(row.get('full_name', '')).lower().replace(' ', '_').replace('.', '')
-        name = ''.join(c for c in name if c.isalnum() or c == '_')
-        return f"{name}_{row.get('position', 'unknown').lower()}"
+        # Handle different possible name fields - use player_name for 2025 data
+        full_name = row.get('player_name') or row.get('full_name') or row.get('display_name') or ''
+        
+        if pd.isna(full_name) or not full_name:
+            # Try first + last name
+            first = row.get('first_name', '')
+            last = row.get('last_name', '')
+            if first and last:
+                full_name = f"{first} {last}"
+            else:
+                return None  # Skip players without names
+        
+        # Clean the name
+        name = str(full_name).lower().replace(' ', '').replace('.', '').replace("'", '')
+        name = ''.join(c for c in name if c.isalnum())
+        
+        if not name:
+            return None
+            
+        position = str(row.get('position', 'unknown')).lower()
+        return f"{name}_{position}"
         
     def _create_player_from_row(self, row: pd.Series, player_id: str, season: int) -> Player:
         """Create Player object from roster row."""
+        # Get name from multiple possible fields - prioritize player_name for 2025 data
+        full_name = row.get('player_name') or row.get('full_name') or row.get('display_name') or ''
+        if not full_name and row.get('first_name') and row.get('last_name'):
+            full_name = f"{row.get('first_name')} {row.get('last_name')}"
+        
+        # Determine if player is active based on status
+        status = row.get('status', '').upper()
+        is_active = status in ['ACT', 'RES']
+        
         return Player(
             player_id=player_id,
-            name=str(row.get('full_name', '')),
+            name=str(full_name),
             first_name=str(row.get('first_name', '')),
             last_name=str(row.get('last_name', '')),
             position=str(row.get('position', '')),
             current_team=str(row.get('team', '')),
             height_inches=self._convert_height(row.get('height')),
             weight_lbs=int(row.get('weight', 0)) if pd.notna(row.get('weight')) else None,
-            draft_year=int(row.get('draft_year', 0)) if pd.notna(row.get('draft_year')) else None,
+            draft_year=int(row.get('entry_year', 0)) if pd.notna(row.get('entry_year')) else None,
             draft_round=int(row.get('draft_round', 0)) if pd.notna(row.get('draft_round')) else None,
-            draft_pick=int(row.get('draft_pick', 0)) if pd.notna(row.get('draft_pick')) else None,
+            draft_pick=int(row.get('draft_number', 0)) if pd.notna(row.get('draft_number')) else None,
             college=str(row.get('college', '')) if pd.notna(row.get('college')) else None,
             years_experience=int(row.get('years_exp', 0)) if pd.notna(row.get('years_exp')) else None,
             espn_id=str(row.get('espn_id', '')) if pd.notna(row.get('espn_id')) else None,
             yahoo_id=str(row.get('yahoo_id', '')) if pd.notna(row.get('yahoo_id')) else None,
             pfr_id=str(row.get('pfr_id', '')) if pd.notna(row.get('pfr_id')) else None,
-            is_active=True
+            is_active=is_active
         )
         
     def _update_player_fields(self, player: Player, row: pd.Series, season: int):
@@ -401,8 +446,15 @@ class StatsDataCollector:
         try:
             self.logger.info(f"Collecting weekly stats for {season}")
             
-            # Get weekly stats from nfl_data_py
-            weekly_stats = nfl.import_weekly_data([season])
+            # Get weekly stats data - handle case where current season data isn't available yet
+            try:
+                weekly_stats = nfl.import_weekly_data([season])
+            except Exception as e:
+                if "404" in str(e) and season >= 2025:
+                    self.logger.warning(f"Stats data not yet available for {season} season - using previous season for training")
+                    return
+                else:
+                    raise
             
             await self._process_weekly_stats(weekly_stats, season)
             

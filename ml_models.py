@@ -30,9 +30,14 @@ try:
     import torch.nn as nn
     import torch.optim as optim
     from torch.utils.data import DataLoader, TensorDataset
-    TORCH_AVAILABLE = True
+    PYTORCH_AVAILABLE = True
 except ImportError:
-    TORCH_AVAILABLE = False
+    PYTORCH_AVAILABLE = False
+    # Create dummy nn module to prevent NameError
+    class DummyNN:
+        class Module:
+            pass
+    nn = DummyNN()
     print("PyTorch not available. Neural network models will be disabled.")
 
 # Import our models
@@ -96,7 +101,7 @@ class NFLPredictor:
             'gradient_boosting': GradientBoostingModel
         }
         
-        if TORCH_AVAILABLE and config.enable_neural_networks:
+        if PYTORCH_AVAILABLE and config.enable_neural_networks:
             self.model_builders['neural_network'] = NeuralNetworkModel
             
     def _initialize_prediction_targets(self) -> Dict[str, List[PredictionTarget]]:
