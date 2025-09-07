@@ -511,6 +511,139 @@ class PlayerValidation(Base):
     )
 
 
+class HistoricalDataStandardization(Base):
+    """Track historical data standardization process and results"""
+    __tablename__ = 'historical_data_standardization'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False)
+    standardization_date: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    
+    # Processing metrics
+    records_processed: Mapped[int] = mapped_column(Integer, default=0)
+    records_standardized: Mapped[int] = mapped_column(Integer, default=0)
+    player_mappings_applied: Mapped[int] = mapped_column(Integer, default=0)
+    stat_mappings_applied: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Quality metrics
+    data_quality_score: Mapped[float] = mapped_column(Float, default=0.0)
+    completeness_score: Mapped[float] = mapped_column(Float, default=0.0)
+    consistency_score: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Status and metadata
+    status: Mapped[str] = mapped_column(String(50), default='pending')  # pending/processing/completed/failed
+    issues_found: Mapped[str] = mapped_column(Text, nullable=True)  # JSON string of issues
+    recommendations: Mapped[str] = mapped_column(Text, nullable=True)  # JSON string of recommendations
+    
+    __table_args__ = (
+        Index('idx_historical_standardization_season', 'season'),
+        Index('idx_historical_standardization_date', 'standardization_date'),
+        UniqueConstraint('season'),
+    )
+
+
+class PlayerIdentityMapping(Base):
+    """Track player identity mappings across seasons"""
+    __tablename__ = 'player_identity_mapping'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    original_player_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    master_player_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    
+    # Identity resolution metadata
+    confidence_score: Mapped[float] = mapped_column(Float, default=1.0)
+    resolution_method: Mapped[str] = mapped_column(String(50), nullable=True)  # exact/name_similarity/manual/etc
+    conflicting_ids: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array of conflicted IDs
+    
+    # Player information
+    canonical_name: Mapped[str] = mapped_column(String(200), nullable=True)
+    primary_position: Mapped[str] = mapped_column(String(10), nullable=True)
+    seasons_active: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array of seasons
+    teams_played_for: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array of teams
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+    
+    __table_args__ = (
+        Index('idx_player_identity_original', 'original_player_id'),
+        Index('idx_player_identity_master', 'master_player_id'),
+        Index('idx_player_identity_name', 'canonical_name'),
+        UniqueConstraint('original_player_id'),
+    )
+
+
+class StatTerminologyMapping(Base):
+    """Track statistical terminology mappings across seasons"""
+    __tablename__ = 'stat_terminology_mapping'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False)
+    standard_stat_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    original_column_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    
+    # Mapping metadata
+    mapping_confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    mapping_method: Mapped[str] = mapped_column(String(50), nullable=True)  # exact/fuzzy/manual
+    stat_category: Mapped[str] = mapped_column(String(50), nullable=True)  # passing/rushing/receiving/fantasy
+    
+    # Usage tracking
+    records_affected: Mapped[int] = mapped_column(Integer, default=0)
+    validation_status: Mapped[str] = mapped_column(String(20), default='pending')  # pending/validated/failed
+    
+    # Metadata
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    
+    __table_args__ = (
+        Index('idx_stat_terminology_season', 'season'),
+        Index('idx_stat_terminology_standard', 'standard_stat_name'),
+        Index('idx_stat_terminology_original', 'original_column_name'),
+        UniqueConstraint('season', 'standard_stat_name', 'original_column_name'),
+    )
+
+
+class HistoricalValidationReport(Base):
+    """Store comprehensive validation reports for historical data"""
+    __tablename__ = 'historical_validation_report'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False)
+    week: Mapped[int] = mapped_column(Integer, nullable=True)  # NULL for season-wide reports
+    report_type: Mapped[str] = mapped_column(String(50), nullable=False)  # season/week/player/team
+    
+    # Validation metrics
+    total_records: Mapped[int] = mapped_column(Integer, default=0)
+    valid_records: Mapped[int] = mapped_column(Integer, default=0)
+    invalid_records: Mapped[int] = mapped_column(Integer, default=0)
+    missing_data_percentage: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Quality scores
+    overall_quality_score: Mapped[float] = mapped_column(Float, default=0.0)
+    completeness_score: Mapped[float] = mapped_column(Float, default=0.0)
+    consistency_score: Mapped[float] = mapped_column(Float, default=0.0)
+    accuracy_score: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Detailed findings
+    critical_issues: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array of critical issues
+    warnings: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array of warnings
+    recommendations: Mapped[str] = mapped_column(Text, nullable=True)  # JSON array of recommendations
+    
+    # Statistical summaries
+    position_coverage: Mapped[str] = mapped_column(Text, nullable=True)  # JSON object of position stats
+    team_coverage: Mapped[str] = mapped_column(Text, nullable=True)  # JSON object of team stats
+    
+    # Metadata
+    validation_timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    validator_version: Mapped[str] = mapped_column(String(50), nullable=True)
+    
+    __table_args__ = (
+        Index('idx_historical_validation_season', 'season'),
+        Index('idx_historical_validation_type', 'report_type'),
+        Index('idx_historical_validation_timestamp', 'validation_timestamp'),
+        Index('idx_historical_validation_season_week', 'season', 'week'),
+    )
+
+
 # Database Initialization Functions
 def create_all_tables(engine):
     """Create all tables in the database."""
