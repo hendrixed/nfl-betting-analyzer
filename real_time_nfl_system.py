@@ -25,6 +25,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, r2_score
 
+# Enhanced Data Architecture
+from data_foundation import PlayerRole, WeeklyRosterSnapshot, MasterPlayer
+from enhanced_data_collector import EnhancedNFLDataCollector, RoleBasedStatsCollector
+from data_validator import ComprehensiveValidator
+
 # Configuration
 from config_manager import get_config
 
@@ -56,23 +61,76 @@ class GameInfo:
     game_time: Optional[str] = None
 
 class RealTimeNFLSystem:
-    """Real-time NFL prediction system with current data."""
+    """Real-time NFL prediction system with enhanced data architecture."""
     
-    def __init__(self):
-        """Initialize the real-time system."""
-        self.config = get_config()
-        self.engine = create_engine(self.config.database.url)
+    def __init__(self, db_path: str = "nfl_predictions.db", current_season: int = 2024):
+        self.db_path = db_path
+        self.engine = create_engine(f"sqlite:///{db_path}")
         self.Session = sessionmaker(bind=self.engine)
+        self.config = get_config()
+        self.current_season = current_season
         
-        # Model storage
+        # Initialize enhanced data collection components
+        with self.Session() as session:
+            self.enhanced_collector = EnhancedNFLDataCollector(session, current_season)
+            self.stats_collector = RoleBasedStatsCollector(self.enhanced_collector)
+            self.validator = ComprehensiveValidator()
+        
+        # Initialize models dictionary
         self.models = {}
         self.scalers = {}
         
-        # Current season info
-        self.current_season = 2024
-        self.current_week = self._get_current_week()
+        # Cache for roster snapshots
+        self.roster_cache = {}
+        self.cache_timestamp = None
         
-        # Position-specific stat categories
+        # Initialize position stats
+        self._initialize_position_stats()
+        
+        # Load existing models if available
+        self._load_models()
+        
+        # Current season info
+        self.current_week = self._get_current_week()
+    
+    def _load_models(self):
+        """Load existing trained models from disk."""
+        try:
+            models_dir = Path("models/final")
+            if not models_dir.exists():
+                logger.info("No existing models found - will use defaults")
+                return
+            
+            # Load models for each position and stat
+            for position in ['QB', 'RB', 'WR', 'TE']:
+                for stat in self.position_stats.get(position, []):
+                    model_file = models_dir / f"{position}_{stat}_final.pkl"
+                    if model_file.exists():
+                        try:
+                            model_data = joblib.load(model_file)
+                            model_key = f"{position}_{stat}"
+                            
+                            if isinstance(model_data, dict):
+                                self.models[model_key] = model_data.get('model')
+                                self.scalers[model_key] = model_data.get('scaler')
+                            else:
+                                self.models[model_key] = model_data
+                            
+                            logger.debug(f"Loaded model for {position} {stat}")
+                        except Exception as e:
+                            logger.warning(f"Failed to load model {model_file}: {e}")
+            
+            logger.info(f"Loaded {len(self.models)} models")
+            
+        except Exception as e:
+            logger.warning(f"Error loading models: {e}")
+    
+    def load_models(self):
+        """Public method to load models (for compatibility)."""
+        self._load_models()
+        
+    def _initialize_position_stats(self):
+        """Initialize position-specific stat categories."""
         self.position_stats = {
             'QB': ['passing_attempts', 'passing_completions', 'passing_yards', 
                    'passing_touchdowns', 'rushing_attempts', 'rushing_yards', 
@@ -103,7 +161,7 @@ class RealTimeNFLSystem:
         """Get upcoming games within specified days."""
         with self.Session() as session:
             today = date.today()
-            current_season = 2025
+            current_season = self.current_season
             current_week = self._get_current_week()
             
             # Get games from current week onwards
@@ -128,10 +186,94 @@ class RealTimeNFLSystem:
             ]
     
     async def get_game_players(self, game_info: GameInfo) -> List[Player]:
-        """Get all relevant players for a specific game using live roster data."""
+        """Get validated players for a specific game using enhanced data architecture."""
         try:
+            # Get or refresh roster snapshots
+            await self._ensure_roster_cache(game_info.week)
+            
+            # Get players from both teams
+            game_players = []
+            
+            for team in [game_info.home_team, game_info.away_team]:
+                if team in self.roster_cache:
+                    snapshot = self.roster_cache[team]
+                    
+                    # Get stat-eligible players (starters + primary backups)
+                    eligible_players = snapshot.get_stat_eligible_players()
+                    
+                    # Convert MasterPlayer to Player objects
+                    for master_player in eligible_players:
+                        # Create Player-like object for compatibility
+                        class EnhancedPlayer:
+                            def __init__(self, master_player: MasterPlayer):
+                                self.name = master_player.name
+                                self.position = master_player.position
+                                self.current_team = master_player.current_team
+                                self.player_id = master_player.nfl_id
+                                self.is_active = True
+                                
+                                # Enhanced fields
+                                self.role_classification = master_player.role_classification
+                                self.depth_chart_rank = master_player.depth_chart_rank
+                                self.avg_snap_rate = master_player.avg_snap_rate_3_games
+                                self.data_quality_score = master_player.data_quality_score
+                                self.is_injured = master_player.is_injured
+                        
+                        player = EnhancedPlayer(master_player)
+                        game_players.append(player)
+                        
+                        logger.debug(f"Added {player.name} ({player.position}) - {player.role_classification.value if player.role_classification else 'unknown'} - Quality: {player.data_quality_score:.2f}")
+            
+            logger.info(f"Retrieved {len(game_players)} validated players for {game_info.home_team} vs {game_info.away_team}")
+            
+            # Log role distribution
+            role_counts = {}
+            for player in game_players:
+                role = player.role_classification.value if player.role_classification else 'unknown'
+                role_counts[role] = role_counts.get(role, 0) + 1
+            
+            logger.info(f"Player roles: {role_counts}")
+            
+            return game_players
+                
+        except Exception as e:
+            logger.error(f"Error getting validated roster data: {e}")
+            # Fallback to basic roster data
+            return await self._get_fallback_players(game_info)
+    
+    async def _ensure_roster_cache(self, week: int):
+        """Ensure roster cache is current for the specified week."""
+        cache_key = f"{self.current_season}_{week}"
+        current_time = datetime.now()
+        
+        # Refresh cache if older than 1 hour or different week
+        if (self.cache_timestamp is None or 
+            (current_time - self.cache_timestamp).seconds > 3600 or
+            not self.roster_cache):
+            
+            logger.info(f"Refreshing roster cache for {self.current_season} Week {week}")
+            
+            try:
+                with self.Session() as session:
+                    self.enhanced_collector.session = session
+                    snapshots = await self.enhanced_collector.collect_weekly_foundation_data(week)
+                    
+                    self.roster_cache = snapshots
+                    self.cache_timestamp = current_time
+                    
+                    logger.info(f"Cached roster data for {len(snapshots)} teams")
+                    
+            except Exception as e:
+                logger.error(f"Failed to refresh roster cache: {e}")
+                # Keep existing cache if refresh fails
+    
+    async def _get_fallback_players(self, game_info: GameInfo) -> List[Player]:
+        """Fallback method using basic roster data if enhanced system fails."""
+        try:
+            logger.warning("Using fallback player retrieval method")
+            
             # Get current roster data from nfl_data_py
-            weekly_data = nfl.import_weekly_data([2024], columns=['player_name', 'position', 'recent_team', 'player_id'])
+            weekly_data = nfl.import_weekly_data([self.current_season], columns=['player_name', 'position', 'recent_team', 'player_id'])
             
             # Filter for game teams and relevant positions
             game_players_data = weekly_data[
@@ -142,61 +284,33 @@ class RealTimeNFLSystem:
             # Convert to Player objects
             players = []
             for _, row in game_players_data.iterrows():
-                # Create a mock Player object with the data we need
-                class MockPlayer:
+                class FallbackPlayer:
                     def __init__(self, name, position, team, player_id):
                         self.name = name
                         self.position = position
                         self.current_team = team
-                        self.player_id = str(player_id)  # Use original player_id format
+                        self.player_id = str(player_id)
                         self.is_active = True
+                        # Default enhanced fields
+                        self.role_classification = None
+                        self.depth_chart_rank = None
+                        self.avg_snap_rate = 0.0
+                        self.data_quality_score = 0.5
+                        self.is_injured = False
                 
-                player = MockPlayer(
+                player = FallbackPlayer(
                     name=row['player_name'],
                     position=row['position'], 
                     team=row['recent_team'],
-                    player_id=str(row['player_id'])  # Use original player_id without modification
+                    player_id=str(row['player_id'])
                 )
                 players.append(player)
             
-            # Filter to get starters and key backups using depth chart if available
-            try:
-                depth_charts = nfl.import_depth_charts([2025])
-                
-                filtered_players = []
-                for player in players:
-                    # Check depth chart position
-                    player_depth = depth_charts[
-                        (depth_charts['team'] == player.current_team) & 
-                        (depth_charts['player_name'] == player.name) &
-                        (depth_charts['pos_abb'] == player.position)
-                    ]
-                    
-                    if not player_depth.empty:
-                        min_rank = player_depth['pos_rank'].min()
-                        # Include top 2 QBs, top 3 skill position players per team
-                        if player.position == 'QB' and min_rank <= 2:
-                            filtered_players.append(player)
-                        elif player.position in ['RB', 'WR', 'TE'] and min_rank <= 3:
-                            filtered_players.append(player)
-                
-                return filtered_players if filtered_players else players
-                
-            except Exception as e:
-                logger.warning(f"Could not load depth chart data: {e}")
-                # Fallback: return top players per position per team
-                filtered_players = []
-                for position in ['QB', 'RB', 'WR', 'TE']:
-                    for team in [game_info.home_team, game_info.away_team]:
-                        team_pos_players = [p for p in players if p.position == position and p.current_team == team]
-                        # Take top 2 QBs, top 3 others per team
-                        limit = 2 if position == 'QB' else 3
-                        filtered_players.extend(team_pos_players[:limit])
-                
-                return filtered_players
+            return players[:20]  # Limit to prevent too many players
                 
         except Exception as e:
-            logger.error(f"Error getting live roster data: {e}")
+            logger.error(f"Fallback player retrieval also failed: {e}")
+            return []
             # Final fallback to database
             with self.Session() as session:
                 return session.query(Player).filter(

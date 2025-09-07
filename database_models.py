@@ -53,6 +53,15 @@ class Player(Base):
     yahoo_id: Mapped[Optional[str]] = mapped_column(String(50))
     sleeper_id: Mapped[Optional[str]] = mapped_column(String(50))
     pfr_id: Mapped[Optional[str]] = mapped_column(String(50))
+    gsis_id: Mapped[Optional[str]] = mapped_column(String(50))
+    
+    # Enhanced Architecture Fields
+    role_classification: Mapped[Optional[str]] = mapped_column(String(20))  # PlayerRole enum
+    depth_chart_rank: Mapped[Optional[int]] = mapped_column(Integer)
+    avg_snap_rate_3_games: Mapped[float] = mapped_column(Float, default=0.0)
+    data_quality_score: Mapped[float] = mapped_column(Float, default=0.0)
+    last_validated: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    inconsistency_flags: Mapped[Optional[str]] = mapped_column(Text)  # JSON string
     
     # Metadata
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -189,6 +198,10 @@ class PlayerGameStats(Base):
     routes_run: Mapped[Optional[int]] = mapped_column(Integer)
     air_yards: Mapped[Optional[int]] = mapped_column(Integer)
     yards_after_catch: Mapped[Optional[int]] = mapped_column(Integer)
+    
+    # Enhanced Architecture Fields
+    stats_validated: Mapped[bool] = mapped_column(Boolean, default=False)
+    role_at_time: Mapped[Optional[str]] = mapped_column(String(20))  # Role when stats recorded
     
     # Fantasy Points
     fantasy_points_standard: Mapped[float] = mapped_column(Float, default=0.0)
@@ -399,6 +412,102 @@ class ModelPerformance(Base):
     __table_args__ = (
         Index('idx_model_performance_version', 'model_version'),
         Index('idx_model_performance_period', 'evaluation_period'),
+    )
+
+
+class WeeklyRosterSnapshot(Base):
+    """Weekly roster snapshots for enhanced data architecture."""
+    __tablename__ = 'weekly_roster_snapshots'
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False)
+    week: Mapped[int] = mapped_column(Integer, nullable=False)
+    team: Mapped[str] = mapped_column(String(10), nullable=False)
+    snapshot_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    
+    # JSON fields for roster data
+    starters: Mapped[Dict[str, Any]] = mapped_column(JSON)
+    backup_primary: Mapped[Dict[str, Any]] = mapped_column(JSON)
+    backup_depth: Mapped[Dict[str, Any]] = mapped_column(JSON)
+    inactive: Mapped[Dict[str, Any]] = mapped_column(JSON)
+    
+    # Quality metrics
+    depth_chart_confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    injury_impact_score: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    
+    __table_args__ = (
+        Index('idx_roster_snapshot_season_week', 'season', 'week'),
+        Index('idx_roster_snapshot_team', 'team'),
+        UniqueConstraint('season', 'week', 'team'),
+    )
+
+
+class DataQualityReport(Base):
+    """Track data quality metrics over time."""
+    __tablename__ = 'data_quality_reports'
+    
+    report_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False)
+    week: Mapped[int] = mapped_column(Integer, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    
+    # Overall metrics
+    total_players_processed: Mapped[int] = mapped_column(Integer, default=0)
+    players_with_high_quality: Mapped[int] = mapped_column(Integer, default=0)
+    teams_with_complete_rosters: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Quality scores
+    depth_chart_accuracy: Mapped[float] = mapped_column(Float, default=0.0)
+    stats_snap_consistency: Mapped[float] = mapped_column(Float, default=0.0)
+    player_id_consistency: Mapped[float] = mapped_column(Float, default=0.0)
+    roster_completeness: Mapped[float] = mapped_column(Float, default=0.0)
+    overall_score: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Issues and recommendations
+    critical_issues: Mapped[Optional[str]] = mapped_column(Text)  # JSON array
+    warnings: Mapped[Optional[str]] = mapped_column(Text)  # JSON array
+    recommended_actions: Mapped[Optional[str]] = mapped_column(Text)  # JSON array
+    
+    # Source metrics
+    source_metrics: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON)
+    
+    __table_args__ = (
+        Index('idx_quality_report_season_week', 'season', 'week'),
+        Index('idx_quality_report_generated', 'generated_at'),
+    )
+
+
+class PlayerValidation(Base):
+    """Track individual player validation results."""
+    __tablename__ = 'player_validations'
+    
+    validation_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    player_id: Mapped[str] = mapped_column(String(50), ForeignKey('players.player_id'), nullable=False)
+    season: Mapped[int] = mapped_column(Integer, nullable=False)
+    week: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    # Validation results
+    expected_role: Mapped[Optional[str]] = mapped_column(String(20))
+    actual_usage: Mapped[Optional[str]] = mapped_column(String(50))
+    expected_snaps: Mapped[int] = mapped_column(Integer, default=0)
+    actual_snaps: Mapped[int] = mapped_column(Integer, default=0)
+    snap_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    
+    # Consistency flags
+    has_stats_without_snaps: Mapped[bool] = mapped_column(Boolean, default=False)
+    has_snaps_without_stats: Mapped[bool] = mapped_column(Boolean, default=False)
+    role_mismatch: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    # Quality score
+    validation_score: Mapped[float] = mapped_column(Float, default=0.0)
+    validation_timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    
+    __table_args__ = (
+        Index('idx_player_validation_player_week', 'player_id', 'season', 'week'),
+        Index('idx_player_validation_timestamp', 'validation_timestamp'),
+        UniqueConstraint('player_id', 'season', 'week'),
     )
 
 
