@@ -24,9 +24,8 @@ logger = logging.getLogger(__name__)
 # Global models instance
 models = None
 
-@app.before_first_request
 def initialize_models():
-    """Initialize the streamlined models on first request."""
+    """Initialize the streamlined models."""
     global models
     try:
         session = get_db_session()
@@ -34,6 +33,10 @@ def initialize_models():
         logger.info("✅ Streamlined models initialized for web interface")
     except Exception as e:
         logger.error(f"❌ Failed to initialize models: {e}")
+
+# Initialize models at startup
+with app.app_context():
+    initialize_models()
 
 @app.route('/')
 def index():
@@ -207,14 +210,45 @@ def system_status():
             'status': 'error'
         }), 500
 
+def find_available_port(start_port=5000, max_attempts=10):
+    """Find an available port starting from start_port."""
+    import socket
+    for port in range(start_port, start_port + max_attempts):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('localhost', port))
+                return port
+        except OSError:
+            continue
+    return None
+
 if __name__ == '__main__':
     print("🚀 Starting NFL Betting Analyzer Web Interface...")
-    print("📊 Interface will be available at: http://localhost:5000")
-    print("🔧 API endpoints available at: http://localhost:5000/api/")
+    
+    # Check for environment port first
+    env_port = os.environ.get('FLASK_PORT')
+    if env_port:
+        try:
+            port = int(env_port)
+        except ValueError:
+            port = find_available_port(5000)
+    else:
+        port = find_available_port(5000)
+    
+    if port is None:
+        print("❌ No available ports found in range 5000-5009")
+        print("💡 Please stop other services or specify a different port")
+        exit(1)
+    
+    print(f"📊 Interface will be available at: http://localhost:{port}")
+    print(f"🔧 API endpoints available at: http://localhost:{port}/api/")
+    
+    if port != 5000:
+        print(f"⚠️  Note: Using port {port} instead of 5000 (port conflict resolved)")
     
     app.run(
         host='0.0.0.0',
-        port=5000,
+        port=port,
         debug=True,
         threaded=True
     )

@@ -24,20 +24,26 @@ import asyncio
 from contextlib import asynccontextmanager
 
 # Import our models and components
-from database_models import (
-    Player, Team, Game, PlayerGameStats, BettingLine,
-    PlayerPrediction, GamePrediction, ModelPerformance
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from core.database_models import (
+    Player, Game, PlayerGameStats, get_db_session
 )
-from prediction_pipeline import NFLPredictionPipeline, PipelineConfig
+from core.models.streamlined_models import StreamlinedNFLModels
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Database setup
-DATABASE_URL = "postgresql://user:password@localhost/nfl_predictions"
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Database setup - use existing database connection
+def get_db():
+    db = get_db_session()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # Security
 security = HTTPBearer()

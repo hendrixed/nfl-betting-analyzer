@@ -5,7 +5,7 @@ Advanced FastAPI implementation with WebSocket support, real-time updates,
 caching, rate limiting, and comprehensive analytics
 """
 
-from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -14,6 +14,7 @@ import uvicorn
 from pydantic import BaseModel, Field, validator
 from typing import Dict, List, Optional, Any, Union, Set
 from datetime import datetime, date, timedelta
+import uuid
 from sqlalchemy import create_engine, select, and_, or_, desc, asc, func
 from sqlalchemy.orm import sessionmaker, Session
 import pandas as pd
@@ -152,6 +153,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 models = None
 redis_client = None
+pipeline = None  # Will be set to models instance
 
 # Enhanced authentication
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -216,14 +218,15 @@ async def lifespan(app: FastAPI):
         # Initialize Redis
         redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
         redis_client.ping()
-        logger.info("✅ Redis connected")
+        logger.info("✅ Redis connected - caching enabled")
     except Exception as e:
-        logger.warning(f"Redis unavailable: {e}")
+        logger.info("ℹ️  Redis not available - running without caching (this is normal)")
         redis_client = None
     
     # Initialize streamlined models
     session = get_db_session()
     models = StreamlinedNFLModels(session)
+    pipeline = models  # Set pipeline reference
     logger.info("✅ Streamlined models initialized")
     
     # Start background tasks
@@ -373,7 +376,7 @@ async def websocket_endpoint(websocket: WebSocket):
 @cache_response(ttl=300)
 async def get_enhanced_player_prediction(
     player_id: str,
-    request,
+    request: Request,
     opponent: Optional[str] = None,
     include_market_analysis: bool = True,
     include_sentiment: bool = True,
@@ -436,9 +439,9 @@ async def get_enhanced_player_prediction(
 @app.get("/api/v2/betting/live-opportunities")
 @limiter.limit("20/minute")
 async def get_live_betting_opportunities(
-    request,
+    request: Request,
     min_edge: float = Query(0.05, ge=0.01, le=0.5),
-    max_risk: str = Query("MEDIUM", regex="^(LOW|MEDIUM|HIGH)$"),
+    max_risk: str = Query("MEDIUM", pattern="^(LOW|MEDIUM|HIGH)$"),
     positions: Optional[List[str]] = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
@@ -507,7 +510,7 @@ async def get_live_betting_opportunities(
 @limiter.limit("10/minute")
 @cache_response(ttl=180)
 async def get_market_intelligence(
-    request,
+    request: Request,
     game_date: Optional[date] = None,
     include_line_history: bool = True,
     current_user: dict = Depends(get_current_user)
@@ -560,7 +563,7 @@ async def get_market_intelligence(
 @app.post("/api/v1/batch-predictions")
 @limiter.limit("10/minute")
 async def batch_predictions(
-    request: Request,
+    request,  # Remove type hint to avoid Request import issues
     prediction_requests: List[dict],
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
@@ -600,10 +603,41 @@ async def batch_predictions(
 
 # Removed duplicate batch predictions endpoint
 
+@app.get("/api/vs/predictions")
+async def get_vs_predictions():
+    """Get versus predictions endpoint."""
+    return {
+        "message": "VS Predictions endpoint",
+        "status": "active",
+        "predictions": []
+    }
+
+@app.get("/game/{game_id}")
+async def get_game_info(game_id: str):
+    """Get game information endpoint."""
+    try:
+        from core.database_models import get_db_session, Game
+        session = get_db_session()
+        game = session.query(Game).filter(Game.game_id == game_id).first()
+        session.close()
+        
+        if game:
+            return {
+                "game_id": game_id,
+                "home_team": game.home_team,
+                "away_team": game.away_team,
+                "game_date": str(game.game_date),
+                "status": "found"
+            }
+        else:
+            raise HTTPException(status_code=404, detail=f"Game {game_id} not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/v2/real-time/dashboard")
 @limiter.limit("60/minute")
 async def real_time_dashboard(
-    request,
+    request: Request,
     current_user: dict = Depends(get_current_user)
 ):
     """Get real-time dashboard data for live monitoring."""
@@ -703,7 +737,7 @@ async def detailed_health_check():
         "components": {
             "api": "healthy",
             "database": "healthy",
-            "pipeline": "healthy" if pipeline else "unavailable",
+            "pipeline": "healthy" if models else "unavailable",
             "cache": "healthy" if redis_client else "unavailable",
             "websockets": f"{len(manager.active_connections)} active"
         },
@@ -711,7 +745,7 @@ async def detailed_health_check():
     }
     
     # Check if any critical components are down
-    if not pipeline:
+    if not models:
         health_status["status"] = "degraded"
     
     return health_status
