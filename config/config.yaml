@@ -16,13 +16,13 @@ database:
 data:
   directory: data
   update_frequency: daily
-  current_season: 2024
+  current_season: 2025
   seasons_to_load:
-    - 2020
     - 2021
     - 2022
     - 2023
     - 2024
+    - 2025
 
 models:
   directory: models

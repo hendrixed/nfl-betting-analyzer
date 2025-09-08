@@ -137,7 +137,7 @@ def collect(ctx, season: int, week: Optional[int]):
         from core.data.nfl_2025_data_collector import NFL2025DataCollector
         
         collector = NFL2025DataCollector(session)
-        results = collector.collect_comprehensive_data()
+        results = asyncio.run(collector.collect_comprehensive_data())
         
         click.echo("Data collection complete!")
         click.echo("Results:")
@@ -295,15 +295,15 @@ def player(ctx, player: Optional[str], position: Optional[str], week: Optional[i
             ).first()
             
             if not player_obj:
-                click.echo(f"❌ Player '{player}' not found or not active")
+                click.echo(f"Player '{player}' not found or not active")
                 return
             
-            click.echo(f"🎯 Predictions for {player_obj.name} ({player_obj.position})")
+            click.echo(f"Predictions for {player_obj.name} ({player_obj.position})")
             click.echo("=" * 50)
             
             # Generate predictions (placeholder)
-            click.echo("📊 Generating predictions...")
-            click.echo("⚠️  Prediction engine integration pending")
+            click.echo("Generating predictions...")
+            click.echo("Prediction engine integration pending")
             
         elif position:
             # List top players by position
@@ -312,7 +312,7 @@ def player(ctx, player: Optional[str], position: Optional[str], week: Optional[i
                 Player.is_active == True
             ).limit(10).all()
             
-            click.echo(f"🏈 Top {position.upper()} predictions for Week {week or 'Next'}:")
+            click.echo(f"Top {position.upper()} predictions for Week {week or 'Next'}:")
             click.echo("=" * 50)
             
             for p in players:
@@ -321,7 +321,7 @@ def player(ctx, player: Optional[str], position: Optional[str], week: Optional[i
         session.close()
         
     except Exception as e:
-        click.echo(f"❌ Prediction failed: {e}")
+        click.echo(f"Prediction failed: {e}")
 
 
 @predict.command()

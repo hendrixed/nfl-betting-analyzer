@@ -76,7 +76,11 @@ class NFL2025DataCollector:
         days_since_start = (current_date - season_start).days
         return min(days_since_start // 7 + 1, 18)  # Max week 18
     
-    async def collect_all_2025_data(self) -> Dict[str, int]:
+    async def collect_comprehensive_data(self) -> Dict[str, int]:
+        """Collect all current 2025 NFL data"""
+        return await self.collect_2025_data()
+    
+    async def collect_2025_data(self) -> Dict[str, int]:
         """Collect all current 2025 NFL data"""
         logger.info("🏈 Starting comprehensive 2025 NFL data collection...")
         
