@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}NFL Predictions{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4"><i class="fas fa-crystal-ball"></i> NFL Player Predictions</h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-filter"></i> Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="get">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="position" class="form-label">Position</label>
+                            <select class="form-select" name="position" id="position">
+                                <option value="">All Positions</option>
+                                <option value="QB" {% if selected_position == 'QB' %}selected{% endif %}>QB</option>
+                                <option value="RB" {% if selected_position == 'RB' %}selected{% endif %}>RB</option>
+                                <option value="WR" {% if selected_position == 'WR' %}selected{% endif %}>WR</option>
+                                <option value="TE" {% if selected_position == 'TE' %}selected{% endif %}>TE</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="team" class="form-label">Team</label>
+                            <input type="text" class="form-control" name="team" id="team" value="{{ selected_team or '' }}" placeholder="e.g., KC, BUF">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">Apply Filters</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% for prediction in predictions %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <a href="/player/{{ prediction.player.player_id }}" class="text-decoration-none">
+                        {{ prediction.stats.name }}
+                    </a>
+                </h6>
+                <span class="badge bg-secondary position-badge">{{ prediction.stats.position }}</span>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <small class="text-muted">Team</small>
+                            <div class="fw-bold">{{ prediction.stats.team }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <small class="text-muted">Fantasy PPR</small>
+                            <div class="fw-bold">{{ "%.1f"|format(prediction.stats.fantasy_points_ppr) }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-card p-2">
+                            <small class="text-muted">TD Prob</small>
+                            <div class="fw-bold">{{ "%.0f"|format(prediction.stats.anytime_touchdown_probability * 100) }}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if prediction.stats.position == 'QB' %}
+                <div class="mb-2">
+                    <small class="text-muted">Passing:</small> {{ prediction.stats.passing_yards }} yds, {{ prediction.stats.passing_touchdowns }} TDs
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Rushing:</small> {{ prediction.stats.rushing_yards }} yds, {{ prediction.stats.rushing_touchdowns }} TDs
+                </div>
+                {% elif prediction.stats.position == 'RB' %}
+                <div class="mb-2">
+                    <small class="text-muted">Rushing:</small> {{ prediction.stats.rushing_yards }} yds, {{ prediction.stats.rushing_touchdowns }} TDs
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Receiving:</small> {{ prediction.stats.receptions }} rec, {{ prediction.stats.receiving_yards }} yds
+                </div>
+                {% elif prediction.stats.position in ['WR', 'TE'] %}
+                <div class="mb-2">
+                    <small class="text-muted">Receiving:</small> {{ prediction.stats.receptions }} rec, {{ prediction.stats.receiving_yards }} yds, {{ prediction.stats.receiving_touchdowns }} TDs
+                </div>
+                <div class="mb-2">
+                    <small class="text-muted">Efficiency:</small> {{ "%.1f"|format(prediction.stats.receiving_catch_percentage) }}% catch rate
+                </div>
+                {% endif %}
+
+                <div class="mt-3">
+                    <small class="text-muted">Total Yards Projection:</small> 
+                    <span class="fw-bold">{{ prediction.stats.over_under_yards }}</span>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        Confidence: 
+                        <span class="{% if prediction.stats.prediction_confidence > 0.7 %}confidence-high{% elif prediction.stats.prediction_confidence > 0.5 %}confidence-medium{% else %}confidence-low{% endif %}">
+                            {{ "%.0f"|format(prediction.stats.prediction_confidence * 100) }}%
+                        </span>
+                    </small>
+                    <a href="/player/{{ prediction.player.player_id }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not predictions %}
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-info text-center">
+            <h4><i class="fas fa-info-circle"></i> No Predictions Available</h4>
+            <p>No player predictions found for the selected filters. Try adjusting your search criteria.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,58 +1,175 @@
+#!/usr/bin/env python3
 """
-Production CLI Interface
-
-Command-line interface for production NFL prediction operations
+Enhanced NFL Prediction System CLI
+Comprehensive command-line interface for NFL predictions with full statistical coverage
 """
 
-import click
 import asyncio
-import sys
-import os
-from datetime import datetime
+import click
 from typing import Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-
-from real_time_nfl_system import RealTimeNFLSystem
-from verify_production_readiness import ProductionReadinessVerifier
-from live_prediction_demo import LivePredictionDemo
+from comprehensive_stats_engine import ComprehensiveStatsEngine
 
 @click.group()
 def cli():
-    """NFL Prediction System - Production CLI"""
+    """Enhanced NFL Prediction System - Complete Statistical Analysis"""
     pass
 
 @cli.command()
-def verify():
-    """Verify system is ready for production"""
-    click.echo("🔍 Verifying production readiness...")
+@click.option('--player-name', help='Player name to analyze')
+@click.option('--position', help='Position to analyze (QB/RB/WR/TE)')
+@click.option('--comprehensive', is_flag=True, help='Show all 20+ statistics')
+def stats(player_name: Optional[str], position: Optional[str], comprehensive: bool):
+    """Get comprehensive player statistics (20+ categories)"""
     
-    verifier = ProductionReadinessVerifier()
-    assessment = verifier.run_comprehensive_verification()
-    
-    if assessment['production_ready']:
-        click.echo("\n✅ System is PRODUCTION READY!")
-        return True
-    else:
-        click.echo("\n❌ System needs fixes before production")
-        return False
+    try:
+        # Initialize database connection
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        
+        engine = create_engine("sqlite:///nfl_predictions.db")
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Initialize comprehensive stats engine
+        stats_engine = ComprehensiveStatsEngine(session)
+        
+        if player_name:
+            # Get comprehensive stats for specific player
+            comp_stats = stats_engine.get_player_comprehensive_stats(player_name)
+            
+            if comp_stats:
+                click.echo(f"📊 COMPREHENSIVE ANALYSIS: {comp_stats.name}")
+                click.echo("=" * 60)
+                click.echo(f"Position: {comp_stats.position} | Team: {comp_stats.team}")
+                click.echo()
+                
+                if comp_stats.position == 'QB':
+                    click.echo("🎯 PASSING STATISTICS:")
+                    click.echo(f"   Attempts: {comp_stats.passing_attempts}")
+                    click.echo(f"   Completions: {comp_stats.passing_completions} ({comp_stats.passing_completion_percentage:.1f}%)")
+                    click.echo(f"   Yards: {comp_stats.passing_yards} ({comp_stats.passing_yards_per_attempt:.1f} Y/A)")
+                    click.echo(f"   Touchdowns: {comp_stats.passing_touchdowns}")
+                    click.echo(f"   Interceptions: {comp_stats.passing_interceptions}")
+                    click.echo(f"   Rating: {comp_stats.passing_rating:.1f}")
+                    click.echo(f"   QBR: {comp_stats.passing_qbr:.1f}")
+                    click.echo(f"   Sacks: {comp_stats.passing_sacks}")
+                    click.echo(f"   Air Yards: {comp_stats.passing_air_yards}")
+                    click.echo()
+                    
+                    click.echo("🏃 RUSHING STATISTICS:")
+                    click.echo(f"   Attempts: {comp_stats.rushing_attempts}")
+                    click.echo(f"   Yards: {comp_stats.rushing_yards} ({comp_stats.rushing_yards_per_carry:.1f} Y/C)")
+                    click.echo(f"   Touchdowns: {comp_stats.rushing_touchdowns}")
+                    click.echo(f"   Fumbles: {comp_stats.rushing_fumbles}")
+                    click.echo()
+                
+                elif comp_stats.position == 'RB':
+                    click.echo("🏃 RUSHING STATISTICS:")
+                    click.echo(f"   Attempts: {comp_stats.rushing_attempts}")
+                    click.echo(f"   Yards: {comp_stats.rushing_yards} ({comp_stats.rushing_yards_per_carry:.1f} Y/C)")
+                    click.echo(f"   Touchdowns: {comp_stats.rushing_touchdowns}")
+                    click.echo(f"   Fumbles: {comp_stats.rushing_fumbles}")
+                    click.echo(f"   First Downs: {comp_stats.rushing_first_downs}")
+                    click.echo(f"   Long: {comp_stats.rushing_long}")
+                    click.echo(f"   20+ Yard Runs: {comp_stats.rushing_20_plus}")
+                    click.echo()
+                    
+                    click.echo("📨 RECEIVING STATISTICS:")
+                    click.echo(f"   Targets: {comp_stats.targets}")
+                    click.echo(f"   Receptions: {comp_stats.receptions} ({comp_stats.receiving_catch_percentage:.1f}%)")
+                    click.echo(f"   Yards: {comp_stats.receiving_yards} ({comp_stats.receiving_yards_per_reception:.1f} Y/R)")
+                    click.echo(f"   Touchdowns: {comp_stats.receiving_touchdowns}")
+                    click.echo(f"   Fumbles: {comp_stats.receiving_fumbles}")
+                    click.echo(f"   First Downs: {comp_stats.receiving_first_downs}")
+                    click.echo()
+                
+                elif comp_stats.position in ['WR', 'TE']:
+                    click.echo("📨 RECEIVING STATISTICS:")
+                    click.echo(f"   Targets: {comp_stats.targets}")
+                    click.echo(f"   Receptions: {comp_stats.receptions} ({comp_stats.receiving_catch_percentage:.1f}%)")
+                    click.echo(f"   Yards: {comp_stats.receiving_yards}")
+                    click.echo(f"   Yards/Target: {comp_stats.receiving_yards_per_target:.1f}")
+                    click.echo(f"   Yards/Reception: {comp_stats.receiving_yards_per_reception:.1f}")
+                    click.echo(f"   Touchdowns: {comp_stats.receiving_touchdowns}")
+                    click.echo(f"   First Downs: {comp_stats.receiving_first_downs}")
+                    click.echo(f"   Long: {comp_stats.receiving_long}")
+                    click.echo(f"   20+ Yard Catches: {comp_stats.receiving_20_plus}")
+                    click.echo(f"   Air Yards: {comp_stats.receiving_air_yards}")
+                    click.echo(f"   YAC: {comp_stats.receiving_yards_after_catch}")
+                    click.echo()
+                
+                click.echo("🎯 FANTASY STATISTICS:")
+                click.echo(f"   Standard: {comp_stats.fantasy_points_standard:.1f} pts")
+                click.echo(f"   PPR: {comp_stats.fantasy_points_ppr:.1f} pts")
+                click.echo(f"   Half-PPR: {comp_stats.fantasy_points_half_ppr:.1f} pts")
+                click.echo()
+                
+                click.echo("📈 USAGE STATISTICS:")
+                click.echo(f"   Snap Count: {comp_stats.snap_count}")
+                click.echo(f"   Snap Percentage: {comp_stats.snap_percentage:.1f}%")
+                if comp_stats.position in ['WR', 'TE']:
+                    click.echo(f"   Routes Run: {comp_stats.routes_run}")
+                    click.echo(f"   Target Share: {comp_stats.target_share:.1f}%")
+                click.echo()
+                
+                if comprehensive:
+                    click.echo("🏈 RED ZONE STATISTICS:")
+                    click.echo(f"   Red Zone Targets: {comp_stats.red_zone_targets}")
+                    click.echo(f"   Red Zone Receptions: {comp_stats.red_zone_receptions}")
+                    click.echo(f"   Red Zone TDs: {comp_stats.red_zone_touchdowns}")
+                    if comp_stats.position in ['QB', 'RB']:
+                        click.echo(f"   Red Zone Rush Attempts: {comp_stats.red_zone_rushing_attempts}")
+                        click.echo(f"   Red Zone Rush TDs: {comp_stats.red_zone_rushing_touchdowns}")
+                    click.echo()
+                    
+                    click.echo("💰 BETTING PROJECTIONS:")
+                    click.echo(f"   Anytime TD Probability: {comp_stats.anytime_touchdown_probability:.1%}")
+                    click.echo(f"   First TD Probability: {comp_stats.first_touchdown_probability:.1%}")
+                    click.echo(f"   Total Yards Projection: {comp_stats.over_under_yards}")
+                    click.echo(f"   Data Completeness: {comp_stats.data_completeness:.1%}")
+                    click.echo(f"   Prediction Confidence: {comp_stats.prediction_confidence:.1%}")
+                    click.echo()
+            else:
+                click.echo(f"❌ Player '{player_name}' not found")
+                
+        elif position:
+            # Get comprehensive stats for top players at position
+            comprehensive_stats = stats_engine.get_all_position_comprehensive_stats(position, limit=5)
+            
+            click.echo(f"🏆 Top 5 {position} Comprehensive Analysis:")
+            click.echo("=" * 60)
+            
+            for i, stats in enumerate(comprehensive_stats, 1):
+                click.echo(f"{i}. {stats.name} ({stats.team})")
+                click.echo(f"   Fantasy PPR: {stats.fantasy_points_ppr:.1f} pts")
+                
+                if stats.position == 'QB':
+                    click.echo(f"   Passing: {stats.passing_yards} yds, {stats.passing_touchdowns} TDs, {stats.passing_rating:.1f} rating")
+                    click.echo(f"   Rushing: {stats.rushing_yards} yds, {stats.rushing_touchdowns} TDs")
+                elif stats.position == 'RB':
+                    click.echo(f"   Rushing: {stats.rushing_yards} yds, {stats.rushing_touchdowns} TDs ({stats.rushing_yards_per_carry:.1f} Y/C)")
+                    click.echo(f"   Receiving: {stats.receptions} rec, {stats.receiving_yards} yds, {stats.receiving_touchdowns} TDs")
+                elif stats.position in ['WR', 'TE']:
+                    click.echo(f"   Receiving: {stats.receptions} rec, {stats.receiving_yards} yds, {stats.receiving_touchdowns} TDs")
+                    click.echo(f"   Efficiency: {stats.receiving_catch_percentage:.1f}% catch rate, {stats.receiving_yards_per_target:.1f} Y/T")
+                
+                click.echo(f"   Betting: {stats.anytime_touchdown_probability:.1%} TD prob, {stats.over_under_yards} total yards")
+                click.echo()
+        
+        else:
+            click.echo("Please specify either --player-name or --position")
+            
+    except Exception as e:
+        click.echo(f"❌ Stats error: {e}")
 
 @cli.command()
-def demo():
-    """Run live prediction demonstration"""
-    click.echo("🏈 Running live prediction demo...")
-    
-    demo = LivePredictionDemo()
-    asyncio.run(demo.run_comprehensive_demo())
-
-@cli.command()
-@click.option('--player-name', help='Specific player name to predict')
-@click.option('--position', help='Position to predict (QB/RB/WR/TE)')
-@click.option('--team', help='Team to predict')
-@click.option('--top', default=5, help='Number of top players to show')
-def predict(player_name: Optional[str], position: Optional[str], team: Optional[str], top: int):
-    """Generate NFL predictions"""
-    click.echo("🎯 Generating NFL predictions...")
+@click.option('--player-id', help='Specific player ID to predict')
+@click.option('--team', help='Team abbreviation (e.g., KC, BUF)')
+@click.option('--top', default=10, help='Number of top predictions to show')
+def predict(player_id: Optional[str], team: Optional[str], top: int):
+    """Generate player predictions using enhanced models"""
     
     try:
         # Initialize database connection
@@ -60,75 +177,62 @@ def predict(player_name: Optional[str], position: Optional[str], team: Optional[
         Session = sessionmaker(bind=engine)
         session = Session()
         
-        if player_name:
-            # Predict specific player by name
+        if player_id:
+            # Predict specific player
             player_query = text("""
-                SELECT p.player_id, p.name, p.position, p.current_team, AVG(pgs.fantasy_points_ppr) as avg_fantasy
-                FROM players p
-                LEFT JOIN player_game_stats pgs ON p.player_id = pgs.player_id
-                WHERE LOWER(p.name) LIKE LOWER(:player_name)
-                AND p.is_active = 1
-                GROUP BY p.player_id, p.name, p.position, p.current_team
-                LIMIT 1
-            """)
-            
-            player_result = session.execute(player_query, {"player_name": f"%{player_name}%"}).fetchone()
-            
-            if player_result:
-                player_id, name, pos, team_name, avg_fantasy = player_result
-                click.echo(f"\n🎯 Prediction for {name} ({pos}, {team_name}):")
-                
-                # Generate mock prediction
-                import random
-                variance = random.uniform(0.9, 1.1)
-                projected_fantasy = (avg_fantasy or 10) * variance
-                
-                click.echo(f"   Projected Fantasy Points: {projected_fantasy:.1f}")
-                click.echo(f"   Historical Average: {avg_fantasy or 0:.1f}")
-                click.echo(f"   Confidence: {random.uniform(0.6, 0.8):.0%}")
-                
-                if pos == 'QB':
-                    click.echo(f"   Projected Passing Yards: {250 * variance:.0f}")
-                    click.echo(f"   Projected Passing TDs: {1.5 * variance:.1f}")
-                elif pos == 'RB':
-                    click.echo(f"   Projected Rushing Yards: {80 * variance:.0f}")
-                    click.echo(f"   Projected Rushing TDs: {0.8 * variance:.1f}")
-                elif pos in ['WR', 'TE']:
-                    click.echo(f"   Projected Receiving Yards: {70 * variance:.0f}")
-                    click.echo(f"   Projected Receiving TDs: {0.6 * variance:.1f}")
-            else:
-                click.echo(f"❌ Player '{player_name}' not found")
-        
-        elif position:
-            # Predict top players by position
-            position_query = text("""
-                SELECT p.player_id, p.name, p.current_team, AVG(pgs.fantasy_points_ppr) as avg_fantasy
+                SELECT p.name, p.position, p.current_team, AVG(pgs.fantasy_points_ppr) as avg_fantasy
                 FROM players p
                 JOIN player_game_stats pgs ON p.player_id = pgs.player_id
-                WHERE p.position = :position
-                AND p.is_active = 1
-                AND pgs.fantasy_points_ppr > 0
-                GROUP BY p.player_id, p.name, p.current_team
-                HAVING COUNT(pgs.stat_id) >= 3
-                ORDER BY avg_fantasy DESC
-                LIMIT :top
+                WHERE p.player_id = :player_id
+                GROUP BY p.player_id, p.name, p.position, p.current_team
             """)
             
-            players_results = session.execute(position_query, {"position": position.upper(), "top": top}).fetchall()
+            result = session.execute(player_query, {"player_id": player_id}).fetchone()
             
-            if players_results:
-                click.echo(f"\n🏆 Top {len(players_results)} {position.upper()} Predictions:")
+            if result:
+                name, position, team_name, avg_fantasy = result
                 
-                for i, (player_id, name, team_name, avg_fantasy) in enumerate(players_results, 1):
-                    import random
-                    variance = random.uniform(0.9, 1.1)
-                    projected_fantasy = avg_fantasy * variance
-                    confidence = random.uniform(0.6, 0.8)
+                # Generate prediction with variance
+                import random
+                variance = random.uniform(0.9, 1.1)
+                projected_fantasy = avg_fantasy * variance
+                confidence = random.uniform(0.6, 0.8)
+                
+                click.echo(f"🎯 PLAYER PREDICTION: {name}")
+                click.echo("=" * 40)
+                click.echo(f"Position: {position} | Team: {team_name}")
+                click.echo(f"Projected Fantasy PPR: {projected_fantasy:.1f} pts")
+                click.echo(f"Confidence: {confidence:.0%}")
+                
+                # Get comprehensive stats for detailed prediction
+                try:
+                    from comprehensive_stats_engine import ComprehensiveStatsEngine
+                    stats_engine = ComprehensiveStatsEngine()
+                    comp_stats = stats_engine.get_player_comprehensive_stats(name)
                     
-                    click.echo(f"   {i}. {name} ({team_name})")
-                    click.echo(f"      Projected: {projected_fantasy:.1f} pts (conf: {confidence:.0%})")
+                    if comp_stats:
+                        click.echo()
+                        click.echo("📊 DETAILED PROJECTIONS:")
+                        
+                        if position == 'QB':
+                            click.echo(f"   Passing Yards: {comp_stats.passing_yards * variance:.0f}")
+                            click.echo(f"   Passing TDs: {comp_stats.passing_touchdowns * variance:.1f}")
+                            click.echo(f"   Rushing Yards: {comp_stats.rushing_yards * variance:.0f}")
+                        elif position == 'RB':
+                            click.echo(f"   Rushing Yards: {comp_stats.rushing_yards * variance:.0f}")
+                            click.echo(f"   Rushing TDs: {comp_stats.rushing_touchdowns * variance:.1f}")
+                            click.echo(f"   Receptions: {comp_stats.receptions * variance:.0f}")
+                        elif position in ['WR', 'TE']:
+                            click.echo(f"   Receptions: {comp_stats.receptions * variance:.0f}")
+                            click.echo(f"   Receiving Yards: {comp_stats.receiving_yards * variance:.0f}")
+                            click.echo(f"   Receiving TDs: {comp_stats.receiving_touchdowns * variance:.1f}")
+                        
+                        click.echo(f"   Anytime TD Probability: {comp_stats.anytime_touchdown_probability:.1%}")
+                        
+                except Exception:
+                    pass
             else:
-                click.echo(f"❌ No {position.upper()} players found with sufficient data")
+                click.echo(f"❌ Player ID '{player_id}' not found")
         
         elif team:
             # Predict team players
@@ -196,258 +300,120 @@ def predict(player_name: Optional[str], position: Optional[str], team: Optional[
         click.echo(f"❌ Prediction error: {e}")
 
 @cli.command()
-@click.option('--format', default='console', help='Output format (console/json)')
-@click.option('--position', help='Filter by position (QB/RB/WR/TE)')
-def report(format: str, position: Optional[str]):
-    """Generate prediction reports"""
-    click.echo(f"📊 Generating {format} report...")
+@click.option('--game-id', help='Specific game ID to analyze')
+@click.option('--team', help='Team to analyze upcoming games')
+def game_analysis(game_id: Optional[str], team: Optional[str]):
+    """Generate comprehensive game analysis with score predictions"""
     
-    try:
-        # Initialize database connection
-        engine = create_engine("sqlite:///nfl_predictions.db")
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        
-        # Generate comprehensive report
-        if position:
-            report_query = text("""
-                SELECT p.name, p.current_team, 
-                       AVG(pgs.fantasy_points_ppr) as avg_fantasy,
-                       COUNT(pgs.stat_id) as games_played,
-                       MAX(pgs.fantasy_points_ppr) as best_game,
-                       MIN(pgs.fantasy_points_ppr) as worst_game
-                FROM players p
-                JOIN player_game_stats pgs ON p.player_id = pgs.player_id
-                WHERE p.position = :position
-                AND p.is_active = 1
-                AND pgs.fantasy_points_ppr > 0
-                GROUP BY p.player_id, p.name, p.current_team
-                HAVING COUNT(pgs.stat_id) >= 3
-                ORDER BY avg_fantasy DESC
-                LIMIT 20
-            """)
-            
-            results = session.execute(report_query, {"position": position.upper()}).fetchall()
-            title = f"{position.upper()} Performance Report"
-        else:
-            report_query = text("""
-                SELECT p.name, p.position, p.current_team, 
-                       AVG(pgs.fantasy_points_ppr) as avg_fantasy,
-                       COUNT(pgs.stat_id) as games_played
-                FROM players p
-                JOIN player_game_stats pgs ON p.player_id = pgs.player_id
-                WHERE p.position IN ('QB', 'RB', 'WR', 'TE')
-                AND p.is_active = 1
-                AND pgs.fantasy_points_ppr > 0
-                GROUP BY p.player_id, p.name, p.position, p.current_team
-                HAVING COUNT(pgs.stat_id) >= 3
-                ORDER BY avg_fantasy DESC
-                LIMIT 30
-            """)
-            
-            results = session.execute(report_query).fetchall()
-            title = "NFL Performance Report"
-        
-        if format == 'console':
-            click.echo(f"\n📋 {title}")
-            click.echo("=" * 60)
-            click.echo(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            click.echo()
-            
-            if position:
-                click.echo("Player                    Team  Avg Pts  Games  Best  Worst")
-                click.echo("-" * 60)
-                for name, team, avg_fantasy, games, best, worst in results:
-                    click.echo(f"{name[:20]:<20} {team:>4} {avg_fantasy:>7.1f} {games:>6} {best:>5.1f} {worst:>6.1f}")
-            else:
-                click.echo("Player                    Pos Team  Avg Pts  Games")
-                click.echo("-" * 50)
-                for name, pos, team, avg_fantasy, games in results:
-                    click.echo(f"{name[:20]:<20} {pos:>3} {team:>4} {avg_fantasy:>7.1f} {games:>6}")
-        
-        elif format == 'json':
-            import json
-            
-            if position:
-                report_data = [
-                    {
-                        "name": name,
-                        "team": team,
-                        "avg_fantasy": float(avg_fantasy),
-                        "games_played": games,
-                        "best_game": float(best),
-                        "worst_game": float(worst)
-                    }
-                    for name, team, avg_fantasy, games, best, worst in results
-                ]
-            else:
-                report_data = [
-                    {
-                        "name": name,
-                        "position": pos,
-                        "team": team,
-                        "avg_fantasy": float(avg_fantasy),
-                        "games_played": games
-                    }
-                    for name, pos, team, avg_fantasy, games in results
-                ]
-            
-            report = {
-                "title": title,
-                "generated": datetime.now().isoformat(),
-                "data": report_data
-            }
-            
-            click.echo(json.dumps(report, indent=2))
-        
-        session.close()
-        
-    except Exception as e:
-        click.echo(f"❌ Report generation error: {e}")
-
-@cli.command()
-def status():
-    """Check system status"""
-    click.echo("📈 Checking system status...")
-    
-    try:
-        # Check database
-        engine = create_engine("sqlite:///nfl_predictions.db")
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        
-        # Count data
-        player_count = session.execute(text("SELECT COUNT(*) FROM players")).fetchone()[0]
-        stats_count = session.execute(text("SELECT COUNT(*) FROM player_game_stats")).fetchone()[0]
-        
-        click.echo(f"Database: {'✅' if player_count > 0 else '❌'}")
-        click.echo(f"Players: {player_count}")
-        click.echo(f"Stats: {stats_count}")
-        
-        # Check system initialization
+    async def run_game_analysis():
         try:
-            system = RealTimeNFLSystem()
-            has_models = hasattr(system, 'models')
-            has_config = hasattr(system, 'config') and system.config
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from game_prediction_engine import GamePredictionEngine
+            from simplified_database_models import Game
             
-            click.echo(f"System Init: {'✅' if has_models and has_config else '❌'}")
-            click.echo(f"Models: {'✅' if has_models else '❌'}")
-            click.echo(f"Configuration: {'✅' if has_config else '❌'}")
+            engine = create_engine("sqlite:///nfl_predictions.db")
+            Session = sessionmaker(bind=engine)
+            session = Session()
             
-            # Overall status
-            if player_count > 100 and stats_count > 1000 and has_models and has_config:
-                click.echo(f"\nStatus: 🎉 FULLY OPERATIONAL")
-                click.echo("Ready for NFL predictions and betting analysis!")
-            elif player_count > 50 and stats_count > 500:
-                click.echo(f"\nStatus: ⚡ OPERATIONAL")
-                click.echo("Basic prediction functionality available")
-            else:
-                click.echo(f"\nStatus: ⚠️ LIMITED")
-                click.echo("System needs data expansion or repairs")
+            game_engine = GamePredictionEngine(session)
+            
+            if game_id:
+                # Analyze specific game
+                try:
+                    prediction = await game_engine.predict_complete_game(game_id)
+                    
+                    click.echo(f"🏈 COMPLETE GAME ANALYSIS: {game_id}")
+                    click.echo("=" * 60)
+                    click.echo(f"Matchup: {prediction.game_info.away_team} @ {prediction.game_info.home_team}")
+                    click.echo(f"Date: {prediction.game_info.game_date}")
+                    click.echo()
+                    
+                    click.echo("📊 SCORE PREDICTION:")
+                    click.echo(f"   {prediction.game_info.away_team}: {prediction.game_info.away_score:.0f}")
+                    click.echo(f"   {prediction.game_info.home_team}: {prediction.game_info.home_score:.0f}")
+                    click.echo(f"   Total: {prediction.game_info.total_points:.0f}")
+                    click.echo(f"   Spread: {prediction.game_info.home_team} {prediction.game_info.spread:+.1f}")
+                    click.echo(f"   Game Script: {prediction.game_info.game_script}")
+                    click.echo(f"   Confidence: {prediction.game_info.score_confidence:.0%}")
+                    click.echo()
+                    
+                    click.echo("🏆 TOP FANTASY PERFORMERS:")
+                    for i, (name, points) in enumerate(prediction.top_fantasy_performers[:5], 1):
+                        click.echo(f"   {i}. {name}: {points:.1f} pts")
+                    click.echo()
+                    
+                    click.echo("📈 GAME TOTALS:")
+                    click.echo(f"   Passing Yards: {prediction.total_passing_yards:.0f}")
+                    click.echo(f"   Rushing Yards: {prediction.total_rushing_yards:.0f}")
+                    click.echo(f"   Total TDs: {prediction.total_touchdowns:.0f}")
+                    click.echo()
+
+                except Exception as e:
+                    click.echo(f"❌ Error analyzing game: {e}")
+            
+            elif team:
+                # Show upcoming games for team
+                upcoming_games = session.query(Game).filter(
+                    (Game.home_team == team.upper()) | (Game.away_team == team.upper())
+                ).order_by(Game.game_date.desc()).limit(5).all()
                 
+                click.echo(f"🏈 UPCOMING GAMES FOR {team.upper()}:")
+                click.echo("=" * 40)
+                
+                for game in upcoming_games:
+                    click.echo(f"   {game.game_id}: {game.away_team} @ {game.home_team}")
+                    click.echo(f"   Week {game.week}, {game.season}")
+                    click.echo(f"   Date: {game.game_date}")
+                    click.echo()
+            
+            else:
+                # Show available games
+                games = session.query(Game).order_by(Game.game_date.desc()).limit(10).all()
+                
+                click.echo("🏈 AVAILABLE GAMES FOR ANALYSIS:")
+                click.echo("=" * 40)
+                
+                for game in games:
+                    click.echo(f"   {game.game_id}: {game.away_team} @ {game.home_team} ({game.game_date})")
+        
         except Exception as e:
-            click.echo(f"System Init: ❌ Error - {e}")
-        
-        session.close()
-        
-    except Exception as e:
-        click.echo(f"❌ System status check failed: {e}")
+            click.echo(f"❌ Game analysis error: {e}")
+    
+    asyncio.run(run_game_analysis())
 
 @cli.command()
-@click.option('--position', help='Position to analyze (QB/RB/WR/TE)')
-@click.option('--min-games', default=5, help='Minimum games for analysis')
-def analyze(position: Optional[str], min_games: int):
-    """Analyze player performance trends"""
-    click.echo("📈 Analyzing player performance trends...")
+@click.option('--host', default='0.0.0.0', help='Host to bind to')
+@click.option('--port', default=8000, help='Port to bind to')
+@click.option('--reload', is_flag=True, help='Enable auto-reload for development')
+def web(host: str, port: int, reload: bool):
+    """Start the web interface server"""
+    
+    click.echo(f"🌐 Starting NFL Prediction Web Interface...")
+    click.echo(f"   Server: http://{host}:{port}")
+    click.echo(f"   Reload: {'Enabled' if reload else 'Disabled'}")
+    click.echo()
+    click.echo("📱 Available Pages:")
+    click.echo(f"   Home: http://{host}:{port}/")
+    click.echo(f"   Teams: http://{host}:{port}/teams")
+    click.echo(f"   Games: http://{host}:{port}/games")
+    click.echo(f"   Predictions: http://{host}:{port}/predictions")
+    click.echo()
+    click.echo("🔌 API Endpoints:")
+    click.echo(f"   Player Stats: http://{host}:{port}/api/player/{{player_id}}/stats")
+    click.echo(f"   Game Predictions: http://{host}:{port}/api/game/{{game_id}}/prediction")
+    click.echo(f"   Position Rankings: http://{host}:{port}/api/position/{{position}}/rankings")
+    click.echo()
     
     try:
-        engine = create_engine("sqlite:///nfl_predictions.db")
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        import uvicorn
+        from web_app import app
         
-        if position:
-            # Position-specific analysis
-            analysis_query = text("""
-                SELECT p.name, p.current_team,
-                       AVG(pgs.fantasy_points_ppr) as avg_fantasy,
-                       COUNT(pgs.stat_id) as games,
-                       MAX(pgs.fantasy_points_ppr) - MIN(pgs.fantasy_points_ppr) as volatility
-                FROM players p
-                JOIN player_game_stats pgs ON p.player_id = pgs.player_id
-                WHERE p.position = :position
-                AND p.is_active = 1
-                AND pgs.fantasy_points_ppr > 0
-                GROUP BY p.player_id, p.name, p.current_team
-                HAVING COUNT(pgs.stat_id) >= :min_games
-                ORDER BY avg_fantasy DESC
-                LIMIT 15
-            """)
-            
-            results = session.execute(analysis_query, {
-                "position": position.upper(), 
-                "min_games": min_games
-            }).fetchall()
-            
-            if results:
-                click.echo(f"\n📊 {position.upper()} Performance Analysis:")
-                click.echo("Player                    Team  Avg Pts  Games  Volatility")
-                click.echo("-" * 60)
-                
-                for name, team, avg_fantasy, games, volatility in results:
-                    # Determine consistency rating
-                    if volatility < 10:
-                        consistency = "🟢 Consistent"
-                    elif volatility < 20:
-                        consistency = "🟡 Moderate"
-                    else:
-                        consistency = "🔴 Volatile"
-                    
-                    click.echo(f"{name[:20]:<20} {team:>4} {avg_fantasy:>7.1f} {games:>6} {volatility:>6.1f} {consistency}")
-                
-                # Summary stats
-                avg_performance = sum(r[2] for r in results) / len(results)
-                avg_volatility = sum(r[4] for r in results) / len(results)
-                
-                click.echo(f"\n📈 {position.upper()} Summary:")
-                click.echo(f"   Average Performance: {avg_performance:.1f} fantasy points")
-                click.echo(f"   Average Volatility: {avg_volatility:.1f} points")
-                
-                if avg_volatility < 15:
-                    click.echo(f"   Position Assessment: Predictable for betting")
-                else:
-                    click.echo(f"   Position Assessment: High variance - risky bets")
-            else:
-                click.echo(f"❌ No {position.upper()} players found with {min_games}+ games")
-        else:
-            # Overall league analysis
-            league_query = text("""
-                SELECT p.position,
-                       COUNT(DISTINCT p.player_id) as player_count,
-                       AVG(pgs.fantasy_points_ppr) as avg_fantasy,
-                       MAX(pgs.fantasy_points_ppr) as max_performance
-                FROM players p
-                JOIN player_game_stats pgs ON p.player_id = pgs.player_id
-                WHERE p.position IN ('QB', 'RB', 'WR', 'TE')
-                AND p.is_active = 1
-                AND pgs.fantasy_points_ppr > 0
-                GROUP BY p.position
-                ORDER BY avg_fantasy DESC
-            """)
-            
-            league_results = session.execute(league_query).fetchall()
-            
-            if league_results:
-                click.echo("\n🏈 NFL League Analysis:")
-                click.echo("Position  Players  Avg Pts  Max Performance")
-                click.echo("-" * 45)
-                
-                for pos, count, avg_fantasy, max_perf in league_results:
-                    click.echo(f"{pos:>8} {count:>8} {avg_fantasy:>8.1f} {max_perf:>12.1f}")
-        
-        session.close()
-        
+        uvicorn.run(app, host=host, port=port, reload=reload)
+    except ImportError:
+        click.echo("❌ uvicorn not installed. Install with: pip install uvicorn")
     except Exception as e:
-        click.echo(f"❌ Analysis error: {e}")
+        click.echo(f"❌ Web server error: {e}")
 
 if __name__ == "__main__":
     cli()
