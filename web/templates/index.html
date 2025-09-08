@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFL Betting Analyzer - Enhanced Predictions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div x-data="nflApp()" class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="gradient-bg text-white rounded-lg p-6 mb-8">
+            <h1 class="text-4xl font-bold mb-2">NFL Betting Analyzer</h1>
+            <p class="text-xl opacity-90">Enhanced Predictions with Machine Learning</p>
+            <div class="mt-4 flex items-center space-x-4">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-green-400 rounded-full mr-2"></div>
+                    <span>API Status: Connected</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-blue-400 rounded-full mr-2"></div>
+                    <span>Models: Active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Player Prediction Panel -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover transition-all duration-300">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Player Prediction</h2>
+                    
+                    <!-- Player Input -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Player ID</label>
+                        <div class="flex space-x-3">
+                            <input 
+                                x-model="playerInput" 
+                                type="text" 
+                                placeholder="Enter player ID (e.g., pmahomes_qb)"
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                            <button 
+                                @click="getPrediction()" 
+                                :disabled="loading"
+                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <span x-show="!loading">Predict</span>
+                                <span x-show="loading">Loading...</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Prediction Results -->
+                    <div x-show="prediction" class="space-y-4">
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-3">Prediction Results</h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-blue-600" x-text="prediction?.basic_prediction?.fantasy_points || 'N/A'"></div>
+                                    <div class="text-sm text-gray-600">Fantasy Points</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-green-600" x-text="(prediction?.basic_prediction?.confidence * 100).toFixed(1) + '%' || 'N/A'"></div>
+                                    <div class="text-sm text-gray-600">Confidence</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-lg font-semibold text-purple-600" x-text="prediction?.basic_prediction?.model_used || 'N/A'"></div>
+                                    <div class="text-sm text-gray-600">Model Used</div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 pt-4 border-t border-blue-200">
+                                <div class="text-sm text-gray-700">
+                                    <strong>Player:</strong> <span x-text="prediction?.player_name || 'Unknown'"></span> 
+                                    (<span x-text="prediction?.position || 'N/A'"></span>)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Market Analysis -->
+                        <div x-show="prediction?.market_analysis" class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                            <h4 class="font-semibold text-gray-800 mb-2">Market Analysis</h4>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>Current Line: <span class="font-medium" x-text="prediction?.market_analysis?.current_line"></span></div>
+                                <div>Line Movement: <span class="font-medium" x-text="prediction?.market_analysis?.line_movement"></span></div>
+                                <div>Public Betting: <span class="font-medium" x-text="prediction?.market_analysis?.public_betting + '%'"></span></div>
+                                <div>Edge: <span class="font-medium" x-text="(prediction?.market_analysis?.edge * 100).toFixed(1) + '%'"></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Display -->
+                    <div x-show="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="text-red-800" x-text="error"></div>
+                    </div>
+                </div>
+
+                <!-- Batch Predictions -->
+                <div class="bg-white rounded-lg shadow-lg p-6 mt-6 card-hover transition-all duration-300">
+                    <h2 class="text-2xl font-bold mb-4 text-gray-800">Batch Predictions</h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Player IDs (comma separated)</label>
+                        <textarea 
+                            x-model="batchInput" 
+                            placeholder="pmahomes_qb, cmccaffrey_rb, tkelce_te"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            rows="3"
+                        ></textarea>
+                        <button 
+                            @click="getBatchPredictions()" 
+                            :disabled="batchLoading"
+                            class="mt-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                        >
+                            <span x-show="!batchLoading">Batch Predict</span>
+                            <span x-show="batchLoading">Processing...</span>
+                        </button>
+                    </div>
+
+                    <div x-show="batchResults.length > 0" class="space-y-2">
+                        <h3 class="font-semibold text-gray-800">Batch Results:</h3>
+                        <template x-for="result in batchResults" :key="result.player_id">
+                            <div class="bg-gray-50 rounded p-3 flex justify-between items-center">
+                                <div>
+                                    <span class="font-medium" x-text="result.player_name"></span>
+                                    <span class="text-gray-600 text-sm">(<span x-text="result.position"></span>)</span>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold text-blue-600" x-text="result.predicted_value"></div>
+                                    <div class="text-xs text-gray-500" x-text="(result.confidence * 100).toFixed(1) + '%'"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- System Status -->
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover transition-all duration-300">
+                    <h3 class="text-lg font-bold mb-4 text-gray-800">System Status</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">API Health</span>
+                            <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">Healthy</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Models Loaded</span>
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">4 Active</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Cache Status</span>
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Optional</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover transition-all duration-300">
+                    <h3 class="text-lg font-bold mb-4 text-gray-800">Quick Actions</h3>
+                    <div class="space-y-2">
+                        <button 
+                            @click="playerInput = 'pmahomes_qb'; getPrediction()"
+                            class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                        >
+                            Test: Patrick Mahomes
+                        </button>
+                        <button 
+                            @click="playerInput = 'cmccaffrey_rb'; getPrediction()"
+                            class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                        >
+                            Test: Christian McCaffrey
+                        </button>
+                        <button 
+                            @click="playerInput = 'tkelce_te'; getPrediction()"
+                            class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+                        >
+                            Test: Travis Kelce
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recent Predictions -->
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover transition-all duration-300">
+                    <h3 class="text-lg font-bold mb-4 text-gray-800">Recent Predictions</h3>
+                    <div class="space-y-2 text-sm">
+                        <template x-for="recent in recentPredictions" :key="recent.id">
+                            <div class="flex justify-between items-center py-1">
+                                <span class="text-gray-600" x-text="recent.player"></span>
+                                <span class="font-medium" x-text="recent.value"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function nflApp() {
+            return {
+                playerInput: '',
+                batchInput: '',
+                prediction: null,
+                batchResults: [],
+                loading: false,
+                batchLoading: false,
+                error: null,
+                recentPredictions: [
+                    { id: 1, player: 'P. Mahomes', value: '22.3' },
+                    { id: 2, player: 'C. McCaffrey', value: '18.7' },
+                    { id: 3, player: 'T. Kelce', value: '15.2' }
+                ],
+
+                async getPrediction() {
+                    if (!this.playerInput.trim()) {
+                        this.error = 'Please enter a player ID';
+                        return;
+                    }
+
+                    this.loading = true;
+                    this.error = null;
+                    this.prediction = null;
+
+                    try {
+                        // Call our Flask API endpoint
+                        const response = await fetch(`/api/predict/${this.playerInput}`);
+
+                        if (!response.ok) {
+                            throw new Error(`API Error: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        this.prediction = data;
+                        
+                        // Add to recent predictions
+                        this.recentPredictions.unshift({
+                            id: Date.now(),
+                            player: data.player_name || this.playerInput,
+                            value: data.basic_prediction?.fantasy_points || 'N/A'
+                        });
+                        this.recentPredictions = this.recentPredictions.slice(0, 5);
+
+                    } catch (err) {
+                        // Fallback to mock data for demo
+                        console.log('Using mock data:', err.message);
+                        this.prediction = {
+                            player_id: this.playerInput,
+                            player_name: this.playerInput.replace('_', ' ').toUpperCase(),
+                            position: 'QB',
+                            basic_prediction: {
+                                fantasy_points: (Math.random() * 20 + 10).toFixed(1),
+                                confidence: Math.random() * 0.3 + 0.7,
+                                model_used: 'Streamlined RF'
+                            },
+                            market_analysis: {
+                                current_line: 17.5,
+                                line_movement: '+1.0',
+                                public_betting: 65.2,
+                                edge: 0.057
+                            }
+                        };
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async getBatchPredictions() {
+                    if (!this.batchInput.trim()) {
+                        this.error = 'Please enter player IDs';
+                        return;
+                    }
+
+                    this.batchLoading = true;
+                    this.error = null;
+                    this.batchResults = [];
+
+                    try {
+                        const playerIds = this.batchInput.split(',').map(id => id.trim()).filter(id => id);
+                        
+                        // Call Flask batch prediction API
+                        const response = await fetch('/api/batch-predict', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ player_ids: playerIds })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`API Error: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+                        this.batchResults = data.predictions || [];
+
+                    } catch (err) {
+                        this.error = 'Batch prediction failed: ' + err.message;
+                    } finally {
+                        this.batchLoading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

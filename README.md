@@ -293,52 +293,45 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
-CMD ["python", "run_nfl_system.py", "api"]
-```
-
-### Production Checklist
-
-- [ ] Configure PostgreSQL database
-- [ ] Set up API keys for data sources
-- [ ] Configure logging and monitoring
-- [ ] Set up automated backups
-- [ ] Configure reverse proxy (nginx)
-- [ ] Set up SSL certificates
-- [ ] Configure monitoring and alerting
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Run the test suite
-6. Submit a pull request
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
 ### Development Setup
-
 ```bash
 # Install development dependencies
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
-# Install pre-commit hooks
+# Run pre-commit hooks
 pre-commit install
 
-# Run code formatting
-black .
-flake8 .
-mypy .
+# Run tests before committing
+python -m pytest
 ```
 
-## 📝 License
+## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Issues**: GitHub Issues for bug reports and feature requests
+- **Documentation**: Full API documentation at `/docs`
+- **CLI Help**: `python nfl_cli.py --help` for command reference
+
+---
+
+**Built for the 2025 NFL Season** 🏆
 
 ## 🆘 Support
 
 - **Documentation**: Check this README and inline code documentation
 - **Issues**: Report bugs and feature requests via GitHub issues
-- **Demo**: Run `python demo.py` for a comprehensive system demonstration
 
 ## 🔄 Changelog
 

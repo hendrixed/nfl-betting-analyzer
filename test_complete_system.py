@@ -1,350 +1,236 @@
 """
-Complete NFL Prediction System End-to-End Test
-
-This module performs comprehensive testing of the repaired NFL prediction system
-to validate all components are working correctly.
+Complete System Test for NFL Betting Analyzer
+Tests the integrated system with streamlined models and API functionality
 """
-
-import logging
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Optional
+import sys
+import os
+import time
 from datetime import datetime
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
 
-logger = logging.getLogger(__name__)
+# Add current directory to path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-class SystemValidator:
-    """Complete system validation and testing"""
+from core.database_models import get_db_session, Player, PlayerGameStats
+from core.models.streamlined_models import StreamlinedNFLModels
+
+def test_database_connection():
+    """Test database connectivity and data availability."""
+    print("Testing Database Connection...")
     
-    def __init__(self, db_path: str = "nfl_predictions.db"):
-        self.db_path = db_path
-        self.engine = create_engine(f"sqlite:///{db_path}")
-        Session = sessionmaker(bind=self.engine)
-        self.session = Session()
+    try:
+        session = get_db_session()
         
-        self.test_results = {}
-        self.validation_report = {}
+        # Test basic queries
+        player_count = session.query(Player).count()
+        active_players = session.query(Player).filter(Player.is_active == True).count()
+        stats_count = session.query(PlayerGameStats).count()
         
-    def test_database_connectivity(self) -> bool:
-        """Test database connection and basic queries"""
+        print(f"Database connected successfully")
+        print(f"   Total players: {player_count}")
+        print(f"   Active players: {active_players}")
+        print(f"   Player game stats: {stats_count}")
         
-        logger.info("🔌 Testing database connectivity...")
+        # Get sample players for testing
+        sample_players = session.query(Player).filter(Player.is_active == True).limit(5).all()
+        print(f"   Sample players available for testing:")
+        for player in sample_players:
+            print(f"      - {player.name} ({player.position}) - ID: {player.player_id}")
         
-        try:
-            # Test basic connection
-            test_query = text("SELECT 1")
-            result = self.session.execute(test_query).fetchone()
+        session.close()
+        return True, sample_players
+        
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        return False, []
+
+def test_model_loading():
+    """Test model loading and initialization."""
+    print("\nTesting Model Loading...")
+    
+    try:
+        session = get_db_session()
+        models = StreamlinedNFLModels(session)
+        
+        print("StreamlinedNFLModels initialized successfully")
+        
+        # Test model summary
+        summary = models.get_model_summary()
+        if summary:
+            print(f"   Model Summary:")
+            for position, info in summary.items():
+                print(f"      - {position}: {info.get('model_type', 'Unknown')} (R²: {info.get('r2_score', 'N/A')})")
+        
+        session.close()
+        return True, models
+        
+    except Exception as e:
+        print(f"Model loading failed: {e}")
+        return False, None
+
+def test_predictions(models, sample_players):
+    """Test prediction functionality."""
+    print("\nTesting Predictions...")
+    
+    if not models or not sample_players:
+        print("Cannot test predictions - models or players not available")
+        return False
+    
+    try:
+        successful_predictions = 0
+        total_tests = min(3, len(sample_players))
+        
+        for i, player in enumerate(sample_players[:total_tests]):
+            print(f"\n   Testing prediction for {player.name} ({player.position})...")
             
-            if result and result[0] == 1:
-                logger.info("✅ Database connection successful")
-                return True
+            start_time = time.time()
+            prediction = models.predict_player(player.player_id)
+            prediction_time = time.time() - start_time
+            
+            if prediction:
+                print(f"   Prediction successful:")
+                print(f"      - Player: {prediction.player_name}")
+                print(f"      - Position: {prediction.position}")
+                print(f"      - Predicted Value: {prediction.predicted_value:.2f}")
+                print(f"      - Confidence: {prediction.confidence:.3f}")
+                print(f"      - Model Used: {prediction.model_used}")
+                print(f"      - Prediction Time: {prediction_time:.3f}s")
+                successful_predictions += 1
             else:
-                logger.error("❌ Database connection failed")
-                return False
-                
-        except Exception as e:
-            logger.error(f"❌ Database connectivity test failed: {e}")
-            return False
-    
-    def test_data_availability(self) -> Dict[str, any]:
-        """Test data availability and coverage"""
+                print(f"   No prediction available for {player.name}")
         
-        logger.info("📊 Testing data availability...")
+        success_rate = successful_predictions / total_tests
+        print(f"\n   Prediction Success Rate: {successful_predictions}/{total_tests} ({success_rate:.1%})")
         
-        try:
-            # Count players
-            players_query = text("SELECT COUNT(*) FROM players")
-            players_count = self.session.execute(players_query).fetchone()[0]
-            
-            # Count stats
-            stats_query = text("SELECT COUNT(*) FROM player_game_stats")
-            stats_count = self.session.execute(stats_query).fetchone()[0]
-            
-            # Count by position
-            position_query = text("""
-                SELECT position, COUNT(*) 
-                FROM players 
-                WHERE position IN ('QB', 'RB', 'WR', 'TE')
-                GROUP BY position
-            """)
-            position_results = self.session.execute(position_query).fetchall()
-            position_breakdown = {row[0]: row[1] for row in position_results}
-            
-            # Check schedule
-            try:
-                schedule_query = text("SELECT COUNT(*) FROM nfl_schedule")
-                schedule_count = self.session.execute(schedule_query).fetchone()[0]
-            except:
-                schedule_count = 0
-            
-            data_summary = {
-                'players_total': players_count,
-                'stats_total': stats_count,
-                'schedule_games': schedule_count,
-                'position_breakdown': position_breakdown,
-                'data_quality': 'good' if players_count > 50 and stats_count > 100 else 'limited'
-            }
-            
-            logger.info(f"✅ Data: {players_count} players, {stats_count} stats, {schedule_count} games")
-            return data_summary
-            
-        except Exception as e:
-            logger.error(f"❌ Data availability test failed: {e}")
-            return {}
-    
-    def test_model_system(self) -> Dict[str, any]:
-        """Test model loading and functionality"""
+        return success_rate > 0.5
         
-        logger.info("🤖 Testing model system...")
-        
-        try:
-            from real_time_nfl_system import RealTimeNFLSystem
-            
-            # Initialize system
-            nfl_system = RealTimeNFLSystem()
-            
-            # Check model loading
-            model_count = len(nfl_system.models) if hasattr(nfl_system, 'models') else 0
-            scaler_count = len(nfl_system.scalers) if hasattr(nfl_system, 'scalers') else 0
-            
-            model_summary = {
-                'models_loaded': model_count,
-                'scalers_loaded': scaler_count,
-                'system_initialized': True,
-                'model_status': 'functional' if model_count > 5 else 'limited'
-            }
-            
-            logger.info(f"✅ Models: {model_count} loaded, {scaler_count} scalers")
-            return model_summary
-            
-        except Exception as e:
-            logger.error(f"❌ Model system test failed: {e}")
-            return {'system_initialized': False, 'error': str(e)}
-    
-    def test_prediction_functionality(self) -> Dict[str, any]:
-        """Test actual prediction functionality"""
-        
-        logger.info("🎯 Testing prediction functionality...")
-        
-        try:
-            from real_time_nfl_system import RealTimeNFLSystem
-            
-            # Initialize system
-            nfl_system = RealTimeNFLSystem()
-            
-            # Get sample players for testing
-            sample_players_query = text("""
-                SELECT player_id, name, position 
-                FROM players 
-                WHERE position IN ('QB', 'RB', 'WR', 'TE')
-                LIMIT 5
-            """)
-            
-            sample_players = self.session.execute(sample_players_query).fetchall()
-            
-            prediction_results = {
-                'test_players': len(sample_players),
-                'successful_predictions': 0,
-                'failed_predictions': 0,
-                'sample_predictions': []
-            }
-            
-            for player in sample_players:
-                try:
-                    player_id, name, position = player
-                    
-                    # Create a simple test prediction
-                    # This is a basic test - in a real scenario we'd use actual game context
-                    test_features = {
-                        'position': position,
-                        'recent_performance': 10.0,
-                        'opponent_strength': 0.5,
-                        'home_advantage': 1.0
-                    }
-                    
-                    # For now, just verify the system can handle the request
-                    # without throwing errors
-                    prediction_results['successful_predictions'] += 1
-                    prediction_results['sample_predictions'].append({
-                        'player': name,
-                        'position': position,
-                        'test_status': 'passed'
-                    })
-                    
-                except Exception as e:
-                    prediction_results['failed_predictions'] += 1
-                    logger.warning(f"Prediction test failed for {name}: {e}")
-            
-            success_rate = (prediction_results['successful_predictions'] / 
-                          len(sample_players) * 100) if sample_players else 0
-            
-            prediction_results['success_rate'] = success_rate
-            prediction_results['status'] = 'functional' if success_rate > 80 else 'limited'
-            
-            logger.info(f"✅ Predictions: {success_rate:.1f}% success rate")
-            return prediction_results
-            
-        except Exception as e:
-            logger.error(f"❌ Prediction functionality test failed: {e}")
-            return {'status': 'failed', 'error': str(e)}
-    
-    def test_data_quality(self) -> Dict[str, any]:
-        """Test data quality and consistency"""
-        
-        logger.info("🔍 Testing data quality...")
-        
-        try:
-            # Check for data completeness
-            completeness_query = text("""
-                SELECT 
-                    COUNT(*) as total_players,
-                    COUNT(CASE WHEN name IS NOT NULL AND name != '' THEN 1 END) as named_players,
-                    COUNT(CASE WHEN position IS NOT NULL AND position != '' THEN 1 END) as positioned_players,
-                    COUNT(CASE WHEN current_team IS NOT NULL AND current_team != '' THEN 1 END) as team_players
-                FROM players
-            """)
-            
-            completeness_result = self.session.execute(completeness_query).fetchone()
-            
-            # Check stats data quality
-            stats_quality_query = text("""
-                SELECT 
-                    COUNT(*) as total_stats,
-                    COUNT(CASE WHEN fantasy_points_ppr > 0 THEN 1 END) as positive_fantasy,
-                    AVG(fantasy_points_ppr) as avg_fantasy_points
-                FROM player_game_stats
-            """)
-            
-            stats_result = self.session.execute(stats_quality_query).fetchone()
-            
-            quality_summary = {
-                'player_completeness': {
-                    'total': completeness_result[0],
-                    'named': completeness_result[1],
-                    'positioned': completeness_result[2],
-                    'team_assigned': completeness_result[3]
-                },
-                'stats_quality': {
-                    'total_records': stats_result[0],
-                    'positive_fantasy': stats_result[1],
-                    'avg_fantasy_points': float(stats_result[2] or 0)
-                },
-                'completeness_score': (completeness_result[1] / completeness_result[0] * 100) if completeness_result[0] > 0 else 0,
-                'data_quality_grade': 'good' if completeness_result[1] > completeness_result[0] * 0.8 else 'needs_improvement'
-            }
-            
-            logger.info(f"✅ Data Quality: {quality_summary['completeness_score']:.1f}% complete")
-            return quality_summary
-            
-        except Exception as e:
-            logger.error(f"❌ Data quality test failed: {e}")
-            return {}
-    
-    def run_comprehensive_validation(self) -> Dict[str, any]:
-        """Run complete system validation"""
-        
-        logger.info("🚀 Starting comprehensive system validation...")
-        
-        validation_tests = [
-            ("Database Connectivity", self.test_database_connectivity),
-            ("Data Availability", self.test_data_availability),
-            ("Model System", self.test_model_system),
-            ("Prediction Functionality", self.test_prediction_functionality),
-            ("Data Quality", self.test_data_quality)
-        ]
-        
-        validation_results = {}
-        passed_tests = 0
-        total_tests = len(validation_tests)
-        
-        for test_name, test_function in validation_tests:
-            logger.info(f"\n🔄 Running: {test_name}")
-            
-            try:
-                test_result = test_function()
-                validation_results[test_name] = test_result
-                
-                # Determine if test passed
-                if isinstance(test_result, bool):
-                    test_passed = test_result
-                elif isinstance(test_result, dict):
-                    # Check for success indicators
-                    test_passed = (
-                        test_result.get('system_initialized', True) and
-                        not test_result.get('error') and
-                        test_result.get('status') != 'failed'
-                    )
-                else:
-                    test_passed = True
-                
-                if test_passed:
-                    logger.info(f"✅ {test_name}: PASSED")
-                    passed_tests += 1
-                else:
-                    logger.warning(f"⚠️ {test_name}: PARTIAL/FAILED")
-                    
-            except Exception as e:
-                logger.error(f"❌ {test_name}: ERROR - {e}")
-                validation_results[test_name] = {'error': str(e)}
-        
-        # Generate overall assessment
-        success_rate = (passed_tests / total_tests) * 100
-        
-        overall_assessment = {
-            'tests_passed': passed_tests,
-            'total_tests': total_tests,
-            'success_rate': success_rate,
-            'system_status': (
-                'fully_functional' if success_rate >= 80 else
-                'partially_functional' if success_rate >= 60 else
-                'needs_repair'
-            ),
-            'validation_timestamp': datetime.now().isoformat(),
-            'detailed_results': validation_results
-        }
-        
-        # Log summary
-        logger.info("\n" + "="*60)
-        logger.info("🎯 SYSTEM VALIDATION SUMMARY")
-        logger.info("="*60)
-        logger.info(f"Tests Passed: {passed_tests}/{total_tests} ({success_rate:.1f}%)")
-        logger.info(f"System Status: {overall_assessment['system_status'].upper()}")
-        
-        if success_rate >= 80:
-            logger.info("🎉 System validation PASSED! NFL prediction system is functional.")
-        elif success_rate >= 60:
-            logger.info("⚠️ System validation PARTIAL. Some functionality may be limited.")
-        else:
-            logger.warning("❌ System validation FAILED. Significant repairs needed.")
-        
-        return overall_assessment
-
-def main():
-    """Run complete system validation"""
-    
-    print("🧪 NFL Prediction System Validation")
-    print("=" * 60)
-    
-    validator = SystemValidator()
-    results = validator.run_comprehensive_validation()
-    
-    success_rate = results.get('success_rate', 0)
-    
-    if success_rate >= 80:
-        print("\n✅ System validation COMPLETED successfully!")
-        print("   The NFL prediction system is fully functional.")
-        return True
-    elif success_rate >= 60:
-        print("\n⚠️ System validation PARTIALLY successful!")
-        print("   The NFL prediction system has limited functionality.")
-        return True
-    else:
-        print("\n❌ System validation FAILED!")
-        print("   The NFL prediction system needs significant repairs.")
+    except Exception as e:
+        print(f"Prediction testing failed: {e}")
         return False
 
+def test_batch_predictions(models, sample_players):
+    """Test batch prediction functionality."""
+    print("\nTesting Batch Predictions...")
+    
+    if not models or not sample_players:
+        print("Cannot test batch predictions - models or players not available")
+        return False
+    
+    try:
+        player_ids = [player.player_id for player in sample_players[:3]]
+        print(f"   Testing batch prediction for {len(player_ids)} players...")
+        
+        start_time = time.time()
+        results = []
+        
+        for player_id in player_ids:
+            prediction = models.predict_player(player_id)
+            if prediction:
+                results.append(prediction)
+        
+        batch_time = time.time() - start_time
+        
+        print(f"   Batch predictions completed:")
+        print(f"      - Players processed: {len(results)}/{len(player_ids)}")
+        print(f"      - Total time: {batch_time:.3f}s")
+        print(f"      - Avg time per prediction: {batch_time/len(player_ids):.3f}s")
+        
+        for result in results:
+            print(f"      - {result.player_name}: {result.predicted_value:.2f} ({result.confidence:.3f})")
+        
+        return len(results) > 0
+        
+    except Exception as e:
+        print(f"Batch prediction testing failed: {e}")
+        return False
+
+def test_api_integration():
+    """Test API integration readiness."""
+    print("\nTesting API Integration Readiness...")
+    
+    try:
+        # Check if enhanced API file exists and is properly configured
+        api_file = "api/enhanced_prediction_api.py"
+        web_file = "web/web_server.py"
+        
+        api_exists = os.path.exists(api_file)
+        web_exists = os.path.exists(web_file)
+        
+        print(f"   Enhanced API file: {'Found' if api_exists else 'Missing'}")
+        print(f"   Web server file: {'Found' if web_exists else 'Missing'}")
+        
+        # Check web interface
+        web_template = "web/templates/index.html"
+        template_exists = os.path.exists(web_template)
+        print(f"   Web interface: {'Found' if template_exists else 'Missing'}")
+        
+        if api_exists and web_exists and template_exists:
+            print("   All API components ready for deployment")
+            return True
+        else:
+            print("   Some API components missing")
+            return False
+            
+    except Exception as e:
+        print(f"API integration test failed: {e}")
+        return False
+
+def run_complete_system_test():
+    """Run comprehensive system test."""
+    print("NFL Betting Analyzer - Complete System Test")
+    print("=" * 60)
+    print(f"Test started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    test_results = {}
+    
+    # Test 1: Database Connection
+    db_success, sample_players = test_database_connection()
+    test_results['database'] = db_success
+    
+    # Test 2: Model Loading
+    model_success, models = test_model_loading()
+    test_results['models'] = model_success
+    
+    # Test 3: Predictions
+    if db_success and model_success:
+        pred_success = test_predictions(models, sample_players)
+        test_results['predictions'] = pred_success
+        
+        # Test 4: Batch Predictions
+        batch_success = test_batch_predictions(models, sample_players)
+        test_results['batch_predictions'] = batch_success
+    else:
+        test_results['predictions'] = False
+        test_results['batch_predictions'] = False
+    
+    # Test 5: API Integration
+    api_success = test_api_integration()
+    test_results['api_integration'] = api_success
+    
+    # Summary
+    print("\n" + "=" * 60)
+    print("TEST SUMMARY")
+    print("=" * 60)
+    
+    total_tests = len(test_results)
+    passed_tests = sum(test_results.values())
+    
+    for test_name, result in test_results.items():
+        status = "PASS" if result else "FAIL"
+        print(f"{test_name.replace('_', ' ').title():<20} {status}")
+    
+    print("-" * 60)
+    print(f"Overall Result: {passed_tests}/{total_tests} tests passed ({passed_tests/total_tests:.1%})")
+    
+    if passed_tests == total_tests:
+        print("ALL TESTS PASSED - System ready for production!")
+    elif passed_tests >= total_tests * 0.8:
+        print("MOSTLY SUCCESSFUL - System ready with minor issues")
+    else:
+        print("ISSUES DETECTED - System needs attention")
+    
+    print(f"\nTest completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    return passed_tests / total_tests
+
 if __name__ == "__main__":
-    success = main()
-    exit(0 if success else 1)
+    success_rate = run_complete_system_test()
+    exit(0 if success_rate >= 0.8 else 1)
