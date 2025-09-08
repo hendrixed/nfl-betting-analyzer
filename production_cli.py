@@ -20,7 +20,8 @@ def cli():
 @click.option('--player-name', help='Player name to analyze')
 @click.option('--position', help='Position to analyze (QB/RB/WR/TE)')
 @click.option('--comprehensive', is_flag=True, help='Show all 20+ statistics')
-def stats(player_name: Optional[str], position: Optional[str], comprehensive: bool):
+@click.option('--active-only', is_flag=True, default=True, help='Show only active players')
+def stats(player_name: Optional[str], position: Optional[str], comprehensive: bool, active_only: bool):
     """Get comprehensive player statistics (20+ categories)"""
     
     try:
@@ -135,8 +136,8 @@ def stats(player_name: Optional[str], position: Optional[str], comprehensive: bo
                 click.echo(f"❌ Player '{player_name}' not found")
                 
         elif position:
-            # Get comprehensive stats for top players at position
-            comprehensive_stats = stats_engine.get_all_position_comprehensive_stats(position, limit=5)
+            # Get comprehensive stats for top players at position (active only)
+            comprehensive_stats = stats_engine.get_all_position_comprehensive_stats(position, limit=5, active_only=active_only)
             
             click.echo(f"🏆 Top 5 {position} Comprehensive Analysis:")
             click.echo("=" * 60)
@@ -178,12 +179,12 @@ def predict(player_id: Optional[str], team: Optional[str], top: int):
         session = Session()
         
         if player_id:
-            # Predict specific player
+            # Predict specific player (active only)
             player_query = text("""
                 SELECT p.name, p.position, p.current_team, AVG(pgs.fantasy_points_ppr) as avg_fantasy
                 FROM players p
                 JOIN player_game_stats pgs ON p.player_id = pgs.player_id
-                WHERE p.player_id = :player_id
+                WHERE p.player_id = :player_id AND p.is_active = 1
                 GROUP BY p.player_id, p.name, p.position, p.current_team
             """)
             
@@ -243,6 +244,7 @@ def predict(player_id: Optional[str], team: Optional[str], top: int):
                 WHERE UPPER(p.current_team) = UPPER(:team)
                 AND p.is_active = 1
                 AND pgs.fantasy_points_ppr > 0
+                AND pgs.created_at >= '2024-01-01'
                 GROUP BY p.player_id, p.name, p.position
                 HAVING COUNT(pgs.stat_id) >= 3
                 ORDER BY avg_fantasy DESC
@@ -274,6 +276,7 @@ def predict(player_id: Optional[str], team: Optional[str], top: int):
                 WHERE p.position IN ('QB', 'RB', 'WR', 'TE')
                 AND p.is_active = 1
                 AND pgs.fantasy_points_ppr > 0
+                AND pgs.created_at >= '2024-01-01'
                 GROUP BY p.player_id, p.name, p.position, p.current_team
                 HAVING COUNT(pgs.stat_id) >= 3
                 ORDER BY avg_fantasy DESC
@@ -381,6 +384,93 @@ def game_analysis(game_id: Optional[str], team: Optional[str]):
             click.echo(f"❌ Game analysis error: {e}")
     
     asyncio.run(run_game_analysis())
+
+@cli.command()
+def cleanup_data():
+    """Clean up inactive players and validate data quality"""
+    
+    try:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from data_cleanup_service import DataCleanupService
+        
+        engine = create_engine("sqlite:///nfl_predictions.db")
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        cleanup_service = DataCleanupService(session)
+        results = cleanup_service.full_cleanup()
+        
+        click.echo("✅ Data cleanup completed")
+        click.echo("   - Retired players marked inactive")
+        click.echo("   - Players without 2024 stats marked inactive")
+        click.echo("   - Duplicate players cleaned")
+        click.echo("   - Team assignments updated")
+        
+        session.close()
+        
+    except Exception as e:
+        click.echo(f"❌ Cleanup error: {e}")
+
+@cli.command()
+@click.option('--player-name', help='Player name to predict')
+@click.option('--show-props', is_flag=True, help='Show prop betting lines and projections')
+def predict_comprehensive(player_name: Optional[str], show_props: bool):
+    """Generate comprehensive NFL predictions with prop betting focus"""
+    
+    try:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from simplified_database_models import Player
+        
+        engine = create_engine("sqlite:///nfl_predictions.db")
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Filter for active players only
+        player = session.query(Player).filter(
+            Player.name.ilike(f"%{player_name}%"),
+            Player.is_active == True  # Critical filter
+        ).first()
+        
+        if not player:
+            click.echo(f"❌ Active player '{player_name}' not found")
+            return
+        
+        # Get comprehensive stats
+        from comprehensive_stats_engine import ComprehensiveStatsEngine
+        stats_engine = ComprehensiveStatsEngine(session)
+        comp_stats = stats_engine.get_player_comprehensive_stats(player.name)
+        
+        if comp_stats:
+            click.echo(f"🎯 COMPREHENSIVE PREDICTION: {comp_stats.name}")
+            click.echo("=" * 50)
+            click.echo(f"Position: {comp_stats.position} | Team: {comp_stats.team}")
+            click.echo(f"Status: {'ACTIVE' if player.is_active else 'INACTIVE'}")
+            click.echo()
+            
+            if show_props:
+                click.echo("🎯 PROP BETTING PROJECTIONS:")
+                if comp_stats.position == 'QB':
+                    click.echo(f"   Passing Yards Projection: {comp_stats.passing_yards:.0f}")
+                    click.echo(f"   Passing TDs Projection: {comp_stats.passing_touchdowns:.1f}")
+                    click.echo(f"   Rushing Yards Projection: {comp_stats.rushing_yards:.0f}")
+                elif comp_stats.position == 'RB':
+                    click.echo(f"   Rushing Yards Projection: {comp_stats.rushing_yards:.0f}")
+                    click.echo(f"   Rushing TDs Projection: {comp_stats.rushing_touchdowns:.1f}")
+                    click.echo(f"   Receptions Projection: {comp_stats.receptions:.0f}")
+                elif comp_stats.position in ['WR', 'TE']:
+                    click.echo(f"   Receiving Yards Projection: {comp_stats.receiving_yards:.0f}")
+                    click.echo(f"   Receiving TDs Projection: {comp_stats.receiving_touchdowns:.1f}")
+                    click.echo(f"   Receptions Projection: {comp_stats.receptions:.0f}")
+                
+                click.echo(f"   Anytime TD Probability: {comp_stats.anytime_touchdown_probability:.1%}")
+                click.echo(f"   Prediction Confidence: {comp_stats.prediction_confidence:.1%}")
+        
+        session.close()
+        
+    except Exception as e:
+        click.echo(f"❌ Prediction error: {e}")
 
 @cli.command()
 @click.option('--host', default='0.0.0.0', help='Host to bind to')

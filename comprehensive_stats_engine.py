@@ -27,6 +27,7 @@ class ComprehensivePlayerStats:
     name: str
     position: str
     team: str
+    is_active: bool = True
     
     # Basic Passing Stats (for all positions)
     passing_attempts: int = 0
@@ -127,10 +128,33 @@ class ComprehensivePlayerStats:
     
     # Trends and Projections
     last_5_games_trend: str = ""  # up/down/stable
-    season_projection: Dict[str, float] = field(default_factory=dict)
-    rest_days: int = 0
+    season_projection: float = 0.0
     
-    # Confidence and Reliability
+    # Prop Betting Projections
+    passing_yards_projection: float = 0.0
+    passing_tds_projection: float = 0.0
+    rushing_yards_projection: float = 0.0
+    rushing_tds_projection: float = 0.0
+    receiving_yards_projection: float = 0.0
+    receiving_tds_projection: float = 0.0
+    receptions_projection: float = 0.0
+    
+    # Over/Under Lines (typical sportsbook lines)
+    passing_yards_ou_line: float = 0.0
+    rushing_yards_ou_line: float = 0.0
+    receiving_yards_ou_line: float = 0.0
+    receptions_ou_line: float = 0.0
+    
+    # Confidence intervals
+    passing_yards_confidence: float = 0.0
+    rushing_yards_confidence: float = 0.0
+    receiving_yards_confidence: float = 0.0
+    
+    # Historical performance vs similar matchups
+    vs_similar_defenses_avg: Dict[str, float] = field(default_factory=dict)
+    home_away_splits: Dict[str, float] = field(default_factory=dict)
+    
+    # Data Quality Metrics
     data_completeness: float = 0.0
     prediction_confidence: float = 0.0
 
@@ -163,6 +187,58 @@ class ComprehensiveStatsEngine:
                 'fantasy_points_standard', 'fantasy_points_ppr'
             ]
         }
+    
+    def get_player_comprehensive_stats(self, player_name: str, active_only: bool = True) -> Optional[ComprehensivePlayerStats]:
+        """Get comprehensive statistics for a specific player (active only by default)"""
+        
+        try:
+            # Find player by name (active only by default)
+            query = self.session.query(Player).filter(
+                Player.name.ilike(f"%{player_name}%")
+            )
+            
+            if active_only:
+                query = query.filter(Player.is_active == True)
+            
+            player = query.first()
+            
+            if not player:
+                raise ValueError(f"Player {player_name} not found")
+            
+            # Get recent game stats from current season only (last 10 games)
+            from datetime import date
+            recent_stats = self.session.query(PlayerGameStats).filter(
+                PlayerGameStats.player_id == player.player_id,
+                PlayerGameStats.created_at >= date(2024, 8, 1)  # Current season only
+            ).order_by(PlayerGameStats.created_at.desc()).limit(10).all()
+        
+            if not recent_stats:
+                # Return basic stats structure
+                return ComprehensivePlayerStats(
+                    player_id=player.player_id,
+                    name=player.name,
+                    position=player.position,
+                    team=player.current_team or "UNK",
+                    is_active=player.is_active,
+                )
+            
+            # Calculate comprehensive stats
+            stats = self._calculate_comprehensive_stats(player, recent_stats)
+            
+            # Add advanced calculations
+            stats = self._add_advanced_calculations(stats, recent_stats)
+            
+            # Add position-specific analysis
+            stats = self._add_position_specific_analysis(stats, player.position)
+            
+            # Add betting-relevant calculations
+            stats = self._add_betting_calculations(stats)
+            
+            return stats
+        
+        except Exception as e:
+            logger.warning(f"Error getting stats for {player_name}: {e}")
+            return None
     
     def get_comprehensive_player_stats(self, player_id: str, weeks_back: int = 5) -> ComprehensivePlayerStats:
         """Get comprehensive statistics for a player"""
@@ -377,28 +453,38 @@ class ComprehensiveStatsEngine:
         except:
             return 0.0
     
-    def get_all_position_comprehensive_stats(self, position: str, limit: int = 20) -> List[ComprehensivePlayerStats]:
-        """Get comprehensive stats for all players at a position"""
+    def get_all_position_comprehensive_stats(self, position: str, limit: int = 10, active_only: bool = True) -> List[ComprehensivePlayerStats]:
+        """Get comprehensive stats for all players at a position (active only by default)"""
         
-        players = self.session.query(Player).filter(
-            Player.position == position,
-            Player.is_active == True
-        ).limit(limit).all()
+        try:
+            # Get all players at position (active only by default)
+            query = self.session.query(Player).filter(
+                Player.position == position.upper()
+            )
+            
+            if active_only:
+                query = query.filter(Player.is_active == True)
+            
+            players = query.limit(limit).all()
+            
+            comprehensive_stats = []
+            
+            for player in players:
+                try:
+                    stats = self.get_comprehensive_player_stats(player.player_id)
+                    comprehensive_stats.append(stats)
+                except Exception as e:
+                    logger.warning(f"Error getting stats for {player.name}: {e}")
+                    continue
+            
+            # Sort by fantasy points
+            comprehensive_stats.sort(key=lambda x: x.fantasy_points_ppr, reverse=True)
+            
+            return comprehensive_stats
         
-        comprehensive_stats = []
-        
-        for player in players:
-            try:
-                stats = self.get_comprehensive_player_stats(player.player_id)
-                comprehensive_stats.append(stats)
-            except Exception as e:
-                logger.warning(f"Error getting stats for {player.name}: {e}")
-                continue
-        
-        # Sort by fantasy points
-        comprehensive_stats.sort(key=lambda x: x.fantasy_points_ppr, reverse=True)
-        
-        return comprehensive_stats
+        except Exception as e:
+            logger.warning(f"Error getting comprehensive stats for {position}: {e}")
+            return []
 
 def main():
     """Test comprehensive stats engine"""
