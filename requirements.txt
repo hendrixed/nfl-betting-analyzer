@@ -36,6 +36,8 @@ selenium>=4.5.0
 nfl-data-py>=0.3.0
 
 # CLI & Configuration
+typer>=0.9.0
+rich>=13.0.0
 click>=8.0.0
 pyyaml>=6.0
 python-dotenv>=0.20.0

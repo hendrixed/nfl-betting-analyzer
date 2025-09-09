@@ -17,6 +17,7 @@ from sqlalchemy import func, and_, or_
 
 from ..database_models import Player, Team, Game, PlayerGameStats, get_db_session
 from ..data.statistical_computing_engine import NFLStatisticalComputingEngine
+from ..data.ingestion_adapters import CacheManager, UnifiedDataIngestion
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +49,20 @@ class ModelFeatures:
 class NFLFeatureEngineer:
     """Advanced feature engineering for NFL predictions"""
     
-    def __init__(self, session: Session):
+    def __init__(self, session: Session, cache_manager: Optional[CacheManager] = None):
         self.session = session
-        self.current_season = 2025
-        self.stats_engine = NFLStatisticalComputingEngine(session)
+        self.cache_manager = cache_manager or CacheManager()
+        self.statistical_engine = NFLStatisticalComputingEngine(session)
         
-        # Feature engineering parameters
-        self.lookback_games = 8  # Games to look back for rolling averages
-        self.min_games_required = 3  # Minimum games for feature calculation
+        # Feature configuration
+        self.lookback_windows = [3, 5, 8, 16]  # Games to look back for trends
+        self.position_groups = {
+            'skill': ['QB', 'RB', 'WR', 'TE'],
+            'offensive_line': ['C', 'G', 'T'],
+            'defensive': ['DE', 'DT', 'LB', 'CB', 'S']
+        }
+        
+        logger.info("NFL Feature Engineer initialized")
         
         # Position-specific feature weights
         self.position_weights = {
@@ -80,10 +87,450 @@ class NFLFeatureEngineer:
             'TE': {
                 'passing': 0.0,
                 'rushing': 0.05,
-                'receiving': 0.85,
-                'team_context': 0.1
+                'receiving': 0.75,
+                'team_context': 0.2
             }
         }
+    
+    async def engineer_player_features(
+        self, 
+        player_id: str, 
+        season: int, 
+        week: int,
+        target_stats: List[str] = None
+    ) -> Dict[str, Any]:
+        """Engineer comprehensive features for a specific player"""
+        
+        target_stats = target_stats or ['fantasy_points_ppr']
+        
+        try:
+            # Get player info and position
+            player = self.session.query(Player).filter(Player.player_id == player_id).first()
+            if not player:
+                raise ValueError(f"Player {player_id} not found")
+            
+            features = {}
+            
+            # 1. Historical performance features
+            historical_features = await self._compute_historical_features(
+                player_id, season, week, player.position
+            )
+            features.update(historical_features)
+            
+            # 2. Matchup-specific features
+            matchup_features = await self._compute_matchup_features(
+                player_id, season, week
+            )
+            features.update(matchup_features)
+            
+            # 3. Situational features (weather, injuries, etc.)
+            situational_features = await self._compute_situational_features(
+                player_id, season, week
+            )
+            features.update(situational_features)
+            
+            # 4. Team context features
+            team_features = await self._compute_team_context_features(
+                player.current_team, season, week
+            )
+            features.update(team_features)
+            
+            # 5. Advanced metrics
+            advanced_features = await self._compute_advanced_metrics(
+                player_id, season, week, player.position
+            )
+            features.update(advanced_features)
+            
+            logger.info(f"Engineered {len(features)} features for player {player_id}")
+            return features
+            
+        except Exception as e:
+            logger.error(f"Error engineering features for player {player_id}: {e}")
+            raise
+    
+    async def _compute_historical_features(
+        self, 
+        player_id: str, 
+        season: int, 
+        week: int,
+        position: str
+    ) -> Dict[str, float]:
+        """Compute rolling averages and trends from historical performance"""
+        
+        features = {}
+        
+        # Get historical stats for multiple lookback windows
+        for window in self.lookback_windows:
+            historical_stats = self.session.query(PlayerGameStats).join(Game).filter(
+                and_(
+                    PlayerGameStats.player_id == player_id,
+                    Game.season == season,
+                    Game.week < week,
+                    Game.week >= max(1, week - window)
+                )
+            ).order_by(Game.week.desc()).all()
+            
+            if len(historical_stats) < 2:  # Need minimum data
+                continue
+                
+            # Compute rolling averages
+            stats_df = pd.DataFrame([{
+                'passing_yards': s.passing_yards or 0,
+                'passing_tds': s.passing_touchdowns or 0,
+                'rushing_yards': s.rushing_yards or 0,
+                'rushing_tds': s.rushing_touchdowns or 0,
+                'receiving_yards': s.receiving_yards or 0,
+                'receiving_tds': s.receiving_touchdowns or 0,
+                'receptions': s.receptions or 0,
+                'targets': s.targets or 0,
+                'snap_percentage': s.snap_percentage or 0.0
+            } for s in historical_stats])
+            
+            # Rolling averages
+            for col in stats_df.columns:
+                features[f'{col}_avg_{window}g'] = stats_df[col].mean()
+                features[f'{col}_std_{window}g'] = stats_df[col].std()
+                
+            # Trend analysis (slope of recent performance)
+            if len(stats_df) >= 3:
+                for col in ['passing_yards', 'rushing_yards', 'receiving_yards']:
+                    if col in stats_df.columns:
+                        x = np.arange(len(stats_df))
+                        y = stats_df[col].values
+                        slope = np.polyfit(x, y, 1)[0] if len(y) > 1 else 0
+                        features[f'{col}_trend_{window}g'] = slope
+        
+        return features
+    
+    async def _compute_matchup_features(
+        self, 
+        player_id: str, 
+        season: int, 
+        week: int
+    ) -> Dict[str, float]:
+        """Compute opponent-specific matchup features"""
+        
+        features = {}
+        
+        # Get upcoming game info
+        game = self.session.query(Game).filter(
+            and_(
+                Game.season == season,
+                Game.week == week,
+                or_(
+                    Game.home_team == self.session.query(Player.current_team).filter(
+                        Player.player_id == player_id
+                    ).scalar_subquery(),
+                    Game.away_team == self.session.query(Player.current_team).filter(
+                        Player.player_id == player_id
+                    ).scalar_subquery()
+                )
+            )
+        ).first()
+        
+        if not game:
+            return features
+            
+        # Determine opponent
+        player_team = self.session.query(Player.current_team).filter(
+            Player.player_id == player_id
+        ).scalar()
+        
+        opponent = game.away_team if player_team == game.home_team else game.home_team
+        
+        # Opponent defensive rankings (last 8 games)
+        recent_games = self.session.query(Game).filter(
+            and_(
+                Game.season == season,
+                Game.week < week,
+                Game.week >= max(1, week - 8),
+                or_(Game.home_team == opponent, Game.away_team == opponent)
+            )
+        ).all()
+        
+        if recent_games:
+            # Calculate opponent's defensive stats allowed
+            opp_stats = []
+            for g in recent_games:
+                # Get stats allowed by opponent
+                allowed_stats = self.session.query(PlayerGameStats).filter(
+                    and_(
+                        PlayerGameStats.game_id == g.game_id,
+                        PlayerGameStats.team != opponent
+                    )
+                ).all()
+                
+                total_allowed = {
+                    'passing_yards': sum(s.passing_yards or 0 for s in allowed_stats),
+                    'rushing_yards': sum(s.rushing_yards or 0 for s in allowed_stats),
+                    'receiving_yards': sum(s.receiving_yards or 0 for s in allowed_stats),
+                    'passing_tds': sum(s.passing_touchdowns or 0 for s in allowed_stats),
+                    'rushing_tds': sum(s.rushing_touchdowns or 0 for s in allowed_stats),
+                    'receiving_tds': sum(s.receiving_touchdowns or 0 for s in allowed_stats)
+                }
+                opp_stats.append(total_allowed)
+            
+            # Average defensive stats allowed
+            if opp_stats:
+                for stat in opp_stats[0].keys():
+                    avg_allowed = np.mean([game_stats[stat] for game_stats in opp_stats])
+                    features[f'opp_{stat}_allowed_avg'] = avg_allowed
+        
+        # Home/away indicator
+        features['is_home'] = 1.0 if player_team == game.home_team else 0.0
+        
+        return features
+    
+    async def _compute_situational_features(
+        self, 
+        player_id: str, 
+        season: int, 
+        week: int
+    ) -> Dict[str, float]:
+        """Compute weather, injury, and other situational features"""
+        
+        features = {}
+        
+        try:
+            # Load weather data from cache if available
+            date_str = f"{season}-{week:02d}-01"  # Approximate date
+            weather_data = self.cache_manager.load_from_cache("weather", date_str)
+            
+            if weather_data is not None:
+                features.update({
+                    'temperature': weather_data.get('temperature', 70.0),
+                    'wind_speed': weather_data.get('wind_speed', 0.0),
+                    'precipitation': weather_data.get('precipitation', 0.0),
+                    'is_dome': 1.0 if weather_data.get('conditions') == 'dome' else 0.0
+                })
+            
+            # Injury report features
+            injury_data = self.cache_manager.load_from_cache("injuries", date_str)
+            if injury_data is not None:
+                player_injury = next(
+                    (inj for inj in injury_data if inj.get('player_id') == player_id), 
+                    None
+                )
+                if player_injury:
+                    status_map = {'out': 0.0, 'doubtful': 0.25, 'questionable': 0.75, 'probable': 0.9}
+                    features['injury_status'] = status_map.get(
+                        player_injury.get('injury_status', 'probable'), 1.0
+                    )
+                else:
+                    features['injury_status'] = 1.0
+            
+        except Exception as e:
+            logger.warning(f"Could not load situational data: {e}")
+            # Set default values
+            features.update({
+                'temperature': 70.0,
+                'wind_speed': 0.0,
+                'precipitation': 0.0,
+                'is_dome': 0.0,
+                'injury_status': 1.0
+            })
+        
+        return features
+    
+    async def _compute_team_context_features(
+        self, 
+        team: str, 
+        season: int, 
+        week: int
+    ) -> Dict[str, float]:
+        """Compute team-level context features"""
+        
+        features = {}
+        
+        # Team's recent performance (last 4 games)
+        recent_games = self.session.query(Game).filter(
+            and_(
+                Game.season == season,
+                Game.week < week,
+                Game.week >= max(1, week - 4),
+                or_(Game.home_team == team, Game.away_team == team)
+            )
+        ).order_by(Game.week.desc()).limit(4).all()
+        
+        if recent_games:
+            wins = 0
+            total_points_for = 0
+            total_points_against = 0
+            
+            for game in recent_games:
+                # Determine if team won and points scored/allowed
+                if game.home_team == team:
+                    team_score = game.home_score or 0
+                    opp_score = game.away_score or 0
+                else:
+                    team_score = game.away_score or 0
+                    opp_score = game.home_score or 0
+                
+                if team_score > opp_score:
+                    wins += 1
+                    
+                total_points_for += team_score
+                total_points_against += opp_score
+            
+            features.update({
+                'team_win_pct_4g': wins / len(recent_games),
+                'team_ppg_4g': total_points_for / len(recent_games),
+                'team_papg_4g': total_points_against / len(recent_games),
+                'team_point_diff_4g': (total_points_for - total_points_against) / len(recent_games)
+            })
+        
+        return features
+    
+    async def _compute_advanced_metrics(
+        self, 
+        player_id: str, 
+        season: int, 
+        week: int,
+        position: str
+    ) -> Dict[str, float]:
+        """Compute advanced analytics and efficiency metrics"""
+        
+        features = {}
+        
+        # Get recent games for efficiency calculations
+        recent_stats = self.session.query(PlayerGameStats).join(Game).filter(
+            and_(
+                PlayerGameStats.player_id == player_id,
+                Game.season == season,
+                Game.week < week,
+                Game.week >= max(1, week - 8)
+            )
+        ).all()
+        
+        if not recent_stats:
+            return features
+        
+        # Position-specific efficiency metrics
+        if position == 'QB':
+            # Passing efficiency
+            total_attempts = sum(s.passing_attempts or 0 for s in recent_stats)
+            total_completions = sum(s.passing_completions or 0 for s in recent_stats)
+            total_yards = sum(s.passing_yards or 0 for s in recent_stats)
+            total_tds = sum(s.passing_touchdowns or 0 for s in recent_stats)
+            total_ints = sum(s.interceptions or 0 for s in recent_stats)
+            
+            if total_attempts > 0:
+                features.update({
+                    'completion_pct': total_completions / total_attempts,
+                    'yards_per_attempt': total_yards / total_attempts,
+                    'td_rate': total_tds / total_attempts,
+                    'int_rate': total_ints / total_attempts
+                })
+        
+        elif position in ['RB', 'WR', 'TE']:
+            # Receiving efficiency
+            total_targets = sum(s.targets or 0 for s in recent_stats)
+            total_receptions = sum(s.receptions or 0 for s in recent_stats)
+            total_rec_yards = sum(s.receiving_yards or 0 for s in recent_stats)
+            
+            if total_targets > 0:
+                features.update({
+                    'catch_rate': total_receptions / total_targets,
+                    'yards_per_target': total_rec_yards / total_targets,
+                    'target_share': total_targets / len(recent_stats)  # Avg targets per game
+                })
+            
+            # Rushing efficiency for RB
+            if position == 'RB':
+                total_carries = sum(s.rushing_attempts or 0 for s in recent_stats)
+                total_rush_yards = sum(s.rushing_yards or 0 for s in recent_stats)
+                
+                if total_carries > 0:
+                    features['yards_per_carry'] = total_rush_yards / total_carries
+        
+        # Snap count trends
+        snap_percentages = [s.snap_percentage for s in recent_stats if s.snap_percentage]
+        if snap_percentages:
+            features.update({
+                'avg_snap_pct': np.mean(snap_percentages),
+                'snap_pct_trend': np.polyfit(range(len(snap_percentages)), snap_percentages, 1)[0]
+                if len(snap_percentages) > 1 else 0
+            })
+        
+        return features
+    
+    def prepare_training_data(
+        self, 
+        feature_data: List[Dict[str, Any]], 
+        target_column: str = 'fantasy_points_ppr',
+        test_size: float = 0.2
+    ) -> ModelFeatures:
+        """Prepare engineered features for model training"""
+        
+        if not feature_data:
+            raise ValueError("No feature data provided")
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(feature_data)
+        
+        # Separate features and target
+        if target_column not in df.columns:
+            raise ValueError(f"Target column '{target_column}' not found in data")
+        
+        feature_columns = [col for col in df.columns if col != target_column]
+        X = df[feature_columns].fillna(0)  # Fill NaN with 0
+        y = df[target_column].fillna(0)
+        
+        # Train/test split
+        from sklearn.model_selection import train_test_split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=42
+        )
+        
+        # Scale features
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+        
+        return ModelFeatures(
+            X_train=X_train_scaled,
+            X_test=X_test_scaled,
+            y_train=y_train.values,
+            y_test=y_test.values,
+            feature_names=feature_columns,
+            scaler=scaler,
+            target_name=target_column
+        )
+    
+    def select_features(
+        self, 
+        model_features: ModelFeatures, 
+        k: int = 50,
+        method: str = 'f_regression'
+    ) -> ModelFeatures:
+        """Select top k features using statistical tests"""
+        
+        if method == 'f_regression':
+            selector = SelectKBest(score_func=f_regression, k=min(k, len(model_features.feature_names)))
+        elif method == 'mutual_info':
+            selector = SelectKBest(score_func=mutual_info_regression, k=min(k, len(model_features.feature_names)))
+        else:
+            raise ValueError(f"Unknown feature selection method: {method}")
+        
+        # Fit selector and transform data
+        X_train_selected = selector.fit_transform(model_features.X_train, model_features.y_train)
+        X_test_selected = selector.transform(model_features.X_test)
+        
+        # Get selected feature names
+        selected_mask = selector.get_support()
+        selected_features = [name for name, selected in zip(model_features.feature_names, selected_mask) if selected]
+        
+        logger.info(f"Selected {len(selected_features)} features using {method}")
+        
+        return ModelFeatures(
+            X_train=X_train_selected,
+            X_test=X_test_selected,
+            y_train=model_features.y_train,
+            y_test=model_features.y_test,
+            feature_names=selected_features,
+            scaler=model_features.scaler,
+            target_name=model_features.target_name
+        )
     
     def engineer_all_features(self, target_stat: str = 'fantasy_points_ppr') -> FeatureSet:
         """Engineer comprehensive feature set for all players"""

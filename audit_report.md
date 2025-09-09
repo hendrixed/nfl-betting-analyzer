@@ -1,0 +1,572 @@
+# Audit summary for `nfl-betting-analyzer`
+
+## Inventory
+
+- Python modules: **80**
+- Data files: **56**
+- Notebooks: **0**
+- Config present: requirements.txt, .env
+
+## Dependencies
+
+- **requirements.txt**:
+  - pandas>=1.5.0
+  - numpy>=1.21.0
+  - scipy>=1.9.0
+  - scikit-learn>=1.2.0
+  - xgboost>=1.6.0
+  - lightgbm>=3.3.0
+  - torch>=1.12.0
+  - joblib>=1.2.0
+  - sqlalchemy>=2.0.0
+  - psycopg2-binary>=2.9.0
+  - alembic>=1.8.0
+  - fastapi>=0.104.1
+  - uvicorn[standard]>=0.24.0
+  - websockets>=12.0
+  - redis>=5.0.1
+  - slowapi>=0.1.9
+  - python-jose[cryptography]>=3.3.0
+  - passlib[bcrypt]>=1.7.4
+  - python-multipart>=0.0.6
+  - flask>=2.3.0
+  - flask-cors>=4.0.0
+  - pydantic>=2.0.0
+  - requests>=2.28.0
+  - aiohttp>=3.8.0
+  - beautifulsoup4>=4.11.0
+  - selenium>=4.5.0
+  - nfl-data-py>=0.3.0
+  - click>=8.0.0
+  - pyyaml>=6.0
+  - python-dotenv>=0.20.0
+  - schedule>=1.2.0
+  - tqdm>=4.64.0
+  - python-dateutil>=2.8.0
+  - pytz>=2022.1
+  - pytest>=7.0.0
+  - pytest-asyncio>=0.21.0
+  - black>=22.0.0
+  - flake8>=5.0.0
+  - mypy>=0.971
+  - pre-commit>=2.20.0
+  - textblob>=0.17.1
+  - nltk>=3.8
+  - vaderSentiment>=3.3.2
+  - plotly>=5.15.0
+  - matplotlib>=3.6.0
+  - seaborn>=0.12.0
+  - bayesian-optimization>=1.4.0
+  - optuna>=3.0.0
+  - shap>=0.41.0
+  - statsmodels>=0.14.0
+  - networkx>=3.1
+  - pulp>=2.7.0
+  - cvxpy>=1.3.0
+
+## Models/ML libs detected
+
+- sklearn: 12 files
+- lightgbm: 3 files
+- xgboost: 3 files
+- tensorflow: 1 files
+- torch: 1 files
+
+## Potential issues
+
+- Duplicate function/method bodies: **16** groups
+- Possibly dead/unused defs: **176**
+- Files with `if __name__ == '__main__'`: 4
+
+## Notes
+
+- Multiple CLI entrypoints detected; consolidate with Typer.
+
+## Files
+
+- `advanced_analytics.py` (loc=661) []
+  - functions: main
+  - classes: AdvancedPlayerStats, AdvancedAnalytics
+- `advanced_feature_engineering.py` (loc=507) []
+  - functions: main
+  - classes: AdvancedFeatureEngineering
+- `advanced_game_context.py` (loc=451) []
+  - functions: main
+  - classes: AdvancedGameContext
+- `advanced_market_analytics.py` (loc=499) []
+  - functions: main
+  - classes: MarketIntelligence, BettingEdge, AdvancedMarketAnalyzer, PublicBettingAnalyzer
+- `advanced_ml_models.py` (loc=512) []
+  - classes: AdvancedMLModels, NeuralNetworkWrapper, ModelComparison
+- `advanced_situational_analytics.py` (loc=551) []
+  - functions: main
+  - classes: SituationalStats, GameScript, SituationalAnalyzer, AdvancedPlayerMetrics, CoachingAnalytics
+- `api/__init__.py` (loc=9) []
+- `api/enhanced_prediction_api.py` (loc=761) [fastapi]
+  - functions: create_access_token, verify_token, get_current_user, cache_response, lifespan, get_db, real_time_update_task, enhanced_root, websocket_endpoint, get_enhanced_player_prediction, get_live_betting_opportunities, get_market_intelligence ...
+  - classes: EnhancedPlayerInfo, RealTimePrediction, BettingRecommendation, MarketAnalysis, WebSocketMessage, ConnectionManager
+- `api/prediction_api.py` (loc=770) [fastapi]
+  - functions: get_db, lifespan, get_db, get_current_user, root, health_check, get_players, get_player_details, get_player_predictions, get_game_predictions, get_betting_insights, get_model_performance ...
+  - classes: PlayerInfo, PlayerPredictionResponse, GamePredictionResponse, BettingInsight, PerformanceMetrics, PredictionRequest, BettingAnalysisRequest
+- `api/web_app.py` (loc=365) [fastapi]
+  - functions: get_db, home, teams_page, team_detail, player_detail, games_page, game_detail, predictions_page, api_player_stats, api_game_prediction, api_position_rankings
+- `api_integrations.py` (loc=643) []
+  - functions: main
+  - classes: DataSource, APIIntegrations
+- `audit_repo.py` (loc=362) [typer argparse fastapi]
+  - functions: normalize_fn_ast, analyze_python_file, walk_repo, parse_requirements, find_duplicates, estimate_dead_defs, detect_multiple_mains, gather_notes, generate_markdown, main
+  - classes: FunctionInfo, ClassInfo, ModuleInfo, RepoReport
+- `backup_20250907_212630/live_prediction_demo.py` (loc=374) []
+  - functions: main
+  - classes: LivePredictionDemo
+- `backup_20250907_212630/production_cli.py` (loc=453) []
+  - functions: cli, verify, demo, predict, report, status, analyze
+- `backup_20250907_212630/verify_production_readiness.py` (loc=651) []
+  - functions: main
+  - classes: ProductionReadinessVerifier
+- `comprehensive_matchup_analyzer.py` (loc=624) []
+  - classes: TeamMatchupProfile, PositionalMatchup, ComprehensiveMatchupReport, ComprehensiveMatchupAnalyzer
+- `comprehensive_stats_engine.py` (loc=556) []
+  - functions: main
+  - classes: ComprehensivePlayerStats, ComprehensiveStatsEngine
+- `config/config_manager.py` (loc=431) []
+  - functions: get_config, load_config, save_config, update_config
+  - classes: DatabaseConfig, APIConfig, DataConfig, FeatureConfig, ModelConfig, PipelineConfig, LoggingConfig, PredictionConfig, DirectoriesConfig, ProcessingConfig, APIKeysConfig, SystemMetaConfig ...
+- `core/__init__.py` (loc=7) []
+- `core/data/__init__.py` (loc=15) []
+- `core/data/data_collector.py` (loc=662) []
+  - functions: main
+  - classes: DataCollectionConfig, NFLDataCollector, PlayerDataCollector, GameDataCollector, StatsDataCollector, BettingDataCollector
+- `core/data/data_foundation.py` (loc=289) []
+  - functions: merge_player_data, classify_position_group, validate_player_role_consistency
+  - classes: PlayerRole, MasterPlayer, WeeklyRosterSnapshot, ValidationReport, PlayerGameValidation, TeamDepthChart, DataSourceMetrics, WeeklyDataQualityReport
+- `core/data/data_processing_pipeline.py` (loc=459) []
+  - functions: main
+  - classes: DataQualityMetrics, ProcessingResult, NFLDataProcessingPipeline
+- `core/data/data_validation_pipeline.py` (loc=505) []
+  - functions: main
+  - classes: ValidationRule, DataValidator, AutomatedWorkflowManager
+- `core/data/data_validator.py` (loc=425) []
+  - classes: DataQualityValidator, StatsValidator, ComprehensiveValidator
+- `core/data/enhanced_data_collector.py` (loc=685) []
+  - classes: EnhancedNFLDataCollector, RoleBasedStatsCollector
+- `core/data/nfl_2025_data_collector.py` (loc=391) []
+  - functions: main
+  - classes: PlayerInfo, TeamInfo, NFL2025DataCollector
+- `core/data/statistical_computing_engine.py` (loc=541) []
+  - functions: main
+  - classes: PlayerTrends, TeamAnalytics, GameContext, NFLStatisticalComputingEngine
+- `core/database_models.py` (loc=419) []
+  - functions: create_all_tables, get_db_session, migrate_database, validate_player_status
+  - classes: Player, Team, Game, PlayerGameStats, PlayerPrediction, GamePrediction
+- `core/models/__init__.py` (loc=16) []
+- `core/models/feature_engineering.py` (loc=508) []
+  - functions: main
+  - classes: FeatureSet, ModelFeatures, NFLFeatureEngineer
+- `core/models/prediction_models.py` (loc=498) []
+  - functions: main
+  - classes: ModelPerformance, PredictionResult, ModelEnsemble, NFLPredictionModels
+- `core/models/streamlined_models.py` (loc=485) []
+  - functions: main
+  - classes: ModelResult, PredictionResult, StreamlinedNFLModels
+- `core/prediction_bounds.py` (loc=167) []
+  - classes: PredictionBoundsValidator
+- `deploy_production.py` (loc=345) []
+  - functions: main
+  - classes: ProductionDeployer
+- `enhanced_logging.py` (loc=445) []
+  - functions: performance_monitor, error_handler, log_prediction_start, log_prediction_success, log_api_request, log_database_operation, main
+  - classes: LogLevel, LogContext, StructuredFormatter, NFLLogger, ErrorTracker, LoggingConfig
+- `expand_data_coverage.py` (loc=407) []
+  - functions: main
+  - classes: DataCoverageExpander
+- `feature_engineering.py` (loc=806) []
+  - functions: main
+  - classes: FeatureConfig, AdvancedFeatureEngineer
+- `fix_player_count.py` (loc=95) []
+  - functions: analyze_player_discrepancy
+- `historical_data_standardizer.py` (loc=759) []
+  - classes: HistoricalDataReport, StandardizedStatRecord, HistoricalDataStandardizer
+- `historical_trend_analyzer.py` (loc=625) []
+  - classes: PlayerTrend, TeamTrend, SeasonalPattern, HistoricalTrendAnalyzer
+- `historical_validation_lite.py` (loc=353) []
+  - functions: main
+  - classes: QuickValidationReport, HistoricalValidationLite
+- `injury_data_integration.py` (loc=367) []
+  - functions: main
+  - classes: InjuryDataIntegrator
+- `load_nfl_schedule.py` (loc=324) []
+  - functions: main
+  - classes: NFLScheduleLoader
+- `ml_models.py` (loc=923) []
+  - functions: main
+  - classes: ModelConfig, PredictionTarget, NFLPredictor, BaseMLModel, XGBoostModel, LightGBMModel, RandomForestModel, GradientBoostingModel, NeuralNetworkModel, NFLNeuralNetwork, EnsembleModel
+- `model_evaluation.py` (loc=826) []
+  - functions: run_rolling_backtest, main
+  - classes: EvaluationConfig, PredictionResult, EvaluationMetrics, NFLModelEvaluator
+- `nfl_browser.py` (loc=454) []
+  - functions: find_available_port, initialize_models, index, get_team_players, search_players, predict_player
+- `nfl_cli.py` (loc=485) []
+  - functions: cli, setup, database, validate, data, collect, process, validate_data, predict, train, player, games ...
+- `opponent_defensive_analysis.py` (loc=479) []
+  - functions: main
+  - classes: OpponentDefensiveAnalysis
+- `player_comparison_optimizer.py` (loc=606) []
+  - functions: main
+  - classes: PlayerComparison, LineupPlayer, OptimalLineup, PlayerComparator, LineupOptimizer, AdvancedAnalytics, VisualizationEngine
+- `player_identity_resolver.py` (loc=651) []
+  - classes: PlayerIdentityConflict, PlayerMasterRecord, PlayerIdentityResolver
+- `prediction_pipeline.py` (loc=831) []
+  - functions: main
+  - classes: PipelineConfig, NFLPredictionPipeline
+- `real_time_data_integration.py` (loc=537) []
+  - functions: main
+  - classes: InjuryReport, WeatherData, LiveOdds, RealTimeDataIntegrator, MarketMovementTracker, EnhancedPredictionAdjuster
+- `real_time_market_data.py` (loc=400) []
+  - functions: main
+  - classes: RealTimeMarketData
+- `run_full_standardization.py` (loc=273) []
+  - functions: run_full_standardization, validate_standardized_data, main
+- `scripts/download_initial_data.py` (loc=35) []
+  - functions: main
+- `scripts/make_predictions.py` (loc=18) []
+  - functions: main
+- `scripts/run_pipeline.py` (loc=28) []
+  - functions: main
+- `scripts/setup_database.py` (loc=23) []
+  - functions: main
+- `scripts/start_api.py` (loc=21) []
+- `scripts/train_models.py` (loc=30) []
+  - functions: main
+- `social_sentiment_analyzer.py` (loc=450) []
+  - functions: main
+  - classes: SentimentData, NewsImpact, SocialSentimentAnalyzer, NewsImpactAnalyzer, PublicPerceptionTracker
+- `start_nfl_system.py` (loc=208) []
+  - functions: find_available_port, check_dependencies, start_flask_server, start_fastapi_server, main
+- `stat_terminology_mapper.py` (loc=286) []
+  - classes: StatTerminologyMapper
+- `team_matchup_analyzer.py` (loc=421) []
+  - functions: main
+  - classes: TeamStrength, DefensiveRankings, MatchupAnalysis, TeamMatchupAnalyzer
+- `test_complete_system.py` (loc=236) []
+  - functions: test_database_connection, test_model_loading, test_predictions, test_batch_predictions, test_api_integration, run_complete_system_test
+- `test_model_training.py` (loc=108) []
+  - functions: test_simple_model_training
+- `test_real_prediction.py` (loc=78) []
+  - functions: test_real_prediction
+- `test_server_fixes.py` (loc=193) []
+  - functions: test_flask_server, test_fastapi_server, test_import_fixes, main
+- `tests/test_complete_system.py` (loc=350) []
+  - functions: main
+  - classes: SystemValidator
+- `tests/test_enhanced_realtime.py` (loc=295) []
+  - functions: main
+  - classes: EnhancedRealtimeSystemTester
+- `tests/test_enhanced_system.py` (loc=280) []
+  - functions: main
+  - classes: EnhancedSystemTester
+- `tests/test_historical_standardizer.py` (loc=254) []
+  - functions: test_historical_standardizer, run_full_standardization
+- `tests/test_system.py` (loc=370) []
+  - classes: TestSystemImports, TestDatabaseModels, TestConfigurationSystem, TestPredictionSystem, TestSentimentAnalysis, TestUltimateSystem, TestInteractiveInterface, TestCLISystem, TestDataIntegrity, TestPerformanceAndReliability, TestSystemIntegration
+- `validate_system_fixes.py` (loc=256) []
+  - functions: test_database_connections, test_streamlined_models, test_prediction_bounds, test_api_imports, test_retired_players, test_data_integrity, main
+- `validation_backtesting_framework.py` (loc=681) []
+  - functions: main
+  - classes: ValidationBacktestingFramework
+- `verify_environment.py` (loc=104) []
+  - functions: verify_conda_environment, setup_project_paths
+- `verify_production_readiness.py` (loc=651) []
+  - functions: main
+  - classes: ProductionReadinessVerifier
+- `web/__init__.py` (loc=4) []
+- `web/web_server.py` (loc=254) []
+  - functions: initialize_models, index, predict_player, batch_predict, get_players, health_check, system_status, find_available_port
+
+## Data files
+- backup_20250907_212630/models/performance/QB_fantasy_points_model_performance.json
+- backup_20250907_212630/models/performance/QB_passing_touchdowns_model_performance.json
+- backup_20250907_212630/models/performance/QB_passing_yards_model_performance.json
+- backup_20250907_212630/models/performance/RB_fantasy_points_model_performance.json
+- backup_20250907_212630/models/performance/RB_receiving_yards_model_performance.json
+- backup_20250907_212630/models/performance/RB_rushing_touchdowns_model_performance.json
+- backup_20250907_212630/models/performance/RB_rushing_yards_model_performance.json
+- backup_20250907_212630/models/performance/TE_fantasy_points_model_performance.json
+- backup_20250907_212630/models/performance/TE_receiving_yards_model_performance.json
+- backup_20250907_212630/models/performance/TE_receptions_model_performance.json
+- backup_20250907_212630/models/performance/WR_fantasy_points_model_performance.json
+- backup_20250907_212630/models/performance/WR_receiving_touchdowns_model_performance.json
+- backup_20250907_212630/models/performance/WR_receiving_yards_model_performance.json
+- backup_20250907_212630/models/performance/WR_receptions_model_performance.json
+- models/performance/QB_fantasy_points_model_performance.json
+- models/performance/QB_passing_touchdowns_model_performance.json
+- models/performance/QB_passing_yards_model_performance.json
+- models/performance/RB_fantasy_points_model_performance.json
+- models/performance/RB_receiving_yards_model_performance.json
+- models/performance/RB_rushing_touchdowns_model_performance.json
+- models/performance/RB_rushing_yards_model_performance.json
+- models/performance/TE_fantasy_points_model_performance.json
+- models/performance/TE_receiving_yards_model_performance.json
+- models/performance/TE_receptions_model_performance.json
+- models/performance/WR_fantasy_points_model_performance.json
+- models/performance/WR_receiving_touchdowns_model_performance.json
+- models/performance/WR_receiving_yards_model_performance.json
+- models/performance/WR_receptions_model_performance.json
+- models_backup/QB_fantasy_points_model_performance_20250907_144357.json
+- models_backup/QB_fantasy_points_model_performance_20250907_144747.json
+- models_backup/QB_passing_touchdowns_model_performance_20250907_144357.json
+- models_backup/QB_passing_touchdowns_model_performance_20250907_144747.json
+- models_backup/QB_passing_yards_model_performance_20250907_144357.json
+- models_backup/QB_passing_yards_model_performance_20250907_144747.json
+- models_backup/RB_fantasy_points_model_performance_20250907_144357.json
+- models_backup/RB_fantasy_points_model_performance_20250907_144747.json
+- models_backup/RB_receiving_yards_model_performance_20250907_144357.json
+- models_backup/RB_receiving_yards_model_performance_20250907_144747.json
+- models_backup/RB_rushing_touchdowns_model_performance_20250907_144357.json
+- models_backup/RB_rushing_touchdowns_model_performance_20250907_144747.json
+- models_backup/RB_rushing_yards_model_performance_20250907_144357.json
+- models_backup/RB_rushing_yards_model_performance_20250907_144747.json
+- models_backup/TE_fantasy_points_model_performance_20250907_144357.json
+- models_backup/TE_fantasy_points_model_performance_20250907_144747.json
+- models_backup/TE_receiving_yards_model_performance_20250907_144357.json
+- models_backup/TE_receiving_yards_model_performance_20250907_144747.json
+- models_backup/TE_receptions_model_performance_20250907_144357.json
+- models_backup/TE_receptions_model_performance_20250907_144747.json
+- models_backup/WR_fantasy_points_model_performance_20250907_144357.json
+- models_backup/WR_fantasy_points_model_performance_20250907_144747.json
+- models_backup/WR_receiving_touchdowns_model_performance_20250907_144357.json
+- models_backup/WR_receiving_touchdowns_model_performance_20250907_144747.json
+- models_backup/WR_receiving_yards_model_performance_20250907_144357.json
+- models_backup/WR_receiving_yards_model_performance_20250907_144747.json
+- models_backup/WR_receptions_model_performance_20250907_144357.json
+- models_backup/WR_receptions_model_performance_20250907_144747.json
+
+## Duplicate bodies (same AST hash)
+- c2b0decd10… :
+  - player_comparison_optimizer.py:AdvancedAnalytics.__init__@361
+  - advanced_ml_models.py:ModelComparison.__init__@424
+- df91e964cf… :
+  - verify_production_readiness.py:main@636
+  - backup_20250907_212630/verify_production_readiness.py:main@636
+- 4049cdd366… :
+  - verify_production_readiness.py:ProductionReadinessVerifier.__init__@28
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier.__init__@28
+- 33bce948aa… :
+  - verify_production_readiness.py:ProductionReadinessVerifier.run_comprehensive_verification@36
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier.run_comprehensive_verification@36
+- a966437253… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._verify_system_initialization@95
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._verify_system_initialization@95
+- ddbadad94a… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._verify_data_availability@133
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._verify_data_availability@133
+- 53f84b749d… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._verify_model_functionality@207
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._verify_model_functionality@207
+- 03d44aa9c1… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._verify_prediction_generation@287
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._verify_prediction_generation@287
+- 9a25fd5c8c… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._verify_data_quality@380
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._verify_data_quality@380
+- 73004ef722… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._verify_performance@454
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._verify_performance@454
+- 3ddc04e49e… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._verify_production_config@501
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._verify_production_config@501
+- e6531dfed7… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._verify_error_handling@531
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._verify_error_handling@531
+- 8d7e5700f3… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._generate_production_recommendations@581
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._generate_production_recommendations@581
+- 0a6f50609c… :
+  - verify_production_readiness.py:ProductionReadinessVerifier._print_final_assessment@613
+  - backup_20250907_212630/verify_production_readiness.py:ProductionReadinessVerifier._print_final_assessment@613
+- f0d08f9330… :
+  - start_nfl_system.py:find_available_port@15
+  - nfl_browser.py:find_available_port@23
+- c3a6967cb2… :
+  - api/enhanced_prediction_api.py:get_db@265
+  - api/prediction_api.py:get_db@41
+  - api/prediction_api.py:get_db@163
+  - api/web_app.py:get_db@28
+
+## Possibly unused definitions
+- APIConfig
+- APIIntegrations
+- APIKeysConfig
+- AdvancedFeatureEngineering
+- AdvancedGameContext
+- AdvancedMLModels
+- AdvancedMarketAnalyzer
+- AdvancedPlayerMetrics
+- AdvancedPlayerStats
+- AutomatedWorkflowManager
+- BaseMLModel
+- BettingAnalysisRequest
+- BettingDataCollector
+- BettingRecommendation
+- ClassInfo
+- CoachingAnalytics
+- ComprehensiveMatchupAnalyzer
+- ComprehensiveValidator
+- ConnectionManager
+- DataConfig
+- DataCoverageExpander
+- DataQualityValidator
+- DatabaseConfig
+- DefensiveRankings
+- DirectoriesConfig
+- EnhancedNFLDataCollector
+- EnhancedPlayerInfo
+- EnhancedPredictionAdjuster
+- EnhancedRealtimeSystemTester
+- EnhancedSystemTester
+- EnsembleModel
+- ErrorTracker
+- EvaluationMetrics
+- FeatureSet
+- GameDataCollector
+- GameScript
+- GradientBoostingModel
+- HistoricalDataReport
+- HistoricalTrendAnalyzer
+- HistoricalValidationLite
+- InjuryDataIntegrator
+- InjuryReport
+- LightGBMModel
+- LineupOptimizer
+- LiveOdds
+- LogLevel
+- LoggingConfig
+- MarketAnalysis
+- MarketIntelligence
+- MarketMovementTracker
+- MatchupAnalysis
+- ModelComparison
+- ModelEnsemble
+- ModelFeatures
+- ModelResult
+- NFLPredictionModels
+- NFLScheduleLoader
+- NeuralNetworkModel
+- NewsImpact
+- NewsImpactAnalyzer
+- OpponentDefensiveAnalysis
+- OptimalLineup
+- PlayerComparator
+- PlayerDataCollector
+- PlayerGameValidation
+- PlayerIdentityResolver
+- PlayerRole
+- PredictionBoundsValidator
+- PredictionConfig
+- PredictionRequest
+- ProcessingConfig
+- ProductionDeployer
+- PublicBettingAnalyzer
+- PublicPerceptionTracker
+- QuickValidationReport
+- RandomForestModel
+- RealTimeDataIntegrator
+- RealTimeMarketData
+- RealTimePrediction
+- RepoReport
+- RoleBasedStatsCollector
+- SituationalAnalyzer
+- SituationalStats
+- StandardizedStatRecord
+- StatTerminologyMapper
+- StatsDataCollector
+- StatsValidator
+- SystemMetaConfig
+- SystemValidator
+- TeamDepthChart
+- TeamMatchupAnalyzer
+- TeamStrength
+- TestCLISystem
+- TestConfigurationSystem
+- TestDataIntegrity
+- TestDatabaseModels
+- TestInteractiveInterface
+- TestPerformanceAndReliability
+- TestPredictionSystem
+- TestSentimentAnalysis
+- TestSystemImports
+- TestSystemIntegration
+- TestUltimateSystem
+- ValidationBacktestingFramework
+- ValidationReport
+- VisualizationEngine
+- WeatherData
+- WeeklyDataQualityReport
+- WeeklyRosterSnapshot
+- XGBoostModel
+- api_game_prediction
+- api_player_stats
+- api_position_rankings
+- batch_predict
+- batch_predictions
+- classify_position_group
+- collect
+- create_access_token
+- database
+- demo
+- detailed_health_check
+- enhanced_general_exception_handler
+- enhanced_http_exception_handler
+- enhanced_root
+- game_detail
+- games_page
+- general_exception_handler
+- generate_real_time_prediction
+- get_betting_insights
+- get_enhanced_player_prediction
+- get_game_info
+- get_game_predictions
+- get_live_betting_opportunities
+- get_market_intelligence
+- get_model_performance
+- get_player_details
+- get_player_predictions
+- get_player_trends
+- get_team_performance
+- get_team_players
+- get_vs_predictions
+- home
+- http_exception_handler
+- leaders
+- log_api_request
+- log_database_operation
+- log_prediction_start
+- log_prediction_success
+- merge_player_data
+- player_detail
+- player_stats
+- predictions_page
+- process
+- real_time_dashboard
+- report
+- root
+- run_rolling_backtest
+- search_players
+- setup
+- system_status
+- team_detail
+- teams_page
+- test_api_imports
+- test_data_integrity
+- test_database_connections
+- test_fastapi_server
+- test_flask_server
+- test_import_fixes
+- test_prediction_bounds
+- test_retired_players
+- test_streamlined_models
+- trigger_prediction_update
+- validate_data
+- validate_player_role_consistency
+- verify
+- websocket_endpoint
