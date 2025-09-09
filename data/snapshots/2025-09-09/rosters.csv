@@ -1,0 +1,6 @@
+player_id,name,position,team,jersey_number,status,week,season
+mahomes_patrick,Patrick Mahomes,QB,KC,15,active,1,2025
+allen_josh,Josh Allen,QB,BUF,17,active,1,2025
+jackson_lamar,Lamar Jackson,QB,BAL,8,active,1,2025
+henry_derrick,Derrick Henry,RB,BAL,22,active,1,2025
+kelce_travis,Travis Kelce,TE,KC,87,active,1,2025

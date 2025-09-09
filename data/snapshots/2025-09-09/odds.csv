@@ -1,0 +1,16 @@
+timestamp,book,market,player_id,team_id,line,over_odds,under_odds
+2025-09-09T17:31:54.438700,draftkings,player_pass_yds,00-0031549,NE,221.4,100,-100
+2025-09-09T17:31:54.438721,draftkings,player_rush_yds,00-0031549,NE,57.9,100,-100
+2025-09-09T17:31:54.438730,draftkings,player_rec,00-0031549,NE,3.5,-105,-110
+2025-09-09T17:31:54.438736,draftkings,player_rec_yds,00-0031549,NE,48.9,-115,-110
+2025-09-09T17:31:54.438743,draftkings,player_ints,00-0031549,NE,1.5,-115,-110
+2025-09-09T17:31:54.438749,fanduel,player_pass_yds,00-0031549,NE,221.6,-105,-110
+2025-09-09T17:31:54.438755,fanduel,player_rush_yds,00-0031549,NE,59.0,-110,-110
+2025-09-09T17:31:54.438764,fanduel,player_rec,00-0031549,NE,5.6,-120,-110
+2025-09-09T17:31:54.438771,fanduel,player_rec_yds,00-0031549,NE,59.2,-120,-110
+2025-09-09T17:31:54.438777,fanduel,player_ints,00-0031549,NE,0.6,-115,-110
+2025-09-09T17:31:54.438783,betmgm,player_pass_yds,00-0031549,NE,279.6,-105,-110
+2025-09-09T17:31:54.438788,betmgm,player_rush_yds,00-0031549,NE,71.0,-110,-110
+2025-09-09T17:31:54.438794,betmgm,player_rec,00-0031549,NE,4.2,-115,-110
+2025-09-09T17:31:54.438799,betmgm,player_rec_yds,00-0031549,NE,56.1,-110,-110
+2025-09-09T17:31:54.438804,betmgm,player_ints,00-0031549,NE,1.0,-115,-110

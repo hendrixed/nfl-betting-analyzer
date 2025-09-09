@@ -43,20 +43,24 @@ This plan adheres to the non-negotiable rules:
 
 ## REMOVE / ARCHIVE (after verification; no loss of unique logic)
 
-- Backups and archives
-  - `backup_*/` — archive then remove.
-  - `models_backup/*` — remove after ensuring artifacts superseded by `models/`.
-- Redundant API files (superseded by `api/app.py`)
-  - `api/prediction_api.py`
-  - `api/enhanced_prediction_api.py`
-  - `api/web_app.py`
-- Legacy/demo entrypoints (migrate or delete `__main__`)
-  - `nfl_browser.py` — remove; web served from `api/app.py`.
-  - `web/web_server.py` — remove; routes exist in `api/app.py`.
-  - `start_nfl_system.py` — remove; replaced by `nfl_cli.py run-api`.
-  - `scripts/*` wrappers (`run_api.py`, `start_api.py`, `fetch.py`, `project.py`, `simulate.py`, `train.py`, `backtest.py`, etc.) — remove; all commands exist in `nfl_cli.py`.
-- Redundant verification duplicates
-  - `backup_20250907_212630/verify_production_readiness.py` — remove; keep root `verify_production_readiness.py`.
+**ALREADY REMOVED BY CLAUDE:**
+- ✅ `backup_*/` directories — REMOVED
+- ✅ `models_backup/*` — REMOVED  
+- ✅ `api/prediction_api.py` — REMOVED
+- ✅ `api/enhanced_prediction_api.py` — REMOVED
+- ✅ `api/web_app.py` — REMOVED
+- ✅ `nfl_browser.py` — REMOVED
+- ✅ `web/web_server.py` — REMOVED
+- ✅ `start_nfl_system.py` — REMOVED
+- ✅ `scripts/*` directory — REMOVED
+
+**STILL PRESENT (need cleanup):**
+- Root level duplicates:
+  - `data_collector.py` (duplicate of core/data/data_collector.py)
+  - `data_foundation.py` (duplicate of core/data/data_foundation.py) 
+  - `data_validator.py` (duplicate of core/data/data_validator.py)
+  - `database_models.py` (duplicate of core/database_models.py)
+  - `feature_engineering.py` (duplicate of core/models/feature_engineering.py)
 
 ## Duplicate Groups — Canonical Targets
 

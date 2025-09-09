@@ -1,0 +1,16 @@
+{
+  "position": "QB",
+  "model_type": "ridge",
+  "target_stat": "fantasy_points_ppr",
+  "r2_score": 0.9866347919407141,
+  "features": 6,
+  "feature_names": [
+    "avg_passing_yards",
+    "avg_passing_tds",
+    "avg_passing_ints",
+    "avg_rushing_yards",
+    "game_count",
+    "fantasy_range"
+  ],
+  "saved_at": "2025-09-09T15:38:26.282024"
+}

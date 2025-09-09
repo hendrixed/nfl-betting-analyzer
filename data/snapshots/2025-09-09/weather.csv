@@ -1,0 +1,3 @@
+game_id,temperature,humidity,wind_speed,conditions,roof_state
+KC_BUF_2025_W1,72,45,8,Clear,open
+BAL_PIT_2025_W1,68,52,12,Partly Cloudy,open

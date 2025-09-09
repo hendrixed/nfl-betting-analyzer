@@ -1,0 +1,5 @@
+player_id,game_id,team,position,offensive_snaps,defensive_snaps,special_teams_snaps,snap_percentage
+mahomes_patrick,KC_BUF_2025_W1,KC,QB,65,0,0,100.0
+allen_josh,KC_BUF_2025_W1,BUF,QB,68,0,0,100.0
+jackson_lamar,BAL_PIT_2025_W1,BAL,QB,62,0,0,100.0
+henry_derrick,BAL_PIT_2025_W1,BAL,RB,45,0,5,73.8

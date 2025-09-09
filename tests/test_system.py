@@ -21,7 +21,8 @@ class TestSystemImports:
         try:
             import database_models
             import config_manager
-            import run_nfl_system
+            from api import app
+            import nfl_cli
             assert True
         except ImportError as e:
             pytest.fail(f"Core import failed: {e}")
@@ -29,11 +30,9 @@ class TestSystemImports:
     def test_advanced_imports(self):
         """Test that advanced modules can be imported."""
         try:
-            import ultimate_enhanced_predictor
-            import social_sentiment_analyzer
-            import nfl_ultimate_system
-            import nfl_interactive_main
-            assert True
+            import validation_backtesting_framework
+            import model_evaluation
+            import prediction_pipeline
         except ImportError as e:
             pytest.fail(f"Advanced import failed: {e}")
     
@@ -148,14 +147,22 @@ class TestPredictionSystem:
             mock.return_value = mock_instance
             yield mock_instance
     
-    def test_ultimate_predictor_initialization(self):
-        """Test UltimateEnhancedPredictor can be initialized."""
+    def test_validation_framework_initialization(self):
+        """Test validation framework can be initialized."""
         try:
-            from ultimate_enhanced_predictor import UltimateEnhancedPredictor
+            from validation_backtesting_framework import ValidationBacktestingFramework
             # Just test import, actual initialization requires database
-            assert UltimateEnhancedPredictor is not None
+            assert ValidationBacktestingFramework is not None
         except Exception as e:
-            pytest.fail(f"UltimateEnhancedPredictor initialization failed: {e}")
+            pytest.fail(f"ValidationBacktestingFramework initialization failed: {e}")
+    
+    def test_model_evaluation_initialization(self):
+        """Test model evaluation module can be imported."""
+        try:
+            import model_evaluation
+            assert model_evaluation is not None
+        except ImportError as e:
+            pytest.fail(f"Model evaluation import failed: {e}")
     
     def test_prediction_structure(self, mock_predictor):
         """Test prediction output structure."""
@@ -166,98 +173,42 @@ class TestPredictionSystem:
         assert hasattr(prediction, 'market_edge')
         assert 'fantasy_points_ppr' in prediction.final_prediction
 
-class TestSentimentAnalysis:
-    """Test sentiment analysis functionality."""
+class TestValidationFramework:
+    """Test validation and backtesting functionality."""
     
-    def test_sentiment_analyzer_import(self):
-        """Test sentiment analyzer can be imported."""
+    def test_validation_framework_import(self):
+        """Test ValidationBacktestingFramework can be imported."""
         try:
-            from social_sentiment_analyzer import SocialSentimentAnalyzer
-            assert SocialSentimentAnalyzer is not None
+            from validation_backtesting_framework import ValidationBacktestingFramework
         except ImportError as e:
-            pytest.fail(f"SentimentAnalyzer import failed: {e}")
+            pytest.fail(f"ValidationBacktestingFramework import failed: {e}")
     
-    @patch('social_sentiment_analyzer.SocialSentimentAnalyzer.analyze_player_sentiment')
-    def test_sentiment_analysis_output(self, mock_sentiment):
-        """Test sentiment analysis output structure."""
-        from social_sentiment_analyzer import SocialSentimentAnalyzer
+    def test_backtest_framework_structure(self):
+        """Test backtest framework has required methods."""
+        from validation_backtesting_framework import ValidationBacktestingFramework
+        framework = ValidationBacktestingFramework()
         
-        # Mock sentiment response
-        mock_sentiment.return_value = Mock(
-            sentiment_score=0.75,
-            mention_volume=150,
-            trending_topics=['injury_update', 'fantasy']
-        )
-        
-        analyzer = SocialSentimentAnalyzer()
-        result = analyzer.analyze_player_sentiment("pmahomes_qb")
-        
-        assert hasattr(result, 'sentiment_score')
-        assert hasattr(result, 'mention_volume')
-        assert hasattr(result, 'trending_topics')
+        assert hasattr(framework, 'run_comprehensive_validation')
+        assert hasattr(framework, 'backtest_betting_strategy')
+        assert hasattr(framework, 'get_validation_summary')
 
-class TestUltimateSystem:
-    """Test the ultimate system integration."""
+class TestCoverageValidation:
+    """Test coverage matrix and validation functionality."""
     
-    def test_ultimate_system_import(self):
-        """Test ultimate system can be imported."""
+    def test_coverage_generation_import(self):
+        """Test coverage matrix generation can be imported."""
         try:
-            from nfl_ultimate_system import NFLUltimateSystem
-            assert NFLUltimateSystem is not None
+            import generate_coverage_matrices
         except ImportError as e:
-            pytest.fail(f"NFLUltimateSystem import failed: {e}")
+            pytest.fail(f"Coverage matrix generation import failed: {e}")
     
-    @patch('nfl_ultimate_system.UltimateEnhancedPredictor')
-    @patch('nfl_ultimate_system.SocialSentimentAnalyzer')
-    def test_comprehensive_analysis_structure(self, mock_sentiment, mock_predictor):
-        """Test comprehensive analysis output structure."""
-        from nfl_ultimate_system import NFLUltimateSystem, ComprehensiveAnalysis
+    def test_coverage_matrix_structure(self):
+        """Test coverage matrix has required structure."""
+        import generate_coverage_matrices
         
-        # Test ComprehensiveAnalysis dataclass
-        analysis = ComprehensiveAnalysis(
-            player_id="pmahomes_qb",
-            position="QB",
-            ultimate_prediction=Mock(),
-            sentiment_data={},
-            market_intelligence={},
-            final_recommendation={},
-            confidence_level="HIGH",
-            risk_assessment="MEDIUM_RISK"
-        )
-        
-        assert analysis.player_id == "pmahomes_qb"
-        assert analysis.position == "QB"
-        assert analysis.confidence_level == "HIGH"
-
-class TestInteractiveInterface:
-    """Test interactive interface functionality."""
-    
-    def test_interactive_main_import(self):
-        """Test interactive main can be imported."""
-        try:
-            import nfl_interactive_main
-            assert nfl_interactive_main is not None
-        except ImportError as e:
-            pytest.fail(f"Interactive main import failed: {e}")
-
-class TestCLISystem:
-    """Test CLI system functionality."""
-    
-    def test_cli_commands_available(self):
-        """Test that CLI commands are properly registered."""
-        from run_nfl_system import cli
-        
-        # Get list of registered commands
-        commands = list(cli.commands.keys())
-        
-        # Check for essential commands
-        essential_commands = [
-            'status', 'predict', 'ultimate', 'sentiment', 
-            'compare', 'daily-recs', 'interactive'
-        ]
-        
-        for cmd in essential_commands:
-            assert cmd in commands, f"Command '{cmd}' not found in CLI"
+        assert hasattr(generate_coverage_matrices, 'generate_stats_feature_matrix')
+        assert hasattr(generate_coverage_matrices, 'generate_model_market_matrix')
+        assert hasattr(generate_coverage_matrices, 'validate_coverage_with_real_data')
 
 class TestDataIntegrity:
     """Test data integrity and validation."""

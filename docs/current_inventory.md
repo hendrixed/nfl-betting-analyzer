@@ -1,31 +1,97 @@
-# Current Inventory — nfl-betting-analyzer (Phase 0)
+# Current Inventory - NFL Betting Analyzer
 
-This document captures the current repository inventory and Phase 0 confirmations pulled from the latest audit artifacts and a fresh scan of the repo.
+## Fresh Baseline (2025-09-09 16:31)
 
-## Baseline Confirmation (from latest audit - 2025-09-09)
+After Claude's consolidation commits, current repository state:
 
-- Python modules (audit): **111**
-- Data files (active, excluding backups): **57**
-- Duplicate groups (AST-identical bodies): **18**
-- Possibly unused defs: **214**
-- Files with `__main__` (primary, non-test): **3**
-- API files present: `api/app.py`, `api/prediction_api.py`, `api/enhanced_prediction_api.py`, `api/web_app.py`
-- Note: A unified `api/app.py` exists with 1016 LOC and consolidates endpoints.
+**ENTRYPOINTS**: 
+- Single unified API: `api/app.py` 
+- Single unified CLI: `nfl_cli.py` 
+- Legacy APIs: REMOVED 
 
-Sources:
-- `audit_report.json` and `audit_report.md`
-- Targeted repo scan (grouped below)
+**CLEANUP STATUS**:
+- Duplicates: 3 function/method groups (reduced from 18)
+- Unused Definitions: 202 possibly unused definitions (reduced from 214)
+- Files with __main__: 1 remaining (down from 3)
 
-## Python Modules (path and LOC when available)
+## Data Files Present (33 total)
 
-Grouped by directory. LOC values come from `audit_report.md` when available; others omitted.
+### Snapshots (data/snapshots/2025-09-09/)
+- `reference_teams.csv`
+- `reference_stadiums.csv` 
+- `reference_players.csv`
+- `rosters.csv`
+- `depth_charts.csv`
+- `injuries.csv`
+- `schedules.csv`
+- `snaps.csv`
+- `pbp.csv`
+- `weather.csv`
+- `odds.csv`
 
-- api/
-  - `api/__init__.py` (loc=9)
-  - `api/app.py` (loc=784)
-  - `api/enhanced_prediction_api.py` (loc=761)
-  - `api/prediction_api.py` (loc=770)
-  - `api/web_app.py` (loc=365)
+### Models Directory
+- Multiple .pkl files in models/ subdirectories
+- Model artifacts for different positions and markets
+
+### Other Data
+- Database files (.db)
+- Configuration files (.yaml, .env)
+
+## Python Modules Present (89 total)
+
+### CORE ENTRYPOINTS (KEEP)
+- `api/app.py` - Unified FastAPI server (784 LOC)
+- `nfl_cli.py` - Unified Typer CLI
+
+### CORE ARCHITECTURE (KEEP)
+- `core/database_models.py` - SQLAlchemy models
+- `core/models/feature_engineering.py` - Feature pipeline
+- `core/models/prediction_models.py` - ML models
+- `core/data/ingestion_adapters.py` - Data adapters
+- `core/data/market_mapping.py` - Market normalization
+
+### DATA PIPELINE (KEEP)
+- `core/data/data_collector.py`
+- `core/data/data_foundation.py` 
+- `core/data/data_validator.py`
+- `core/data/enhanced_data_collector.py`
+- `core/data/odds_snapshot.py`
+
+### Data Processing (25 modules)
+- `core/data/data_collector.py` - Enhanced data collection
+- `core/data/data_foundation.py` - Foundation data structures
+- `core/data/odds_snapshot.py` - Odds data handling
+
+### Model Training & Evaluation (15 modules)
+- `core/models/feature_engineering.py` - Feature engineering
+- `core/models/streamlined_models.py` - Streamlined ML models
+- `core/models/prediction_bounds.py` - Prediction validation
+
+### Testing Framework (25 modules)
+- `tests/` - Comprehensive test suite (87 passing tests)
+- Schema validation, feature engineering, model training tests
+
+### Configuration & Utilities (9 modules)
+- `config/config_manager.py` - Configuration management
+- `config/config.yaml` - System configuration
+- Various utility scripts and helpers
+
+## Data Assets
+
+### Processed Data (33 files)
+- `data/snapshots/2025-09-09/` - Current snapshot data
+- `data/processed/` - Processed datasets
+- `data/features/` - Feature matrices
+- `models/` - Trained model artifacts (33 .pkl files)
+
+### Reports & Coverage
+- `reports/coverage/` - Coverage matrices and validation
+- `reports/backtests/` - Backtest results and metrics
+
+## Removed During Cleanup (Phase 6)
+- 30+ legacy files including duplicates and unused modules
+- Broken test files referencing deleted modules
+- Obsolete configuration and backup files
 
 - core/
   - `core/__init__.py`

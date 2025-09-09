@@ -1,0 +1,6 @@
+stadium_id,name,city,state,lat,lon,surface,roof,elevation
+PHX,State Farm Stadium,Glendale,AZ,33.5276,-112.2626,FieldTurf,retractable,1117
+ATL,Mercedes-Benz Stadium,Atlanta,GA,33.7553,-84.4006,FieldTurf,retractable,1050
+BAL,M&T Bank Stadium,Baltimore,MD,39.278,-76.6227,Grass,open,56
+BUF,Highmark Stadium,Orchard Park,NY,42.7738,-78.787,FieldTurf,open,650
+KC,Arrowhead Stadium,Kansas City,MO,39.0489,-94.4839,Grass,open,909

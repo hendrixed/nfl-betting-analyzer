@@ -1,0 +1,16 @@
+market,XGBoost,LightGBM,RandomForest,LinearRegression,NeuralNetwork,EnsembleModel
+player_passing_yds,1,1,1,1,0,1
+player_passing_tds,0,0,0,1,0,0
+player_interceptions,0,0,0,1,0,0
+player_rushing_yds,1,1,1,1,0,1
+player_rushing_tds,0,0,0,1,0,0
+player_rec_yds,1,1,1,1,0,1
+player_receptions,1,1,1,1,0,1
+player_rec_tds,0,0,0,1,0,0
+player_fantasy_points,1,1,1,1,1,1
+team_total_points,0,0,0,1,1,0
+game_total_points,0,0,0,1,1,0
+point_spread,0,0,0,1,1,0
+first_half_total,0,0,0,1,0,0
+first_td_scorer,0,0,0,1,0,0
+anytime_td_scorer,0,0,0,1,0,0

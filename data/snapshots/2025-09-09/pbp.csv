@@ -1,0 +1,5 @@
+game_id,play_id,quarter,down,yards_to_go,yard_line,offense,defense,play_type
+KC_BUF_2025_W1,1,1,1,10,35,KC,BUF,pass
+KC_BUF_2025_W1,2,1,2,7,28,BUF,KC,rush
+BAL_PIT_2025_W1,3,1,3,4,42,BAL,PIT,pass
+BAL_PIT_2025_W1,4,1,1,10,25,PIT,BAL,rush

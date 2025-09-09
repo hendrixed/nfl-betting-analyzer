@@ -1,0 +1,6 @@
+player_id,name,birthdate,age,position,team,height_inches,weight_lbs,dominant_hand,draft_year,draft_round,draft_pick
+mahomes_patrick,Patrick Mahomes,1995-09-17,28,QB,KC,75,230,R,2017,1,10
+allen_josh,Josh Allen,1996-05-21,27,QB,BUF,77,237,R,2018,1,7
+jackson_lamar,Lamar Jackson,1997-01-07,26,QB,BAL,74,212,R,2018,1,32
+henry_derrick,Derrick Henry,1994-01-04,29,RB,BAL,75,247,R,2016,2,45
+kelce_travis,Travis Kelce,1989-10-05,34,TE,KC,77,260,R,2013,3,63

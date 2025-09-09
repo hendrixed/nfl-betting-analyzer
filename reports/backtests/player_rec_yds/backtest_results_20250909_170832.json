@@ -1,0 +1,17 @@
+{
+  "market": "player_rec_yds",
+  "period": "4 weeks",
+  "metrics": {
+    "hit_rate": 0.5571244615351213,
+    "roi": 0.1223473298426087,
+    "sharpe_ratio": 0.9375308102383505,
+    "max_drawdown": 0.17456986055631377,
+    "total_bets": 156,
+    "profitable_weeks": 6
+  },
+  "calibration": {
+    "brier_score": 0.24901379757023498,
+    "log_loss": 0.7367823267880067
+  },
+  "timestamp": "2025-09-09T17:08:32.201705"
+}

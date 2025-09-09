@@ -1,0 +1,8 @@
+player_id,week,team,position,offense_snaps,offense_pct,defense_pct
+pmahomes_qb,1,KC,QB,65,100.0,0.0
+cmccaffrey_rb,1,SF,RB,45,68.2,0.0
+thill_wr,1,MIA,WR,52,78.8,0.0
+tkelce_te,1,KC,TE,58,89.2,0.0
+allen_josh,1,BUF,QB,68,100.0,0.0
+jackson_lamar,1,BAL,QB,62,100.0,0.0
+henry_derrick,1,BAL,RB,45,73.8,0.0

@@ -1,0 +1,33 @@
+team_id,abbr,name,conference,division,head_coach,home_stadium_id
+ARI,ARI,Arizona Cardinals,NFC,West,Jonathan Gannon,PHX
+ATL,ATL,Atlanta Falcons,NFC,South,Raheem Morris,ATL
+BAL,BAL,Baltimore Ravens,AFC,North,John Harbaugh,BAL
+BUF,BUF,Buffalo Bills,AFC,East,Sean McDermott,BUF
+CAR,CAR,Carolina Panthers,NFC,South,Dave Canales,CAR
+CHI,CHI,Chicago Bears,NFC,North,Matt Eberflus,CHI
+CIN,CIN,Cincinnati Bengals,AFC,North,Zac Taylor,CIN
+CLE,CLE,Cleveland Browns,AFC,North,Kevin Stefanski,CLE
+DAL,DAL,Dallas Cowboys,NFC,East,Mike McCarthy,DAL
+DEN,DEN,Denver Broncos,AFC,West,Sean Payton,DEN
+DET,DET,Detroit Lions,NFC,North,Dan Campbell,DET
+GB,GB,Green Bay Packers,NFC,North,Matt LaFleur,GB
+HOU,HOU,Houston Texans,AFC,South,DeMeco Ryans,HOU
+IND,IND,Indianapolis Colts,AFC,South,Shane Steichen,IND
+JAX,JAX,Jacksonville Jaguars,AFC,South,Doug Pederson,JAX
+KC,KC,Kansas City Chiefs,AFC,West,Andy Reid,KC
+LV,LV,Las Vegas Raiders,AFC,West,Antonio Pierce,LV
+LAC,LAC,Los Angeles Chargers,AFC,West,Jim Harbaugh,LAC
+LAR,LAR,Los Angeles Rams,NFC,West,Sean McVay,LAR
+MIA,MIA,Miami Dolphins,AFC,East,Mike McDaniel,MIA
+MIN,MIN,Minnesota Vikings,NFC,North,Kevin OConnell,MIN
+NE,NE,New England Patriots,AFC,East,Jerod Mayo,NE
+NO,NO,New Orleans Saints,NFC,South,Dennis Allen,NO
+NYG,NYG,New York Giants,NFC,East,Brian Daboll,NYG
+NYJ,NYJ,New York Jets,AFC,East,Robert Saleh,NYJ
+PHI,PHI,Philadelphia Eagles,NFC,East,Nick Sirianni,PHI
+PIT,PIT,Pittsburgh Steelers,AFC,North,Mike Tomlin,PIT
+SF,SF,San Francisco 49ers,NFC,West,Kyle Shanahan,SF
+SEA,SEA,Seattle Seahawks,NFC,West,Mike Macdonald,SEA
+TB,TB,Tampa Bay Buccaneers,NFC,South,Todd Bowles,TB
+TEN,TEN,Tennessee Titans,AFC,South,Brian Callahan,TEN
+WAS,WAS,Washington Commanders,NFC,East,Dan Quinn,WAS

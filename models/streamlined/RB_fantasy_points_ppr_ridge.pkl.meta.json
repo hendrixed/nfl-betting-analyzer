@@ -1,0 +1,16 @@
+{
+  "position": "RB",
+  "model_type": "ridge",
+  "target_stat": "fantasy_points_ppr",
+  "r2_score": 0.9945974952617765,
+  "features": 6,
+  "feature_names": [
+    "avg_rushing_yards",
+    "avg_rushing_tds",
+    "avg_receiving_yards",
+    "avg_receptions",
+    "game_count",
+    "fantasy_range"
+  ],
+  "saved_at": "2025-09-09T15:38:27.015888"
+}
