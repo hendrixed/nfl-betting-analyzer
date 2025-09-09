@@ -4,6 +4,7 @@ Simplified, working implementation for NFL betting predictions.
 """
 
 import logging
+import json
 import numpy as np
 import pandas as pd
 import pickle
@@ -12,11 +13,20 @@ from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from pathlib import Path
 
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.linear_model import Ridge
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.preprocessing import StandardScaler
+# Make sklearn optional so that importing this module doesn't fail in lean environments
+try:
+    from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+    from sklearn.linear_model import Ridge
+    from sklearn.model_selection import train_test_split, cross_val_score
+    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+    from sklearn.preprocessing import StandardScaler
+    SKLEARN_AVAILABLE = True
+except Exception:
+    SKLEARN_AVAILABLE = False
+    RandomForestRegressor = GradientBoostingRegressor = Ridge = None  # type: ignore
+    train_test_split = cross_val_score = None  # type: ignore
+    mean_squared_error = mean_absolute_error = r2_score = None  # type: ignore
+    StandardScaler = None  # type: ignore
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -59,15 +69,21 @@ class StreamlinedNFLModels:
         self.models_dir.mkdir(parents=True, exist_ok=True)
         
         # Model configurations
-        self.models = {
-            'random_forest': RandomForestRegressor(n_estimators=100, random_state=42),
-            'gradient_boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
-            'ridge': Ridge(alpha=1.0, random_state=42)
-        }
+        if SKLEARN_AVAILABLE:
+            self.models = {
+                'random_forest': RandomForestRegressor(n_estimators=100, random_state=42),
+                'gradient_boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
+                'ridge': Ridge(alpha=1.0, random_state=42)
+            }
+        else:
+            self.models = {}
     
     def train_all_models(self, target_stat: str = 'fantasy_points_ppr') -> Dict[str, List[ModelResult]]:
         """Train models for all positions"""
         logger.info(f"Training streamlined models for {target_stat}")
+        if not SKLEARN_AVAILABLE:
+            logger.warning("scikit-learn not available; skipping training.")
+            return {}
         
         results = {}
         
@@ -91,6 +107,8 @@ class StreamlinedNFLModels:
     
     def _train_position_models(self, position: str, target_stat: str) -> List[ModelResult]:
         """Train all model types for a specific position"""
+        if not SKLEARN_AVAILABLE:
+            return []
         
         # Get training data
         X, y, feature_names, player_count = self._prepare_training_data(position, target_stat)
@@ -266,6 +284,8 @@ class StreamlinedNFLModels:
     
     def predict_player(self, player_id: str, target_stat: str = 'fantasy_points_ppr') -> Optional[PredictionResult]:
         """Predict performance for a specific player"""
+        if not SKLEARN_AVAILABLE:
+            return None
         
         # Get player info
         player = self.session.query(Player).filter(Player.player_id == player_id).first()
@@ -356,6 +376,8 @@ class StreamlinedNFLModels:
     
     def _save_model_result(self, result: ModelResult):
         """Save the best model for a position"""
+        if not SKLEARN_AVAILABLE:
+            return
         
         # Retrain the model with all data for saving
         X, y, feature_names, _ = self._prepare_training_data(result.position, result.target_stat)
@@ -388,11 +410,29 @@ class StreamlinedNFLModels:
             with open(filepath, 'wb') as f:
                 pickle.dump(model_data, f)
             logger.info(f"Saved model: {filename}")
+            # Also write sidecar JSON metadata to avoid requiring sklearn for summaries
+            meta = {
+                'position': result.position,
+                'model_type': result.model_type,
+                'target_stat': result.target_stat,
+                'r2_score': result.r2_score,
+                'features': len(feature_names),
+                'feature_names': feature_names,
+                'saved_at': datetime.now().isoformat()
+            }
+            meta_path = filepath.with_suffix(filepath.suffix + ".meta.json")
+            try:
+                with open(meta_path, 'w', encoding='utf-8') as mf:
+                    json.dump(meta, mf, ensure_ascii=True, indent=2)
+            except Exception as me:
+                logger.debug(f"Failed to write metadata for {filename}: {me}")
         except Exception as e:
             logger.error(f"Error saving model: {e}")
     
     def _load_model(self, position: str, target_stat: str) -> Optional[Dict]:
         """Load the best model for a position"""
+        if not SKLEARN_AVAILABLE:
+            return None
         
         # Try to find the best model file
         best_model = None
@@ -406,7 +446,7 @@ class StreamlinedNFLModels:
                 if model_data.get('r2_score', 0) > best_r2:
                     best_model = model_data
                     best_r2 = model_data.get('r2_score', 0)
-                    
+                
             except Exception as e:
                 logger.debug(f"Error loading {model_file}: {e}")
                 continue
@@ -415,34 +455,67 @@ class StreamlinedNFLModels:
     
     def get_model_summary(self) -> Dict[str, Any]:
         """Get summary of trained models by position"""
-        summary = {}
+        summary: Dict[str, Any] = {}
         
-        for model_file in self.models_dir.glob("*.pkl"):
+        # 1) Prefer reading sidecar JSON metadata if available (does not require sklearn)
+        for meta_file in self.models_dir.glob("*.meta.json"):
             try:
-                with open(model_file, 'rb') as f:
-                    model_data = pickle.load(f)
-                
-                position = model_data.get('position', 'Unknown')
-                if position not in summary:
+                with open(meta_file, 'r', encoding='utf-8') as mf:
+                    meta = json.load(mf)
+                position = meta.get('position', 'Unknown')
+                current_best = summary.get(position)
+                if (current_best is None) or (float(meta.get('r2_score', 0)) > float(current_best.get('r2_score', 0))):
                     summary[position] = {
-                        'model_type': model_data.get('model_type', 'Unknown'),
-                        'r2_score': model_data.get('r2_score', 0),
-                        'target_stat': model_data.get('target_stat', 'fantasy_points_ppr'),
-                        'features': len(model_data.get('feature_names', []))
+                        'model_type': meta.get('model_type', 'Unknown'),
+                        'r2_score': float(meta.get('r2_score', 0)),
+                        'target_stat': meta.get('target_stat', 'fantasy_points_ppr'),
+                        'features': int(meta.get('features', 0))
                     }
-                else:
-                    # Keep the best model for each position
-                    if model_data.get('r2_score', 0) > summary[position]['r2_score']:
+            except Exception as e:
+                logger.debug(f"Error reading metadata {meta_file}: {e}")
+                continue
+        
+        # 2) If no metadata, provide minimal summary by parsing filenames
+        if not summary:
+            for model_file in self.models_dir.glob("*.pkl"):
+                try:
+                    name = model_file.stem  # e.g., QB_fantasy_points_ppr_ridge
+                    parts = name.split("_")
+                    if len(parts) >= 3:
+                        position = parts[0]
+                        model_type = parts[-1]
+                        target_stat = "_".join(parts[1:-1])
+                        # Minimal info; r2 unknown without unpickling
+                        existing = summary.get(position)
+                        if existing is None:
+                            summary[position] = {
+                                'model_type': model_type,
+                                'r2_score': 0.0,
+                                'target_stat': target_stat,
+                                'features': 0
+                            }
+                    else:
+                        continue
+                except Exception:
+                    continue
+        
+        # 3) If sklearn is available, try to refine with actual r2/features by unpickling
+        if SKLEARN_AVAILABLE:
+            for model_file in self.models_dir.glob("*.pkl"):
+                try:
+                    with open(model_file, 'rb') as f:
+                        model_data = pickle.load(f)
+                    position = model_data.get('position', 'Unknown')
+                    if position not in summary or float(model_data.get('r2_score', 0)) > float(summary[position]['r2_score']):
                         summary[position] = {
                             'model_type': model_data.get('model_type', 'Unknown'),
-                            'r2_score': model_data.get('r2_score', 0),
+                            'r2_score': float(model_data.get('r2_score', 0)),
                             'target_stat': model_data.get('target_stat', 'fantasy_points_ppr'),
                             'features': len(model_data.get('feature_names', []))
                         }
-                
-            except Exception as e:
-                logger.debug(f"Error reading {model_file}: {e}")
-                continue
+                except Exception as e:
+                    logger.debug(f"Error refining summary from {model_file}: {e}")
+                    continue
         
         return summary
 

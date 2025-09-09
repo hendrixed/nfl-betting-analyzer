@@ -892,7 +892,6 @@ def backtest(
     
     try:
         with Progress(
-            SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             console=console
         ) as progress:
