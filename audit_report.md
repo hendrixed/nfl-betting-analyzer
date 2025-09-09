@@ -2,8 +2,8 @@
 
 ## Inventory
 
-- Python modules: **92**
-- Data files: **15**
+- Python modules: **89**
+- Data files: **33**
 - Notebooks: **0**
 - Config present: requirements.txt, .env
 
@@ -33,6 +33,7 @@
   - flask-cors>=4.0.0
   - pydantic>=2.0.0
   - requests>=2.28.0
+  - httpx>=0.24.1
   - aiohttp>=3.8.0
   - beautifulsoup4>=4.11.0
   - selenium>=4.5.0
@@ -76,13 +77,12 @@
 
 ## Potential issues
 
-- Duplicate function/method bodies: **16** groups
-- Possibly dead/unused defs: **180**
-- Files with `if __name__ == '__main__'`: 3
+- Duplicate function/method bodies: **3** groups
+- Possibly dead/unused defs: **202**
+- Files with `if __name__ == '__main__'`: 1
 
 ## Notes
 
-- Multiple CLI entrypoints detected; consolidate with Typer.
 
 ## Files
 
@@ -103,85 +103,79 @@
 - `advanced_situational_analytics.py` (loc=551) []
   - functions: main
   - classes: SituationalStats, GameScript, SituationalAnalyzer, AdvancedPlayerMetrics, CoachingAnalytics
-- `api\__init__.py` (loc=9) []
-- `api\app.py` (loc=784) [fastapi]
-  - functions: cache_response, get_db, create_access_token, verify_token, get_current_user, lifespan, real_time_update_task, root, health_check, detailed_health_check, websocket_endpoint, generate_real_time_prediction ...
-  - classes: PlayerInfo, EnhancedPlayerInfo, PredictionRequest, BettingAnalysisRequest, PlayerPredictionResponse, GamePredictionResponse, BettingInsight, PerformanceMetrics, RealTimePrediction, BettingRecommendation, MarketAnalysis, WebSocketMessage ...
-- `api\enhanced_prediction_api.py` (loc=761) [fastapi]
-  - functions: create_access_token, verify_token, get_current_user, cache_response, lifespan, get_db, real_time_update_task, enhanced_root, websocket_endpoint, get_enhanced_player_prediction, get_live_betting_opportunities, get_market_intelligence ...
-  - classes: EnhancedPlayerInfo, RealTimePrediction, BettingRecommendation, MarketAnalysis, WebSocketMessage, ConnectionManager
-- `api\prediction_api.py` (loc=770) [fastapi]
-  - functions: get_db, lifespan, get_db, get_current_user, root, health_check, get_players, get_player_details, get_player_predictions, get_game_predictions, get_betting_insights, get_model_performance ...
-  - classes: PlayerInfo, PlayerPredictionResponse, GamePredictionResponse, BettingInsight, PerformanceMetrics, PredictionRequest, BettingAnalysisRequest
-- `api\web_app.py` (loc=365) [fastapi]
-  - functions: get_db, home, teams_page, team_detail, player_detail, games_page, game_detail, predictions_page, api_player_stats, api_game_prediction, api_position_rankings
+- `api/__init__.py` (loc=10) []
+- `api/app.py` (loc=1016) [fastapi]
+  - functions: cache_response, poisson, latest_snapshot_dir, models_available, get_db, create_access_token, verify_token, get_current_user, lifespan, real_time_update_task, root, snapshot_mock_odds ...
+  - classes: PlayerInfo, EnhancedPlayerInfo, PredictionRequest, BettingAnalysisRequest, PlayerPredictionResponse, FantasyPredictionResponse, GamePredictionResponse, BettingInsight, PerformanceMetrics, RealTimePrediction, BettingRecommendation, MarketAnalysis ...
 - `api_integrations.py` (loc=643) []
   - functions: main
   - classes: DataSource, APIIntegrations
-- `audit_repo.py` (loc=362) [typer argparse fastapi]
+- `audit_repo.py` (loc=363) [typer argparse fastapi]
   - functions: normalize_fn_ast, analyze_python_file, walk_repo, parse_requirements, find_duplicates, estimate_dead_defs, detect_multiple_mains, gather_notes, generate_markdown, main
   - classes: FunctionInfo, ClassInfo, ModuleInfo, RepoReport
-- `backup_20250907_212630\live_prediction_demo.py` (loc=374) []
-  - functions: main
-  - classes: LivePredictionDemo
-- `backup_20250907_212630\production_cli.py` (loc=453) []
-  - functions: cli, verify, demo, predict, report, status, analyze
-- `backup_20250907_212630\verify_production_readiness.py` (loc=651) []
-  - functions: main
-  - classes: ProductionReadinessVerifier
 - `comprehensive_matchup_analyzer.py` (loc=624) []
   - classes: TeamMatchupProfile, PositionalMatchup, ComprehensiveMatchupReport, ComprehensiveMatchupAnalyzer
 - `comprehensive_stats_engine.py` (loc=556) []
   - functions: main
   - classes: ComprehensivePlayerStats, ComprehensiveStatsEngine
-- `config\config_manager.py` (loc=431) []
+- `config/config_manager.py` (loc=435) []
   - functions: get_config, load_config, save_config, update_config
   - classes: DatabaseConfig, APIConfig, DataConfig, FeatureConfig, ModelConfig, PipelineConfig, LoggingConfig, PredictionConfig, DirectoriesConfig, ProcessingConfig, APIKeysConfig, SystemMetaConfig ...
-- `core\__init__.py` (loc=7) []
-- `core\data\__init__.py` (loc=15) []
-- `core\data\data_collector.py` (loc=662) []
+- `config_manager.py` (loc=4) []
+- `core/__init__.py` (loc=7) []
+- `core/data/__init__.py` (loc=15) []
+- `core/data/data_collector.py` (loc=666) []
   - functions: main
   - classes: DataCollectionConfig, NFLDataCollector, PlayerDataCollector, GameDataCollector, StatsDataCollector, BettingDataCollector
-- `core\data\data_foundation.py` (loc=289) []
+- `core/data/data_foundation.py` (loc=304) []
   - functions: merge_player_data, classify_position_group, validate_player_role_consistency
   - classes: PlayerRole, MasterPlayer, WeeklyRosterSnapshot, ValidationReport, PlayerGameValidation, TeamDepthChart, DataSourceMetrics, WeeklyDataQualityReport
-- `core\data\data_processing_pipeline.py` (loc=459) []
+- `core/data/data_processing_pipeline.py` (loc=459) []
   - functions: main
   - classes: DataQualityMetrics, ProcessingResult, NFLDataProcessingPipeline
-- `core\data\data_validation_pipeline.py` (loc=505) []
+- `core/data/data_validation_pipeline.py` (loc=505) []
   - functions: main
   - classes: ValidationRule, DataValidator, AutomatedWorkflowManager
-- `core\data\data_validator.py` (loc=425) []
-  - classes: DataQualityValidator, StatsValidator, ComprehensiveValidator
-- `core\data\enhanced_data_collector.py` (loc=685) []
+- `core/data/data_validator.py` (loc=519) []
+  - classes: ValidationSeverity, ValidationResult, DataQualityValidator, StatsValidator, ComprehensiveValidator
+- `core/data/enhanced_data_collector.py` (loc=685) []
   - classes: EnhancedNFLDataCollector, RoleBasedStatsCollector
-- `core\data\ingestion_adapters.py` (loc=678) []
+- `core/data/ingestion_adapters.py` (loc=887) []
   - functions: main
   - classes: PlayerRoster, GameSchedule, PlayerStats, InjuryReport, WeatherData, BettingLine, CacheManager, BaseAdapter, NFLDataPyAdapter, WeatherAdapter, UnifiedDataIngestion
-- `core\data\nfl_2025_data_collector.py` (loc=391) []
+- `core/data/market_mapping.py` (loc=110) []
+  - functions: normalize_book, normalize_market, to_internal
+- `core/data/nfl_2025_data_collector.py` (loc=391) []
   - functions: main
   - classes: PlayerInfo, TeamInfo, NFL2025DataCollector
-- `core\data\statistical_computing_engine.py` (loc=541) []
+- `core/data/odds_snapshot.py` (loc=140) []
+  - functions: ensure_snapshot_dir, write_mock_odds_snapshot
+- `core/data/statistical_computing_engine.py` (loc=541) []
   - functions: main
   - classes: PlayerTrends, TeamAnalytics, GameContext, NFLStatisticalComputingEngine
-- `core\database_models.py` (loc=419) []
+- `core/database_models.py` (loc=546) []
   - functions: create_all_tables, get_db_session, migrate_database, validate_player_status
-  - classes: Player, Team, Game, PlayerGameStats, PlayerPrediction, GamePrediction
-- `core\models\__init__.py` (loc=16) []
-- `core\models\feature_engineering.py` (loc=955) []
+  - classes: Player, BettingLine, FeatureStore, HistoricalValidationReport, Team, Game, ModelPerformance, PlayerGameStats, PlayerPrediction, GamePrediction, PlayerIdentityMapping, StatTerminologyMapping ...
+- `core/models/__init__.py` (loc=25) []
+- `core/models/feature_engineering.py` (loc=970) []
   - functions: main
   - classes: FeatureSet, ModelFeatures, NFLFeatureEngineer
-- `core\models\prediction_models.py` (loc=783) []
+- `core/models/prediction_models.py` (loc=803) []
   - functions: main
   - classes: ModelPerformance, PredictionResult, ModelEnsemble, ModelConfig, NFLPredictionModel, EnsembleModel, NFLPredictionEngine
-- `core\models\streamlined_models.py` (loc=485) []
+- `core/models/streamlined_models.py` (loc=558) []
   - functions: main
   - classes: ModelResult, PredictionResult, StreamlinedNFLModels
-- `core\prediction_bounds.py` (loc=167) []
+- `core/prediction_bounds.py` (loc=167) []
   - classes: PredictionBoundsValidator
+- `data_collector.py` (loc=4) []
+- `data_foundation.py` (loc=4) []
+- `data_validator.py` (loc=4) []
+- `database_models.py` (loc=5) []
 - `deploy_production.py` (loc=345) []
   - functions: main
   - classes: ProductionDeployer
+- `enhanced_data_collector.py` (loc=5) []
 - `enhanced_logging.py` (loc=445) []
   - functions: performance_monitor, error_handler, log_prediction_start, log_prediction_success, log_api_request, log_database_operation, main
   - classes: LogLevel, LogContext, StructuredFormatter, NFLLogger, ErrorTracker, LoggingConfig
@@ -212,10 +206,10 @@
 - `model_evaluation.py` (loc=826) []
   - functions: run_rolling_backtest, main
   - classes: EvaluationConfig, PredictionResult, EvaluationMetrics, NFLModelEvaluator
-- `nfl_browser.py` (loc=454) []
-  - functions: find_available_port, initialize_models, index, get_team_players, search_players, predict_player
-- `nfl_cli.py` (loc=591) [typer]
-  - functions: main, fetch, features, train, project, sim, backtest, run_api, status
+- `nfl_cli.py` (loc=1069) [typer]
+  - functions: main, fetch, models_status, sync_roster, players_audit, foundation, snapshot_verify, odds_snapshot, features, train, project, sim ...
+- `nfl_ultimate_system.py` (loc=47) []
+  - classes: UltimateEnhancedPredictor, SocialSentimentAnalyzer, ComprehensiveAnalysis, NFLUltimateSystem
 - `opponent_defensive_analysis.py` (loc=479) []
   - functions: main
   - classes: OpponentDefensiveAnalysis
@@ -227,80 +221,72 @@
 - `prediction_pipeline.py` (loc=831) []
   - functions: main
   - classes: PipelineConfig, NFLPredictionPipeline
+- `psutil.py` (loc=15) []
+  - classes: _MemInfo, Process
 - `real_time_data_integration.py` (loc=537) []
   - functions: main
   - classes: InjuryReport, WeatherData, LiveOdds, RealTimeDataIntegrator, MarketMovementTracker, EnhancedPredictionAdjuster
 - `real_time_market_data.py` (loc=400) []
   - functions: main
   - classes: RealTimeMarketData
+- `real_time_nfl_system.py` (loc=73) []
+  - classes: GameInfo, RealTimeNFLSystem
 - `run_full_standardization.py` (loc=273) []
   - functions: run_full_standardization, validate_standardized_data, main
-- `scripts\backtest.py` (loc=20) []
-  - functions: main
-- `scripts\download_initial_data.py` (loc=35) []
-  - functions: main
-- `scripts\fetch.py` (loc=20) []
-  - functions: main
-- `scripts\make_predictions.py` (loc=18) []
-  - functions: main
-- `scripts\project.py` (loc=20) []
-  - functions: main
-- `scripts\run_api.py` (loc=20) []
-  - functions: main
-- `scripts\run_pipeline.py` (loc=28) []
-  - functions: main
-- `scripts\setup_database.py` (loc=23) []
-  - functions: main
-- `scripts\simulate.py` (loc=20) []
-  - functions: main
-- `scripts\start_api.py` (loc=21) []
-- `scripts\train.py` (loc=20) []
-  - functions: main
-- `scripts\train_models.py` (loc=30) []
-  - functions: main
-- `social_sentiment_analyzer.py` (loc=450) []
+- `social_sentiment_analyzer.py` (loc=458) []
   - functions: main
   - classes: SentimentData, NewsImpact, SocialSentimentAnalyzer, NewsImpactAnalyzer, PublicPerceptionTracker
-- `start_nfl_system.py` (loc=208) []
-  - functions: find_available_port, check_dependencies, start_flask_server, start_fastapi_server, main
 - `stat_terminology_mapper.py` (loc=286) []
   - classes: StatTerminologyMapper
 - `team_matchup_analyzer.py` (loc=421) []
   - functions: main
   - classes: TeamStrength, DefensiveRankings, MatchupAnalysis, TeamMatchupAnalyzer
-- `test_complete_system.py` (loc=236) []
-  - functions: test_database_connection, test_model_loading, test_predictions, test_batch_predictions, test_api_integration, run_complete_system_test
 - `test_model_training.py` (loc=108) []
   - functions: test_simple_model_training
 - `test_real_prediction.py` (loc=78) []
   - functions: test_real_prediction
-- `test_server_fixes.py` (loc=193) []
+- `test_server_fixes.py` (loc=190) []
   - functions: test_flask_server, test_fastapi_server, test_import_fixes, main
-- `tests\test_complete_system.py` (loc=350) []
+- `tests/conftest.py` (loc=7) []
+- `tests/test_betting_props.py` (loc=23) [fastapi]
+  - functions: test_admin_snapshot_and_props_offers
+- `tests/test_complete_system.py` (loc=351) []
   - functions: main
   - classes: SystemValidator
-- `tests\test_data_validation.py` (loc=137) []
+- `tests/test_data_validation.py` (loc=137) []
   - functions: mock_session, data_quality_validator, stats_validator, sample_master_player
   - classes: TestDataQualityValidator, TestStatsValidator
-- `tests\test_enhanced_realtime.py` (loc=295) []
+- `tests/test_enhanced_realtime.py` (loc=295) []
   - functions: main
   - classes: EnhancedRealtimeSystemTester
-- `tests\test_enhanced_system.py` (loc=280) []
+- `tests/test_enhanced_system.py` (loc=280) []
   - functions: main
   - classes: EnhancedSystemTester
-- `tests\test_feature_engineering.py` (loc=534) []
+- `tests/test_feature_engineering.py` (loc=534) []
   - functions: mock_session, mock_cache_manager, feature_engineer, sample_player, sample_game_stats, sample_games
   - classes: TestNFLFeatureEngineer, TestFeatureIntegration
-- `tests\test_feature_engineering_simple.py` (loc=163) []
+- `tests/test_feature_engineering_simple.py` (loc=163) []
   - classes: TestFeatureEngineeringCore
-- `tests\test_historical_standardizer.py` (loc=254) []
+- `tests/test_historical_standardizer.py` (loc=254) []
   - functions: test_historical_standardizer, run_full_standardization
-- `tests\test_prediction_models.py` (loc=481) []
+- `tests/test_market_mapping.py` (loc=28) []
+  - functions: test_book_normalization_variants, test_market_normalization_variants, test_to_internal_ok, test_to_internal_unknown_market
+- `tests/test_prediction_models.py` (loc=481) []
   - functions: temp_models_dir, mock_feature_engineer, sample_model_features, sample_model_config
   - classes: TestModelConfig, TestNFLPredictionModel, TestEnsembleModel, TestNFLPredictionEngine, TestDeterministicBehavior
-- `tests\test_system.py` (loc=370) []
+- `tests/test_schema_comprehensive.py` (loc=233) []
+  - functions: latest_snapshot_dir, read_csv_safe, validate_columns, validate_no_nulls, test_reference_teams_schema, test_reference_stadiums_schema, test_reference_players_schema, test_rosters_schema, test_depth_charts_schema, test_injuries_schema, test_schedule_schema, test_snaps_schema ...
+- `tests/test_schema_games_usage.py` (loc=66) []
+  - functions: latest_snapshot_dir, read_header, test_schedule_schema, test_snaps_schema, test_pbp_schema, test_weather_schema, test_odds_schema
+- `tests/test_schema_reference.py` (loc=51) []
+  - functions: latest_snapshot_dir, read_header, test_reference_teams_schema, test_reference_stadiums_schema, test_reference_players_schema
+- `tests/test_schema_rosters_depth_injuries.py` (loc=81) []
+  - functions: latest_snapshot_dir, read_rows, test_rosters_schema_and_pk, test_depth_charts_schema, test_injuries_schema
+- `tests/test_system.py` (loc=370) []
   - classes: TestSystemImports, TestDatabaseModels, TestConfigurationSystem, TestPredictionSystem, TestSentimentAnalysis, TestUltimateSystem, TestInteractiveInterface, TestCLISystem, TestDataIntegrity, TestPerformanceAndReliability, TestSystemIntegration
-- `validate_system_fixes.py` (loc=256) []
+- `ultimate_enhanced_predictor.py` (loc=28) []
+  - classes: UltimatePrediction, UltimateEnhancedPredictor
+- `validate_system_fixes.py` (loc=255) []
   - functions: test_database_connections, test_streamlined_models, test_prediction_bounds, test_api_imports, test_retired_players, test_data_integrity, main
 - `validation_backtesting_framework.py` (loc=681) []
   - functions: main
@@ -310,79 +296,54 @@
 - `verify_production_readiness.py` (loc=651) []
   - functions: main
   - classes: ProductionReadinessVerifier
-- `web\__init__.py` (loc=4) []
-- `web\web_server.py` (loc=254) []
-  - functions: initialize_models, index, predict_player, batch_predict, get_players, health_check, system_status, find_available_port
+- `web/__init__.py` (loc=4) []
 
 ## Data files
 - audit_report.json
-- models\performance\QB_fantasy_points_model_performance.json
-- models\performance\QB_passing_touchdowns_model_performance.json
-- models\performance\QB_passing_yards_model_performance.json
-- models\performance\RB_fantasy_points_model_performance.json
-- models\performance\RB_receiving_yards_model_performance.json
-- models\performance\RB_rushing_touchdowns_model_performance.json
-- models\performance\RB_rushing_yards_model_performance.json
-- models\performance\TE_fantasy_points_model_performance.json
-- models\performance\TE_receiving_yards_model_performance.json
-- models\performance\TE_receptions_model_performance.json
-- models\performance\WR_fantasy_points_model_performance.json
-- models\performance\WR_receiving_touchdowns_model_performance.json
-- models\performance\WR_receiving_yards_model_performance.json
-- models\performance\WR_receptions_model_performance.json
+- data/snapshots/2025-09-09/depth_charts.csv
+- data/snapshots/2025-09-09/injuries.csv
+- data/snapshots/2025-09-09/odds.csv
+- data/snapshots/2025-09-09/pbp.csv
+- data/snapshots/2025-09-09/reference_players.csv
+- data/snapshots/2025-09-09/reference_stadiums.csv
+- data/snapshots/2025-09-09/reference_teams.csv
+- data/snapshots/2025-09-09/rosters.csv
+- data/snapshots/2025-09-09/schedule.csv
+- data/snapshots/2025-09-09/snaps.csv
+- data/snapshots/2025-09-09/weather.csv
+- models/performance/QB_fantasy_points_model_performance.json
+- models/performance/QB_passing_touchdowns_model_performance.json
+- models/performance/QB_passing_yards_model_performance.json
+- models/performance/RB_fantasy_points_model_performance.json
+- models/performance/RB_receiving_yards_model_performance.json
+- models/performance/RB_rushing_touchdowns_model_performance.json
+- models/performance/RB_rushing_yards_model_performance.json
+- models/performance/TE_fantasy_points_model_performance.json
+- models/performance/TE_receiving_yards_model_performance.json
+- models/performance/TE_receptions_model_performance.json
+- models/performance/WR_fantasy_points_model_performance.json
+- models/performance/WR_receiving_touchdowns_model_performance.json
+- models/performance/WR_receiving_yards_model_performance.json
+- models/performance/WR_receptions_model_performance.json
+- models/streamlined/QB_fantasy_points_ppr_ridge.pkl.meta.json
+- models/streamlined/RB_fantasy_points_ppr_ridge.pkl.meta.json
+- models/streamlined/TE_fantasy_points_ppr_ridge.pkl.meta.json
+- models/streamlined/WR_fantasy_points_ppr_ridge.pkl.meta.json
+- reports/backtests/player_rec_yds/backtest_results_20250909_153905.json
+- reports/coverage/model_market_matrix.csv
+- reports/coverage/stats_feature_matrix.csv
 
 ## Duplicate bodies (same AST hash)
-- b67a381c55… :
-  - advanced_ml_models.py:ModelComparison.__init__@424
+- c2b0decd10… :
   - player_comparison_optimizer.py:AdvancedAnalytics.__init__@361
-- 11a101f24a… :
-  - nfl_browser.py:find_available_port@23
-  - start_nfl_system.py:find_available_port@15
-- a19e229c0b… :
-  - verify_production_readiness.py:main@636
-  - backup_20250907_212630\verify_production_readiness.py:main@636
-- 2bf073c64a… :
-  - verify_production_readiness.py:ProductionReadinessVerifier.__init__@28
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier.__init__@28
-- 12396f09a3… :
-  - verify_production_readiness.py:ProductionReadinessVerifier.run_comprehensive_verification@36
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier.run_comprehensive_verification@36
-- 12544c3218… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._verify_system_initialization@95
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._verify_system_initialization@95
-- 867b7f60ed… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._verify_data_availability@133
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._verify_data_availability@133
-- b38bdb7028… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._verify_model_functionality@207
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._verify_model_functionality@207
-- a0993ce83c… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._verify_prediction_generation@287
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._verify_prediction_generation@287
-- e0b97c6739… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._verify_data_quality@380
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._verify_data_quality@380
-- 161fd65d32… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._verify_performance@454
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._verify_performance@454
-- 363d09a4a8… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._verify_production_config@501
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._verify_production_config@501
-- f8df3a59f7… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._verify_error_handling@531
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._verify_error_handling@531
-- af39688e91… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._generate_production_recommendations@581
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._generate_production_recommendations@581
-- 085aca5ebf… :
-  - verify_production_readiness.py:ProductionReadinessVerifier._print_final_assessment@613
-  - backup_20250907_212630\verify_production_readiness.py:ProductionReadinessVerifier._print_final_assessment@613
-- 743f6aeb3c… :
-  - api\app.py:get_db@200
-  - api\enhanced_prediction_api.py:get_db@265
-  - api\prediction_api.py:get_db@41
-  - api\prediction_api.py:get_db@163
-  - api\web_app.py:get_db@28
+  - advanced_ml_models.py:ModelComparison.__init__@424
+- 28e8725a90… :
+  - tests/test_schema_reference.py:latest_snapshot_dir@7
+  - tests/test_schema_rosters_depth_injuries.py:latest_snapshot_dir@7
+  - tests/test_schema_games_usage.py:latest_snapshot_dir@7
+- f6fc328b32… :
+  - tests/test_schema_reference.py:read_header@14
+  - tests/test_schema_games_usage.py:read_header@13
 
 ## Possibly unused definitions
 - APIConfig
@@ -397,17 +358,21 @@
 - AutomatedWorkflowManager
 - BaseAdapter
 - BaseMLModel
+- BettingAnalysisRequest
 - BettingDataCollector
 - BettingLine
+- BettingRecommendation
 - ClassInfo
 - CoachingAnalytics
 - ComprehensiveMatchupAnalyzer
-- ComprehensiveValidator
+- ComprehensiveStatsEngine
+- ConnectionManager
 - DataConfig
 - DataCoverageExpander
 - DatabaseConfig
 - DefensiveRankings
 - DirectoriesConfig
+- EnhancedPlayerInfo
 - EnhancedPredictionAdjuster
 - EnhancedRealtimeSystemTester
 - EnhancedSystemTester
@@ -415,12 +380,14 @@
 - EvaluationMetrics
 - FeatureSet
 - GameDataCollector
+- GameInfo
 - GameSchedule
 - GameScript
 - GradientBoostingModel
 - HistoricalDataReport
 - HistoricalTrendAnalyzer
 - HistoricalValidationLite
+- HistoricalValidationReport
 - InjuryDataIntegrator
 - InjuryReport
 - LightGBMModel
@@ -428,6 +395,7 @@
 - LiveOdds
 - LogLevel
 - LoggingConfig
+- MarketAnalysis
 - MarketIntelligence
 - MarketMovementTracker
 - MatchupAnalysis
@@ -436,12 +404,15 @@
 - ModelResult
 - NFL2025DataCollector
 - NFLDataProcessingPipeline
+- NFLPredictionPipeline
 - NFLScheduleLoader
+- NFLUltimateSystem
 - NeuralNetworkModel
 - NewsImpact
 - NewsImpactAnalyzer
 - OpponentDefensiveAnalysis
 - OptimalLineup
+- PipelineConfig
 - PlayerComparator
 - PlayerDataCollector
 - PlayerGameValidation
@@ -451,6 +422,8 @@
 - PlayerStats
 - PredictionBoundsValidator
 - PredictionConfig
+- PredictionRequest
+- Process
 - ProcessingConfig
 - ProductionDeployer
 - PublicBettingAnalyzer
@@ -459,8 +432,8 @@
 - RandomForestModel
 - RealTimeDataIntegrator
 - RealTimeMarketData
+- RealTimePrediction
 - RepoReport
-- RoleBasedStatsCollector
 - SituationalAnalyzer
 - SituationalStats
 - StandardizedStatRecord
@@ -492,37 +465,40 @@
 - TestSystemImports
 - TestSystemIntegration
 - TestUltimateSystem
-- UnifiedDataIngestion
+- UltimateEnhancedPredictor
+- UltimatePrediction
 - ValidationBacktestingFramework
 - ValidationReport
+- ValidationSeverity
 - VisualizationEngine
 - WeeklyDataQualityReport
 - WeeklyRosterSnapshot
 - XGBoostModel
-- api_game_prediction
-- api_player_stats
-- api_position_rankings
+- _MemInfo
 - backtest
-- batch_predict
-- batch_predictions
 - classify_position_group
+- create_access_token
 - data_quality_validator
-- demo
-- enhanced_general_exception_handler
-- enhanced_http_exception_handler
-- enhanced_root
+- detailed_health_check
 - feature_engineer
-- game_detail
-- games_page
-- get_game_info
-- get_live_betting_opportunities
-- get_market_intelligence
+- fetch
+- foundation
+- general_exception_handler
+- get_betting_insights
+- get_current_user
+- get_db
+- get_enhanced_player_prediction
+- get_game_predictions
 - get_models
-- get_player_trends
+- get_player_details
+- get_player_fantasy_predictions
+- get_player_predictions
+- get_players
 - get_props
-- get_team_performance
-- get_team_players
-- get_vs_predictions
+- health_check
+- home
+- http_exception_handler
+- lifespan
 - log_api_request
 - log_database_operation
 - log_prediction_start
@@ -531,11 +507,11 @@
 - migrate_database
 - mock_cache_manager
 - mock_feature_engineer
-- player_detail
-- predictions_page
+- models_status
+- odds_snapshot
+- players_audit
 - project
-- real_time_dashboard
-- report
+- root
 - run_api
 - run_rolling_backtest
 - run_simulation
@@ -545,23 +521,30 @@
 - sample_model_config
 - sample_model_features
 - sample_player
-- search_players
 - sim
+- snapshot_mock_odds
+- snapshot_verify
 - stats_validator
-- system_status
-- team_detail
-- teams_page
+- status
+- sync_roster
 - temp_models_dir
+- test_admin_snapshot_and_props_offers
 - test_api_imports
+- test_book_normalization_variants
 - test_data_integrity
 - test_database_connections
 - test_fastapi_server
 - test_flask_server
 - test_import_fixes
+- test_market_normalization_variants
 - test_prediction_bounds
 - test_retired_players
+- test_rosters_schema
+- test_rosters_schema_and_pk
 - test_streamlined_models
-- trigger_prediction_update
+- test_to_internal_ok
+- test_to_internal_unknown_market
 - validate_player_role_consistency
 - validate_player_status
-- verify
+- verify_token
+- websocket_endpoint

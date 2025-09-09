@@ -1,54 +1,28 @@
 # NFL Prediction System
 
-A comprehensive NFL player performance prediction system using machine learning, featuring data collection, feature engineering, ensemble modeling, and automated prediction pipelines.
+A comprehensive NFL betting analysis system with machine learning predictions, real-time data integration, and advanced analytics.
 
 ## Features
 
-- **Advanced Data Collection**: Automated NFL data gathering from multiple sources
-- **Feature Engineering**: 800+ lines of sophisticated feature extraction and processing
-- **Ensemble ML Models**: XGBoost, LightGBM, Random Forest, Gradient Boosting, and Neural Networks
-- **Prediction Pipeline**: Automated daily predictions with performance tracking
-- **REST API**: FastAPI-based prediction serving
-- **Configuration Management**: Centralized YAML-based configuration
-- **Production Ready**: Async operations, logging, error handling, and monitoring
+- **Unified CLI & API**: Single command-line interface (`nfl_cli.py`) and FastAPI server (`api/app.py`)
+- **Machine Learning Models**: Advanced prediction models for player performance and game outcomes
+- **Comprehensive Data Coverage**: Categories A-H with schema validation and snapshot caching
+- **Real-time Analytics**: Market analysis and betting opportunity identification
+- **Monte Carlo Simulation**: Advanced game simulation with correlation modeling
+- **Backtesting Framework**: Model validation with calibration plots and performance metrics
 
-## Quick Start
+## Quick Start (Linux/Conda)
 
-### 1. Installation
-
+1. **Environment Setup**:
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd nfl-betting-analyzer
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+conda activate nfl
 pip install -r requirements.txt
 ```
 
-#### Conda environment (recommended)
-
+2. **Initialize System**:
 ```bash
-# Create environment from environment.yml
-conda env create -f environment.yml
-conda activate nfl
-
-# Or update an existing env named "nfl"
-conda env update -n nfl -f environment.yml
-```
-
-### 2. Configuration
-
-```bash
-# Copy environment template
-cp .env.template .env
-
-# Edit .env with your API keys (optional for basic usage)
-# DATABASE_URL=postgresql://user:password@localhost:5432/nfl_predictions
-# ODDS_API_KEY=your_odds_api_key
+python nfl_cli.py foundation  # Ingest foundational data
+python nfl_cli.py fetch       # Fetch current season data
 # WEATHER_API_KEY=your_weather_api_key
 ```
 

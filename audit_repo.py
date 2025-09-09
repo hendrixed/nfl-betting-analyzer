@@ -358,5 +358,6 @@ def main():
         f.write(generate_markdown(report))
     print("Wrote audit_report.json and audit_report.md")
 
-if __name__ == "__main__":
-    main()
+# Main function can be called directly or via nfl_cli.py status --audit
+# if __name__ == "__main__":
+#     main()

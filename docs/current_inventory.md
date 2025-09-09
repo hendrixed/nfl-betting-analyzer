@@ -2,15 +2,15 @@
 
 This document captures the current repository inventory and Phase 0 confirmations pulled from the latest audit artifacts and a fresh scan of the repo.
 
-## Baseline Confirmation (from latest audit)
+## Baseline Confirmation (from latest audit - 2025-09-09)
 
-- Python modules (audit): 92
-- Data files (active, excluding backups; see below): ~56
-- Duplicate groups (AST-identical bodies): 16
-- Possibly unused defs: ~180
-- Files with `__main__` (primary, non-test): 3 (per audit)
-- API files present at audit time: `api/prediction_api.py`, `api/enhanced_prediction_api.py`, `api/web_app.py`
-- Note: A unified `api/app.py` now exists and already consolidates endpoints.
+- Python modules (audit): **111**
+- Data files (active, excluding backups): **57**
+- Duplicate groups (AST-identical bodies): **18**
+- Possibly unused defs: **214**
+- Files with `__main__` (primary, non-test): **3**
+- API files present: `api/app.py`, `api/prediction_api.py`, `api/enhanced_prediction_api.py`, `api/web_app.py`
+- Note: A unified `api/app.py` exists with 1016 LOC and consolidates endpoints.
 
 Sources:
 - `audit_report.json` and `audit_report.md`
