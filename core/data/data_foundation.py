@@ -36,6 +36,16 @@ class MasterPlayer:
     last_name: str = ""
     position: str = ""
     
+    # Compatibility fields (for tests and legacy code)
+    team: Optional[str] = None                 # alias of current_team
+    jersey_number: Optional[int] = None
+    height: Optional[int] = None               # inches
+    weight: Optional[int] = None               # lbs
+    college: Optional[str] = None
+    years_pro: Optional[int] = None
+    birth_date: Optional[datetime] = None
+    is_active: Optional[bool] = None
+    
     # Current Status (changes weekly)
     current_team: str = ""
     roster_status: str = ""               # ACT/INA/RES/IR/PUP/etc
@@ -55,6 +65,11 @@ class MasterPlayer:
     def __post_init__(self):
         if self.inconsistency_flags is None:
             self.inconsistency_flags = []
+        # Maintain team/current_team compatibility
+        if self.team and not self.current_team:
+            self.current_team = self.team
+        if self.current_team and not self.team:
+            self.team = self.current_team
 
 
 @dataclass

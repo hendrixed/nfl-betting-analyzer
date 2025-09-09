@@ -122,6 +122,10 @@ class ModelConfig:
     model_types: List[str] = field(default_factory=lambda: [
         "xgboost", "lightgbm", "random_forest", "gradient_boosting"
     ])
+    # Backward-compatibility alias expected by tests
+    algorithms: List[str] = field(default_factory=lambda: [
+        "xgboost", "lightgbm", "random_forest"
+    ])
     ensemble_method: str = "weighted_average"  # simple_average, weighted_average, stacking
     retrain_frequency: str = "weekly"  # Added to match config.yaml
     

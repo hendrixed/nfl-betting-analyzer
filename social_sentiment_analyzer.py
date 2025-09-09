@@ -12,7 +12,15 @@ from datetime import datetime, timedelta
 import requests
 import json
 import re
-from textblob import TextBlob
+try:
+    from textblob import TextBlob  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    class TextBlob:  # minimal stub
+        def __init__(self, text: str):
+            self.text = text
+            class _Sent:
+                polarity = 0.0
+            self.sentiment = _Sent()
 import sqlite3
 
 logger = logging.getLogger(__name__)

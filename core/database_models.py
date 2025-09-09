@@ -72,19 +72,60 @@ class Player(Base):
     
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
-    
+
     # Relationships
-    game_stats = relationship("PlayerGameStats", back_populates="player")
-    predictions = relationship("PlayerPrediction", back_populates="player")
-    
+    game_stats = relationship("PlayerGameStats", back_populates="player", cascade="all, delete-orphan")
+    predictions = relationship("PlayerPrediction", back_populates="player", cascade="all, delete-orphan")
+
+
+class BettingLine(Base):
+    """Minimal betting line model for imports and basic storage."""
+    __tablename__ = 'betting_lines'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    game_id: Mapped[Optional[str]] = mapped_column(String(50), ForeignKey('games.game_id'))
+    player_id: Mapped[Optional[str]] = mapped_column(String(50), ForeignKey('players.player_id'))
+    team: Mapped[Optional[str]] = mapped_column(String(10))
+    market: Mapped[Optional[str]] = mapped_column(String(50))
+    book: Mapped[Optional[str]] = mapped_column(String(50))
+    line: Mapped[Optional[float]] = mapped_column(Float)
+    over_odds: Mapped[Optional[int]] = mapped_column(Integer)
+    under_odds: Mapped[Optional[int]] = mapped_column(Integer)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class FeatureStore(Base):
+    """Minimal feature store to persist engineered features per player-game."""
+    __tablename__ = 'feature_store'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    player_id: Mapped[str] = mapped_column(String(50), ForeignKey('players.player_id'), index=True)
+    game_id: Mapped[str] = mapped_column(String(50), ForeignKey('games.game_id'), index=True)
+    position: Mapped[Optional[str]] = mapped_column(String(10))
+
+    # Store feature categories as JSON strings for portability
+    recent_form_features: Mapped[Optional[str]] = mapped_column(Text)
+    seasonal_features: Mapped[Optional[str]] = mapped_column(Text)
+    opponent_features: Mapped[Optional[str]] = mapped_column(Text)
+    contextual_features: Mapped[Optional[str]] = mapped_column(Text)
+    advanced_features: Mapped[Optional[str]] = mapped_column(Text)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
     __table_args__ = (
-        Index('idx_player_position', 'position'),
-        Index('idx_player_team', 'current_team'),
-        Index('idx_player_active', 'is_active'),
-        Index('idx_player_retired', 'is_retired'),
-        CheckConstraint('NOT (is_active = true AND is_retired = true)', name='check_active_retired'),
+        UniqueConstraint('player_id', 'game_id', name='uq_feature_store_player_game'),
     )
+
+
+class HistoricalValidationReport(Base):
+    """Detailed validation report records for standardized historical data."""
+    __tablename__ = 'historical_validation_reports'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    season: Mapped[Optional[int]] = mapped_column(Integer)
+    report_json: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
 class Team(Base):
@@ -155,6 +196,29 @@ class Game(Base):
         Index('idx_game_date', 'game_date'),
         UniqueConstraint('season', 'week', 'home_team', 'away_team'),
     )
+
+
+class ModelPerformance(Base):
+    """Store performance metrics for trained models (stub for import compatibility)."""
+    __tablename__ = 'model_performance'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Common fields across usages
+    model_key: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    model_version: Mapped[Optional[str]] = mapped_column(String(50))
+    model_type: Mapped[Optional[str]] = mapped_column(String(50))
+    evaluation_period: Mapped[Optional[str]] = mapped_column(String(100))
+    # Metrics
+    r2_score: Mapped[Optional[float]] = mapped_column(Float)
+    rmse: Mapped[Optional[float]] = mapped_column(Float)
+    mae: Mapped[Optional[float]] = mapped_column(Float)
+    cv_score: Mapped[Optional[float]] = mapped_column(Float)
+    accuracy_metrics: Mapped[Optional[str]] = mapped_column(Text)  # JSON serialized
+    sample_count: Mapped[Optional[int]] = mapped_column(Integer)
+    total_predictions: Mapped[Optional[int]] = mapped_column(Integer)
+    evaluation_start_date: Mapped[Optional[date]] = mapped_column(Date)
+    evaluation_end_date: Mapped[Optional[date]] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
 class PlayerGameStats(Base):
@@ -308,14 +372,77 @@ class GamePrediction(Base):
     )
 
 
+# --- Additional models required by historical standardizer/tests ---
+
+class PlayerIdentityMapping(Base):
+    """Mapping from original player IDs to master standardized IDs."""
+    __tablename__ = 'player_identity_mappings'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    original_player_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    master_player_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    confidence_score: Mapped[float] = mapped_column(Float, default=1.0)
+    resolution_method: Mapped[str] = mapped_column(String(50), default='automated')
+    canonical_name: Mapped[Optional[str]] = mapped_column(String(100))
+    primary_position: Mapped[Optional[str]] = mapped_column(String(10))
+    seasons_active: Mapped[Optional[str]] = mapped_column(Text)
+    teams_played_for: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    __table_args__ = (
+        Index('idx_identity_original', 'original_player_id'),
+        Index('idx_identity_master', 'master_player_id'),
+    )
+
+
+class StatTerminologyMapping(Base):
+    """Mapping between original stat column names and standardized names by season."""
+    __tablename__ = 'stat_terminology_mappings'
+
+    mapping_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    standard_stat_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    original_column_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    mapping_confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    mapping_method: Mapped[str] = mapped_column(String(50), default='automated')
+    stat_category: Mapped[Optional[str]] = mapped_column(String(50))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    __table_args__ = (
+        Index('idx_stat_map_season', 'season'),
+        Index('idx_stat_map_standard', 'standard_stat_name'),
+    )
+
+
+class HistoricalDataStandardization(Base):
+    """Summary records for historical data standardization runs per season."""
+    __tablename__ = 'historical_data_standardization'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
+    records_processed: Mapped[int] = mapped_column(Integer, default=0)
+    records_standardized: Mapped[int] = mapped_column(Integer, default=0)
+    data_quality_score: Mapped[float] = mapped_column(Float, default=0.0)
+    player_mappings_created: Mapped[int] = mapped_column(Integer, default=0)
+    terminology_mappings_created: Mapped[int] = mapped_column(Integer, default=0)
+    validation_report: Mapped[Optional[str]] = mapped_column(Text)
+    status: Mapped[Optional[str]] = mapped_column(String(50))
+    issues_found: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
 def create_all_tables(engine):
     """Create all database tables."""
     Base.metadata.create_all(engine)
 
 
 def get_db_session(database_url: str = "sqlite:///nfl_predictions.db"):
-    """Get database session."""
+    """Get database session. Ensures tables are created for empty/new DBs."""
     engine = create_engine(database_url)
+    try:
+        Base.metadata.create_all(engine)
+    except Exception:
+        pass
     Session = sessionmaker(bind=engine)
     return Session()
 

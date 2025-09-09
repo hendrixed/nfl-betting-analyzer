@@ -7,11 +7,13 @@ and reliability across all sources.
 """
 
 import logging
+from enum import Enum
+from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Tuple, Optional
 from datetime import datetime
-from data_foundation import (
+from core.data.data_foundation import (
     WeeklyRosterSnapshot, ValidationReport, PlayerRole, MasterPlayer,
     PlayerGameValidation, WeeklyDataQualityReport
 )
@@ -19,17 +21,57 @@ from data_foundation import (
 logger = logging.getLogger(__name__)
 
 
+# Simple validation result types expected by tests
+class ValidationSeverity(Enum):
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+
+
+@dataclass
+class ValidationResult:
+    is_valid: bool
+    severity: ValidationSeverity
+    score: float
+    message: str = ""
+
+
 class DataQualityValidator:
     """Validate data consistency and quality across sources"""
     
-    def __init__(self):
-        self.validation_thresholds = {
+    def __init__(self, session=None):
+        self.session = session
+        # Expose rules per tests' expectations
+        self.validation_rules = {
             'min_starters_per_position': {'QB': 1, 'RB': 1, 'WR': 2, 'TE': 1},
             'max_starters_per_position': {'QB': 2, 'RB': 3, 'WR': 4, 'TE': 2},
             'min_snap_rate_starter': 0.5,
             'max_depth_rank_starter': 2,
             'min_data_quality_score': 0.6
         }
+        # Keep original thresholds name for internal use
+        self.validation_thresholds = self.validation_rules
+
+    def validate_player_completeness(self, player: MasterPlayer) -> ValidationResult:
+        """Basic completeness check for a MasterPlayer. Returns ValidationResult.
+        Fields considered: jersey_number, height, weight, college, years_pro, birth_date.
+        """
+        total = 6
+        present = 0
+        present += 1 if getattr(player, 'jersey_number', None) not in (None, '') else 0
+        present += 1 if getattr(player, 'height', None) not in (None, '') else 0
+        present += 1 if getattr(player, 'weight', None) not in (None, '') else 0
+        present += 1 if getattr(player, 'college', None) not in (None, '') else 0
+        present += 1 if getattr(player, 'years_pro', None) not in (None, '') else 0
+        present += 1 if getattr(player, 'birth_date', None) not in (None, '') else 0
+
+        score = present / total if total else 1.0
+        if score >= 0.9:
+            return ValidationResult(True, ValidationSeverity.INFO, score, "Player record complete")
+        elif score >= 0.75:
+            return ValidationResult(False, ValidationSeverity.WARNING, score, "Player record has missing optional fields")
+        else:
+            return ValidationResult(False, ValidationSeverity.ERROR, score, "Player record incomplete")
     
     def validate_weekly_snapshots(self, snapshots: Dict[str, WeeklyRosterSnapshot]) -> ValidationReport:
         """Run comprehensive validation on weekly roster snapshots"""
@@ -199,12 +241,20 @@ class DataQualityValidator:
 class StatsValidator:
     """Validate statistical data against roster and snap data"""
     
-    def __init__(self):
+    def __init__(self, session=None):
+        self.session = session
         self.validation_rules = {
             'max_passing_yards_per_attempt': 25.0,
             'max_rushing_yards_per_carry': 15.0,
             'max_receiving_yards_per_target': 20.0,
             'min_snap_rate_for_stats': 0.1
+        }
+        # Position ranges (for extensibility in other tests)
+        self.position_stat_ranges = {
+            'QB': {'pass_yds_per_att': (0, 25)},
+            'RB': {'rush_yds_per_carry': (0, 15)},
+            'WR': {'rec_yds_per_target': (0, 20)},
+            'TE': {'rec_yds_per_target': (0, 20)},
         }
     
     def validate_player_stats(self, stats: Dict, player: MasterPlayer, 
@@ -241,6 +291,50 @@ class StatsValidator:
         validation.validation_score = self._calculate_validation_score(validation, stats)
         
         return validation
+
+    def validate_fantasy_points_calculation(self, stat) -> ValidationResult:
+        """Validate PPR fantasy points calculation for a PlayerGameStats-like object.
+        Expected formula (simplified PPR):
+          pass: yards*0.04 + TDs*4 - INT*2
+          rush: yards*0.1 + TDs*6
+          rec:  yards*0.1 + TDs*6 + receptions*1
+        """
+        try:
+            def _to_float_safe(val) -> float:
+                try:
+                    if isinstance(val, (int, float, np.number)):
+                        return float(val)
+                    # Treat mocks/None/empty as 0
+                    return 0.0
+                except Exception:
+                    return 0.0
+
+            pass_yards = _to_float_safe(getattr(stat, 'passing_yards', 0))
+            pass_tds = _to_float_safe(getattr(stat, 'passing_touchdowns', 0))
+            # Avoid default-evaluated getattr producing a Mock by reading separately
+            pi_attr = getattr(stat, 'passing_interceptions', None)
+            if pi_attr is None:
+                pi_attr = getattr(stat, 'interceptions', 0)
+            ints = _to_float_safe(pi_attr)
+            rush_yards = _to_float_safe(getattr(stat, 'rushing_yards', 0))
+            rush_tds = _to_float_safe(getattr(stat, 'rushing_touchdowns', 0))
+            rec_yards = _to_float_safe(getattr(stat, 'receiving_yards', 0))
+            rec_tds = _to_float_safe(getattr(stat, 'receiving_touchdowns', 0))
+            receptions = _to_float_safe(getattr(stat, 'receptions', 0))
+
+            expected = (
+                pass_yards * 0.04 + pass_tds * 4 - ints * 2
+                + rush_yards * 0.1 + rush_tds * 6
+                + rec_yards * 0.1 + rec_tds * 6 + receptions * 1.0
+            )
+            actual = _to_float_safe(getattr(stat, 'fantasy_points_ppr', 0))
+            delta = abs(expected - actual)
+            if delta <= 0.01:
+                return ValidationResult(True, ValidationSeverity.INFO, 1.0, "Fantasy points calculation correct")
+            else:
+                return ValidationResult(False, ValidationSeverity.WARNING, max(0.0, 1.0 - delta/10.0), f"Expected {expected:.2f}, got {actual:.2f}")
+        except Exception as e:
+            return ValidationResult(False, ValidationSeverity.ERROR, 0.0, f"Validation failed: {e}")
     
     def _has_significant_stats(self, stats: Dict) -> bool:
         """Check if player has meaningful statistical production"""

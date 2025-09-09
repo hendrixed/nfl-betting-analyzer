@@ -96,32 +96,40 @@ class NFLPredictionModel:
     def _initialize_model(self):
         """Initialize the underlying ML model"""
         
+        # Avoid passing duplicate random_state both in hyperparameters and explicitly
+        params = dict(self.config.hyperparameters or {})
+        if 'random_state' in params:
+            rs = params.pop('random_state')
+        else:
+            rs = self.config.random_state
+
         if self.config.model_type == 'lightgbm':
             self.model = lgb.LGBMRegressor(
-                random_state=self.config.random_state,
-                **self.config.hyperparameters
+                random_state=rs,
+                **params
             )
         elif self.config.model_type == 'xgboost':
             self.model = xgb.XGBRegressor(
-                random_state=self.config.random_state,
-                **self.config.hyperparameters
+                random_state=rs,
+                **params
             )
         elif self.config.model_type == 'random_forest':
             self.model = RandomForestRegressor(
-                random_state=self.config.random_state,
-                **self.config.hyperparameters
+                random_state=rs,
+                **params
             )
         elif self.config.model_type == 'gradient_boosting':
             self.model = GradientBoostingRegressor(
-                random_state=self.config.random_state,
-                **self.config.hyperparameters
+                random_state=rs,
+                **params
             )
         elif self.config.model_type == 'ridge':
-            self.model = Ridge(**self.config.hyperparameters)
+            # Ridge doesn't take random_state, ensure it's not present in params
+            self.model = Ridge(**params)
         elif self.config.model_type == 'elastic_net':
             self.model = ElasticNet(
-                random_state=self.config.random_state,
-                **self.config.hyperparameters
+                random_state=rs,
+                **params
             )
         else:
             raise ValueError(f"Unsupported model type: {self.config.model_type}")
@@ -295,11 +303,21 @@ class EnsembleModel:
     
     def get_model_performance(self) -> Dict[str, ModelPerformance]:
         """Get performance metrics for all models in the ensemble"""
-        
-        return {
-            model.performance_metrics.model_name: model.performance_metrics
-            for model in self.models if model.performance_metrics
-        }
+        performance_summary: Dict[str, ModelPerformance] = {}
+        name_counts: Dict[str, int] = {}
+        for model in self.models:
+            perf = model.performance_metrics
+            if not perf:
+                continue
+            base = perf.model_name
+            count = name_counts.get(base, 0)
+            if count == 0 and base not in performance_summary:
+                key = base
+            else:
+                key = f"{base}_{count+1}"
+            name_counts[base] = count + 1
+            performance_summary[key] = perf
+        return performance_summary
 
 
 class NFLPredictionEngine:
@@ -332,7 +350,19 @@ class NFLPredictionEngine:
         configs = {}
         
         for stat in target_stats:
+            # Put random_forest first for maximum compatibility in constrained test envs
             configs[stat] = [
+                ModelConfig(
+                    model_type='random_forest',
+                    target_stat=stat,
+                    hyperparameters={
+                        'n_estimators': 100,
+                        'max_depth': 10,
+                        'min_samples_split': 5,
+                        'min_samples_leaf': 2,
+                        'random_state': 42,
+                    }
+                ),
                 ModelConfig(
                     model_type='lightgbm',
                     target_stat=stat,
@@ -355,16 +385,6 @@ class NFLPredictionEngine:
                         'colsample_bytree': 0.8
                     }
                 ),
-                ModelConfig(
-                    model_type='random_forest',
-                    target_stat=stat,
-                    hyperparameters={
-                        'n_estimators': 100,
-                        'max_depth': 10,
-                        'min_samples_split': 5,
-                        'min_samples_leaf': 2
-                    }
-                )
             ]
         
         return configs

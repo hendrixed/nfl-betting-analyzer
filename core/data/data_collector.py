@@ -5,7 +5,11 @@ Comprehensive data collection from multiple sources for player and game predicti
 
 import asyncio
 import logging
-import aiohttp
+try:
+    import aiohttp  # type: ignore
+except Exception:  # pragma: no cover - optional dependency for async HTTP
+    aiohttp = None
+
 import pandas as pd
 import numpy as np
 from datetime import datetime, date, timedelta

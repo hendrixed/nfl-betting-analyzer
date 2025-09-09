@@ -14,8 +14,12 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
-import aiohttp
 import requests
+try:
+    # Make aiohttp optional to avoid import errors in constrained environments/tests
+    import aiohttp  # type: ignore
+except Exception:
+    aiohttp = None  # type: ignore
 import nfl_data_py as nfl
 from sqlalchemy.orm import Session
 
@@ -373,24 +377,36 @@ class NFLDataPyAdapter(BaseAdapter):
             return pd.DataFrame()
     
     def _normalize_schedule_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
-        """Normalize schedule data to our schema"""
+        """Normalize schedule data to schema expected by tests (schedules.csv)."""
         try:
             gameday_series = self._col(raw_data, 'gameday', None)
+            kickoff_dt = pd.to_datetime(gameday_series, errors='coerce')
+            # Build DataFrame with exact headers expected by tests
             normalized = pd.DataFrame({
                 'game_id': self._col(raw_data, 'game_id', ''),
                 'season': self._col(raw_data, 'season', 0),
                 'week': self._col(raw_data, 'week', 0),
-                'game_date': pd.to_datetime(gameday_series, errors='coerce'),
+                'season_type': self._col(raw_data, 'game_type', 'REG'),
                 'home_team': self._col(raw_data, 'home_team', ''),
                 'away_team': self._col(raw_data, 'away_team', ''),
+                'kickoff_dt_utc': kickoff_dt.dt.strftime('%Y-%m-%dT%H:%M:%S').fillna(''),
+                'kickoff_dt_local': kickoff_dt.dt.strftime('%Y-%m-%d %H:%M:%S').fillna(''),
+                'network': pd.Series([''] * len(raw_data)),
+                'spread_close': pd.Series([None] * len(raw_data)),
+                'total_close': pd.Series([None] * len(raw_data)),
+                'officials_crew': pd.Series([''] * len(raw_data)),
                 'stadium': self._col(raw_data, 'stadium', ''),
-                'weather_conditions': pd.Series([None] * len(raw_data)),
-                'game_status': self._col(raw_data, 'game_type', 'scheduled')
+                'roof_state': pd.Series([''] * len(raw_data)),
             })
             return normalized
         except Exception as e:
             logger.error(f"Failed to normalize schedule data: {e}")
-            return pd.DataFrame()
+            # Return empty DataFrame with correct headers
+            cols = [
+                'game_id','season','week','season_type','home_team','away_team','kickoff_dt_utc',
+                'kickoff_dt_local','network','spread_close','total_close','officials_crew','stadium','roof_state'
+            ]
+            return pd.DataFrame(columns=cols)
     
     def _normalize_stats_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
         """Normalize stats data to our schema"""
@@ -424,18 +440,16 @@ class NFLDataPyAdapter(BaseAdapter):
             return pd.DataFrame()
     
     def _normalize_snap_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
-        """Normalize snap count data"""
+        """Normalize snap count data to expected schema (snaps.csv)."""
         try:
             normalized = pd.DataFrame({
                 'player_id': self._col(raw_data, 'player_id', ''),
                 'game_id': self._col(raw_data, 'game_id', ''),
-                'week': self._col(raw_data, 'week', 0),
-                'season': self._col(raw_data, 'season', 0),
                 'team': self._col(raw_data, 'team', ''),
                 'position': self._col(raw_data, 'position', ''),
-                'offensive_snaps': self._col(raw_data, 'offense_snaps', None),
-                'defensive_snaps': self._col(raw_data, 'defense_snaps', None),
-                'special_teams_snaps': self._col(raw_data, 'st_snaps', None),
+                'offense_snaps': self._col(raw_data, 'offense_snaps', None),
+                'defense_snaps': self._col(raw_data, 'defense_snaps', None),
+                'st_snaps': self._col(raw_data, 'st_snaps', None),
                 'offense_pct': self._col(raw_data, 'offense_pct', None),
                 'defense_pct': self._col(raw_data, 'defense_pct', None),
                 'st_pct': self._col(raw_data, 'st_pct', None)
@@ -443,7 +457,12 @@ class NFLDataPyAdapter(BaseAdapter):
             return normalized
         except Exception as e:
             logger.error(f"Failed to normalize snap data: {e}")
-            return pd.DataFrame()
+            # Return empty DataFrame with the correct headers
+            cols = [
+                'player_id','game_id','team','position','offense_snaps','defense_snaps','st_snaps',
+                'offense_pct','defense_pct','st_pct'
+            ]
+            return pd.DataFrame(columns=cols)
     
     def _normalize_depth_chart_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
         """Normalize depth chart data"""
@@ -587,6 +606,11 @@ class WeatherAdapter(BaseAdapter):
     
     async def _fetch_nws_weather(self, game_id: str, stadium: str, game_date: datetime) -> Optional[WeatherData]:
         """Fetch weather from National Weather Service API"""
+        # If aiohttp is not available, gracefully skip external weather fetch
+        if aiohttp is None:
+            logger.info("aiohttp not available; skipping NWS weather fetch")
+            return None
+
         try:
             team = self._stadium_to_team(stadium)
             if team not in self.stadium_coords:
@@ -703,10 +727,18 @@ class UnifiedDataIngestion:
         """
         snapshot_path = self._snapshot_dir(date_str) / filename
         try:
-            if df is not None and not df.empty:
-                df.to_csv(snapshot_path, index=False)
+            if df is not None:
+                # Always write header if columns are available
+                if hasattr(df, 'columns') and len(df.columns) > 0:
+                    df.head(0).to_csv(snapshot_path, index=False)
+                    # If not empty, append full content (overwrite with data)
+                    if not df.empty:
+                        df.to_csv(snapshot_path, index=False)
+                else:
+                    # Create empty file with no header
+                    if not snapshot_path.exists():
+                        snapshot_path.touch()
             else:
-                # Create empty file with no rows if not existing yet
                 if not snapshot_path.exists():
                     snapshot_path.touch()
             logger.info(f"Snapshot written: {snapshot_path}")
