@@ -441,14 +441,10 @@ def predict_player(player_id):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    print("🏈 Starting NFL Data Browser...")
-    
-    port = find_available_port(5000)
-    if port is None:
-        print("❌ No available ports found")
-        exit(1)
-    
-    print(f"📊 NFL Data Browser: http://localhost:{port}")
-    print(f"🔍 Browse teams, players, games, stats, and predictions")
-    
-    app.run(host='0.0.0.0', port=port, debug=True)
+    print("⚠️ The Flask-based NFL Data Browser is deprecated.")
+    print("Please use the unified FastAPI app UI endpoints instead:")
+    print("  uvicorn api.app:app --reload --port 8000")
+    print("Then open http://localhost:8000/web")
+    print("Or start via CLI:")
+    print("  python nfl_cli.py run-api")
+    raise SystemExit(0)

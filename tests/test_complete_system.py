@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+import os
 
 logger = logging.getLogger(__name__)
 

@@ -67,10 +67,9 @@ def test_fastapi_server():
     print("\n🧪 Testing FastAPI Server...")
     
     try:
-        # Start FastAPI server in background
-        api_path = Path(__file__).parent / "api" / "enhanced_prediction_api.py"
+        # Start unified FastAPI server (api.app) in background
         process = subprocess.Popen([
-            sys.executable, str(api_path)
+            sys.executable, "-m", "uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
         # Give it time to start
@@ -104,15 +103,15 @@ def test_fastapi_server():
             except Exception as e:
                 print(f"⚠️  Health endpoint test failed: {e}")
             
-            # Test the previously 404 endpoints
+            # Test docs endpoint availability
             try:
-                vs_response = requests.get("http://localhost:8000/api/vs/predictions", timeout=5)
-                if vs_response.status_code == 200:
-                    print("✅ VS predictions endpoint now working (was 404)")
+                docs_response = requests.get("http://localhost:8000/docs", timeout=5)
+                if docs_response.status_code == 200:
+                    print("✅ Swagger docs available at /docs")
                 else:
-                    print(f"⚠️  VS predictions endpoint returned {vs_response.status_code}")
+                    print(f"⚠️  /docs returned {docs_response.status_code}")
             except Exception as e:
-                print(f"⚠️  VS predictions endpoint test failed: {e}")
+                print(f"⚠️  /docs test failed: {e}")
             
             process.terminate()
             return True
@@ -131,8 +130,7 @@ def test_import_fixes():
     print("\n🧪 Testing Import Fixes...")
     
     imports_to_test = [
-        ("Enhanced Prediction API", "api.enhanced_prediction_api"),
-        ("Web Server", "web.web_server"),
+        ("Unified API", "api.app"),
         ("Prediction Bounds", "core.prediction_bounds"),
         ("Streamlined Models", "core.models.streamlined_models"),
         ("Database Models", "core.database_models")
@@ -157,7 +155,6 @@ def main():
     
     tests = [
         ("Import Fixes", test_import_fixes),
-        ("Flask Web Server", test_flask_server),
         ("FastAPI Server", test_fastapi_server)
     ]
     

@@ -29,6 +29,17 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+#### Conda environment (recommended)
+
+```bash
+# Create environment from environment.yml
+conda env create -f environment.yml
+conda activate nfl
+
+# Or update an existing env named "nfl"
+conda env update -n nfl -f environment.yml
+```
+
 ### 2. Configuration
 
 ```bash
@@ -44,11 +55,11 @@ cp .env.template .env
 ### 3. System Setup
 
 ```bash
-# Initialize the system
-python run_nfl_system.py setup
+# Initialize the system (foundation data)
+python nfl_cli.py foundation --season 2025
 
 # Download initial data
-python run_nfl_system.py download-data --seasons 2022,2023,2024
+python nfl_cli.py fetch --season 2025 --week 1
 ```
 
 ### 4. Run Demo
@@ -66,29 +77,34 @@ The system provides a comprehensive CLI for all operations:
 
 ```bash
 # Show all available commands
-python run_nfl_system.py --help
+python nfl_cli.py --help
 
-# System setup
-python run_nfl_system.py setup
+# Data ingestion (populates data/snapshots/YYYY-MM-DD/*.csv)
+python nfl_cli.py fetch --season 2025 --week 1
 
-# Data operations
-python run_nfl_system.py download-data --seasons 2022,2023,2024
-python run_nfl_system.py status
+# Ingest foundational season data (schedules, rosters)
+python nfl_cli.py foundation --season 2025
 
-# Model training
-python run_nfl_system.py train --position QB
-python run_nfl_system.py train  # Train all positions
+# Generate mock odds snapshot (for /betting/props)
+python nfl_cli.py odds-snapshot --max-offers 200
 
-# Predictions
-python run_nfl_system.py predict --week 10
-python run_nfl_system.py predict --player mahomes_patrick_qb
+# Verify latest snapshot files & headers
+python nfl_cli.py snapshot-verify
 
-# Pipeline operations
-python run_nfl_system.py pipeline
-python run_nfl_system.py api --host 0.0.0.0 --port 8000
+# Sync roster into DB from latest snapshot (updates team/active flags)
+python nfl_cli.py sync-roster --deactivate-missing False
 
-# Testing
-python run_nfl_system.py test --verbose
+# Show saved models and performance summary
+python nfl_cli.py models-status
+
+# Start the unified FastAPI server
+python nfl_cli.py run-api --host 0.0.0.0 --port 8000
+
+# Train models (optional)
+python nfl_cli.py train --target fantasy_points_ppr
+
+# System status
+python nfl_cli.py status
 ```
 
 ### API Usage
@@ -96,20 +112,26 @@ python run_nfl_system.py test --verbose
 Start the API server:
 
 ```bash
-python run_nfl_system.py api
+python nfl_cli.py run-api
 ```
 
 Example API calls:
 
 ```bash
-# Get predictions for a player
-curl "http://localhost:8000/predictions/mahomes_patrick_qb"
+# Health
+curl "http://localhost:8000/health"
 
-# Get predictions for a week
-curl "http://localhost:8000/predictions/week/10"
+# Models summary (empty list until trained)
+curl "http://localhost:8000/models"
 
-# Get model performance
-curl "http://localhost:8000/performance/QB"
+# Props from latest snapshot with canonical filters
+curl "http://localhost:8000/betting/props?book=DK&market=Passing%20Yards"
+
+# Players (optionally filter)
+curl "http://localhost:8000/players?team=KC&position=QB"
+
+# Fantasy predictions (requires trained models)
+curl "http://localhost:8000/predictions/players/fantasy?team=KC&position=QB"
 ```
 
 ### Python Integration

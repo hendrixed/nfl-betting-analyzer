@@ -19,19 +19,18 @@ from datetime import datetime, date, timedelta
 import uuid
 from sqlalchemy import create_engine, select, and_, or_, desc, asc, func
 from sqlalchemy.orm import sessionmaker, Session
-import pandas as pd
-import numpy as np
 import json
 import logging
 import asyncio
 import time
+import random
 from contextlib import asynccontextmanager
 from functools import wraps
 import redis
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import jwt
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 
 # Import our modules
@@ -41,8 +40,6 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.database_models import get_db_session, Player, PlayerGameStats, Game
-from core.models.streamlined_models import StreamlinedNFLModels
-from comprehensive_stats_engine import ComprehensiveStatsEngine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -93,6 +90,16 @@ class PlayerPredictionResponse(BaseModel):
     team: str
     predictions: Dict[str, Any]
     confidence_intervals: Optional[Dict[str, Any]] = None
+    last_updated: datetime
+
+class FantasyPredictionResponse(BaseModel):
+    player_id: str
+    name: str
+    position: str
+    team: str
+    fantasy_points_ppr: float
+    confidence: float
+    model: str
     last_updated: datetime
 
 class GamePredictionResponse(BaseModel):
@@ -196,6 +203,42 @@ def cache_response(ttl: int = 300):
         return wrapper
     return decorator
 
+# Random helpers (avoid numpy dependency)
+def poisson(lam: float) -> int:
+    """Sample from Poisson(lam) using Knuth's method."""
+    if lam <= 0:
+        return 0
+    L = pow(2.718281828459045, -lam)
+    k = 0
+    p = 1.0
+    while p > L:
+        k += 1
+        p *= random.random()
+    return k - 1
+
+def latest_snapshot_dir(base: str = "data/snapshots") -> Optional[Path]:
+    """Return latest snapshot directory by name (YYYY-MM-DD)."""
+    try:
+        base_path = Path(base)
+        if not base_path.exists():
+            return None
+        dirs = [p for p in base_path.iterdir() if p.is_dir()]
+        if not dirs:
+            return None
+        return sorted(dirs)[-1]
+    except Exception:
+        return None
+
+def models_available() -> bool:
+    """Return True if any streamlined model files exist on disk."""
+    try:
+        models_path = Path("models/streamlined")
+        if not models_path.exists():
+            return False
+        return any(models_path.glob("*.pkl"))
+    except Exception:
+        return False
+
 # Database dependency
 def get_db():
     db = get_db_session()
@@ -218,7 +261,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, "secret", algorithms=["HS256"])
         return payload
-    except jwt.PyJWTError:
+    except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 async def get_current_user(token: dict = Depends(verify_token)):
@@ -228,6 +271,8 @@ async def get_current_user(token: dict = Depends(verify_token)):
 models = None
 try:
     session = get_db_session()
+    # Lazy import to avoid heavy dependency at import time
+    from core.models.streamlined_models import StreamlinedNFLModels
     models = StreamlinedNFLModels(session)
     logger.info("Models initialized successfully")
 except Exception as e:
@@ -272,7 +317,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Setup templates and static files
 try:
     templates = Jinja2Templates(directory="web/templates")
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/static", StaticFiles(directory="web/static"), name="static")
 except Exception as e:
     logger.warning(f"Could not setup templates/static files: {e}")
 
@@ -313,13 +358,49 @@ async def root():
         }
     }
 
+# ADMIN ENDPOINTS
+
+@app.post("/admin/odds/snapshot")
+@limiter.limit("5/minute")
+async def snapshot_mock_odds(
+    request: Request,
+    max_offers: int = Query(100, ge=1, le=2000),
+    db: Session = Depends(get_db)
+):
+    """Generate a mock odds snapshot file under data/snapshots/YYYY-MM-DD/odds.csv.
+    This is a placeholder until real odds integrations are enabled.
+    """
+    try:
+        from core.data.odds_snapshot import write_mock_odds_snapshot
+        path = write_mock_odds_snapshot(db, max_offers=max_offers)
+        # Count rows written (excluding header)
+        rows = 0
+        try:
+            import csv
+            with open(path, newline="", encoding="utf-8") as f:
+                r = csv.reader(f)
+                next(r, None)
+                for _ in r:
+                    rows += 1
+        except Exception:
+            pass
+        return {
+            "status": "ok",
+            "snapshot_path": str(path),
+            "rows": rows,
+            "timestamp": datetime.now(),
+        }
+    except Exception as e:
+        logger.error(f"Failed to snapshot mock odds: {e}")
+        raise HTTPException(status_code=500, detail="Failed to snapshot odds")
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
         "timestamp": datetime.now(),
-        "models_loaded": models is not None
+        "models_loaded": models_available()
     }
 
 @app.get("/health/detailed")
@@ -406,23 +487,23 @@ async def get_players(
 ):
     """Get list of players with optional filtering"""
     query = db.query(Player)
-    
+
     if position:
         query = query.filter(Player.position == position.upper())
     if team:
-        query = query.filter(Player.team == team.upper())
+        query = query.filter(Player.current_team == team.upper())
     if active_only:
-        query = query.filter(Player.status == 'active')
-    
+        query = query.filter(Player.is_active == True)
+
     players = query.limit(100).all()
-    
+
     return [
         PlayerInfo(
             player_id=player.player_id,
             name=player.name,
             position=player.position,
-            team=player.team,
-            status=player.status
+            team=player.current_team or "",
+            status=("active" if getattr(player, "is_active", False) else "inactive")
         )
         for player in players
     ]
@@ -442,8 +523,8 @@ async def get_player_details(
         "player_id": player.player_id,
         "name": player.name,
         "position": player.position,
-        "team": player.team,
-        "status": player.status
+        "team": player.current_team or "",
+        "status": ("active" if getattr(player, "is_active", False) else "inactive")
     }
     
     if include_stats:
@@ -460,7 +541,11 @@ async def get_player_details(
                     "passing_yards": stat.passing_yards,
                     "rushing_yards": stat.rushing_yards,
                     "receiving_yards": stat.receiving_yards,
-                    "touchdowns": stat.total_touchdowns
+                    "touchdowns": (
+                        (getattr(stat, "passing_touchdowns", 0) or 0)
+                        + (getattr(stat, "rushing_touchdowns", 0) or 0)
+                        + (getattr(stat, "receiving_touchdowns", 0) or 0)
+                    )
                 }
             }
             for stat in recent_stats
@@ -480,13 +565,13 @@ async def get_player_predictions(
     db: Session = Depends(get_db)
 ):
     """Get player predictions"""
-    if not models:
+    if not models_available():
         raise HTTPException(status_code=503, detail="Prediction models not available")
-    
-    query = db.query(Player).filter(Player.status == 'active')
-    
+
+    query = db.query(Player).filter(Player.is_active == True)
+
     if team:
-        query = query.filter(Player.team == team.upper())
+        query = query.filter(Player.current_team == team.upper())
     if position:
         query = query.filter(Player.position == position.upper())
     
@@ -497,17 +582,17 @@ async def get_player_predictions(
         try:
             # Generate predictions using the models
             player_predictions = {
-                "passing_yards": np.random.normal(200, 50),
-                "rushing_yards": np.random.normal(50, 20),
-                "receiving_yards": np.random.normal(60, 25),
-                "touchdowns": np.random.poisson(1.2)
+                "passing_yards": random.gauss(200, 50),
+                "rushing_yards": random.gauss(50, 20),
+                "receiving_yards": random.gauss(60, 25),
+                "touchdowns": poisson(1.2)
             }
             
             predictions.append(PlayerPredictionResponse(
                 player_id=player.player_id,
                 name=player.name,
                 position=player.position,
-                team=player.team,
+                team=player.current_team or "",
                 predictions=player_predictions,
                 last_updated=datetime.now()
             ))
@@ -517,6 +602,57 @@ async def get_player_predictions(
     
     return predictions
 
+@app.get("/predictions/players/fantasy", response_model=List[FantasyPredictionResponse])
+@limiter.limit("60/minute")
+async def get_player_fantasy_predictions(
+    request: Request,
+    team: Optional[str] = Query(None, description="Filter by team"),
+    position: Optional[str] = Query(None, description="Filter by position"),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db)
+):
+    """Get fantasy (PPR) predictions using streamlined trained models"""
+    if not models_available():
+        raise HTTPException(status_code=503, detail="Prediction models not available")
+
+    # Ensure we have a model instance
+    local_models = None
+    try:
+        from core.models.streamlined_models import StreamlinedNFLModels
+        local_models = models or StreamlinedNFLModels(db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Model initialization failed: {e}")
+
+    query = db.query(Player).filter(Player.is_active == True)
+    if team:
+        query = query.filter(Player.current_team == team.upper())
+    if position:
+        query = query.filter(Player.position == position.upper())
+
+    players = query.limit(limit).all()
+    out: List[FantasyPredictionResponse] = []
+
+    for p in players:
+        try:
+            pred = local_models.predict_player(p.player_id, target_stat='fantasy_points_ppr')
+            if not pred:
+                continue
+            out.append(FantasyPredictionResponse(
+                player_id=p.player_id,
+                name=p.name,
+                position=p.position,
+                team=p.current_team or "",
+                fantasy_points_ppr=float(pred.predicted_value),
+                confidence=float(pred.confidence),
+                model=pred.model_used,
+                last_updated=datetime.now()
+            ))
+        except Exception as e:
+            logger.debug(f"Fantasy prediction failed for {p.player_id}: {e}")
+            continue
+
+    return out
+
 @app.get("/predictions/games", response_model=List[GamePredictionResponse])
 async def get_game_predictions(
     game_date: Optional[date] = Query(None, description="Specific game date"),
@@ -524,7 +660,7 @@ async def get_game_predictions(
     db: Session = Depends(get_db)
 ):
     """Get game predictions"""
-    if not models:
+    if not models_available():
         raise HTTPException(status_code=503, detail="Prediction models not available")
     
     # Get upcoming games
@@ -539,10 +675,10 @@ async def get_game_predictions(
     for game in games:
         try:
             game_prediction = {
-                "total_points": np.random.normal(45, 8),
-                "home_score": np.random.normal(24, 7),
-                "away_score": np.random.normal(21, 7),
-                "spread_prediction": np.random.normal(0, 3)
+                "total_points": random.gauss(45, 8),
+                "home_score": random.gauss(24, 7),
+                "away_score": random.gauss(21, 7),
+                "spread_prediction": random.gauss(0, 3)
             }
             
             predictions.append(GamePredictionResponse(
@@ -578,24 +714,24 @@ async def get_betting_insights(
     insights = []
     
     # Get active players for insights
-    players = db.query(Player).filter(Player.status == 'active').limit(20).all()
+    players = db.query(Player).filter(Player.is_active == True).limit(20).all()
     
     for player in players:
         try:
             # Mock market data and predictions
-            predicted_yards = np.random.normal(75, 25)
-            market_line = predicted_yards + np.random.normal(0, 10)
+            predicted_yards = random.gauss(75, 25)
+            market_line = predicted_yards + random.gauss(0, 10)
             edge = (predicted_yards - market_line) / market_line if market_line > 0 else 0
             
             if abs(edge) >= min_edge:
                 insights.append(BettingInsight(
                     market=f"{player.position}_receiving_yards",
                     player_name=player.name,
-                    game_info=f"{player.team} vs TBD",
+                    game_info=f"{player.current_team or ''} vs TBD",
                     prediction=predicted_yards,
                     line=market_line,
                     edge=edge,
-                    confidence=np.random.uniform(0.6, 0.9),
+                    confidence=random.uniform(0.6, 0.9),
                     recommendation="OVER" if edge > 0 else "UNDER"
                 ))
         except Exception as e:
@@ -608,17 +744,69 @@ async def get_betting_insights(
 @limiter.limit("60/minute")
 async def get_props(
     request: Request,
-    market: Optional[str] = Query(None, description="Market type"),
+    market: Optional[str] = Query(None, description="Sportsbook market label (e.g., 'Passing Yards')"),
+    book: Optional[str] = Query(None, description="Sportsbook name (e.g., 'DraftKings')"),
     week: Optional[int] = Query(None, description="Week number"),
     team: Optional[str] = Query(None, description="Team filter"),
     player: Optional[str] = Query(None, description="Player filter"),
     db: Session = Depends(get_db)
 ):
-    """Get prop betting opportunities with edge analysis"""
-    # This endpoint joins sportsbook lines with our projections
+    """Get prop betting opportunities with edge analysis.
+    Canonicalizes sportsbook identifiers using `core.data.market_mapping`.
+    """
+    canonical_book = None
+    canonical_market = None
+    try:
+        if market:
+            from core.data.market_mapping import to_internal
+            canonical_book, canonical_market = to_internal(book or "", market)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid market/book: {e}")
+
+    # Attempt to read odds snapshot
+    offers = []
+    snap_dir = latest_snapshot_dir()
+    if snap_dir is not None:
+        odds_path = snap_dir / "odds.csv"
+        if odds_path.exists():
+            try:
+                import csv
+                with open(odds_path, newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        row_book = (row.get("book") or "").lower()
+                        row_market = (row.get("market") or "").lower()
+                        if canonical_book and row_book != canonical_book:
+                            continue
+                        if canonical_market and row_market != canonical_market:
+                            continue
+                        if team and (row.get("team_id") or "").upper() != team.upper():
+                            continue
+                        if player and (row.get("player_id") or "") != player:
+                            continue
+                        # Basic typing
+                        try:
+                            offer = {
+                                "timestamp": row.get("timestamp"),
+                                "book": row_book,
+                                "market": row_market,
+                                "player_id": row.get("player_id"),
+                                "team_id": row.get("team_id"),
+                                "line": float(row.get("line")) if row.get("line") else None,
+                                "over_odds": int(row.get("over_odds")) if row.get("over_odds") else None,
+                                "under_odds": int(row.get("under_odds")) if row.get("under_odds") else None,
+                            }
+                            offers.append(offer)
+                        except Exception:
+                            continue
+            except Exception as e:
+                logger.warning(f"Failed to read odds snapshot: {e}")
+
     return {
-        "market": market,
-        "opportunities": [],
+        "book": canonical_book or (book or "").lower(),
+        "market": canonical_market or (market or "").lower(),
+        "offers": offers,
+        "opportunities": offers,
         "timestamp": datetime.now(),
         "note": "Integration with sportsbook APIs required"
     }
@@ -634,7 +822,7 @@ async def run_simulation(
     db: Session = Depends(get_db)
 ):
     """Run Monte Carlo simulations for games"""
-    if not models:
+    if not models_available():
         raise HTTPException(status_code=503, detail="Simulation models not available")
     
     # Mock simulation results
@@ -642,8 +830,8 @@ async def run_simulation(
     for game_id in game_ids:
         results[game_id] = {
             "total_points": {
-                "mean": np.random.normal(45, 2),
-                "std": np.random.uniform(6, 10),
+                "mean": random.gauss(45, 2),
+                "std": random.uniform(6, 10),
                 "percentiles": {
                     "p10": 35,
                     "p50": 45,
@@ -651,8 +839,8 @@ async def run_simulation(
                 }
             },
             "spread": {
-                "mean": np.random.normal(0, 1),
-                "prob_home_cover": np.random.uniform(0.4, 0.6)
+                "mean": random.gauss(0, 1),
+                "prob_home_cover": random.uniform(0.4, 0.6)
             },
             "n_simulations": n_sims
         }
@@ -668,25 +856,26 @@ async def run_simulation(
 @app.get("/models", response_model=List[PerformanceMetrics])
 async def get_models():
     """Get available models and their performance metrics"""
-    # Mock model performance data
-    return [
-        PerformanceMetrics(
-            model_name="XGBoost_v2.1",
-            position="QB",
-            accuracy=0.73,
-            mae=12.5,
-            rmse=18.2,
-            last_updated=datetime.now()
-        ),
-        PerformanceMetrics(
-            model_name="LightGBM_v1.8",
-            position="RB",
-            accuracy=0.68,
-            mae=8.3,
-            rmse=13.1,
-            last_updated=datetime.now()
-        )
-    ]
+    results: List[PerformanceMetrics] = []
+    try:
+        if models_available() and models:
+            summary = models.get_model_summary() or {}
+            for position, info in summary.items():
+                model_name = f"{info.get('model_type','unknown')}_{info.get('target_stat','fantasy_points_ppr')}"
+                results.append(PerformanceMetrics(
+                    model_name=model_name,
+                    position=position,
+                    accuracy=float(info.get('r2_score', 0.0)),
+                    mae=float(0.0),
+                    rmse=float(0.0),
+                    last_updated=datetime.now()
+                ))
+    except Exception as e:
+        logger.warning(f"Failed to build models summary: {e}")
+    if not results:
+        # Return empty list if none available
+        return []
+    return results
 
 # WEB INTERFACE ENDPOINTS (from web_app.py)
 

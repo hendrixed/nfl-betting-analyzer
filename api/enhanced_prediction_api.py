@@ -749,13 +749,3 @@ async def detailed_health_check():
         health_status["status"] = "degraded"
     
     return health_status
-
-if __name__ == "__main__":
-    uvicorn.run(
-        "enhanced_prediction_api:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info",
-        workers=1  # Use 1 worker for WebSocket support
-    )

@@ -187,6 +187,25 @@ class BaseAdapter(ABC):
 class NFLDataPyAdapter(BaseAdapter):
     """Adapter for nfl_data_py library"""
     
+    def _col(self, df: pd.DataFrame, name: str, default=None) -> pd.Series:
+        """Return a column Series if present; otherwise a Series filled with default of proper length."""
+        try:
+            if name in df.columns:
+                return df[name]
+            # For nested keys that might be present under different names
+            alt_map = {
+                'player_name': ['player_display_name', 'name'],
+                'team': ['recent_team', 'current_team'],
+                'opponent_team': ['opponent', 'opp_team'],
+                'gameday': ['game_date', 'gamedate'],
+            }
+            for alt in alt_map.get(name, []):
+                if alt in df.columns:
+                    return df[alt]
+        except Exception:
+            pass
+        return pd.Series([default] * len(df))
+
     async def fetch_rosters(self, season: int, week: Optional[int] = None) -> pd.DataFrame:
         """Fetch roster data"""
         date_str = f"{season}-W{week or 'current'}"
@@ -293,19 +312,60 @@ class NFLDataPyAdapter(BaseAdapter):
             logger.error(f"Failed to fetch snap counts: {e}")
             return pd.DataFrame()
     
+    async def fetch_depth_charts(self, season: int, week: Optional[int] = None) -> pd.DataFrame:
+        """Fetch depth chart data"""
+        date_str = f"{season}-depth"
+        try:
+            logger.info(f"Fetching depth charts for {season}")
+            # nfl_data_py depth charts API varies; attempt common endpoint
+            depth = nfl.import_depth_charts([season]) if hasattr(nfl, 'import_depth_charts') else pd.DataFrame()
+            if week and not depth.empty and 'week' in depth.columns:
+                depth = depth[depth['week'] == week]
+            normalized = self._normalize_depth_chart_data(depth)
+            return normalized
+        except Exception as e:
+            logger.warning(f"Failed to fetch depth charts: {e}")
+            return pd.DataFrame()
+    
+    async def fetch_injuries(self, season: int, week: Optional[int] = None) -> pd.DataFrame:
+        """Fetch injury reports"""
+        try:
+            logger.info(f"Fetching injuries for {season}")
+            injuries = nfl.import_injuries([season]) if hasattr(nfl, 'import_injuries') else pd.DataFrame()
+            if week and not injuries.empty and 'week' in injuries.columns:
+                injuries = injuries[injuries['week'] == week]
+            normalized = self._normalize_injury_data(injuries)
+            return normalized
+        except Exception as e:
+            logger.warning(f"Failed to fetch injuries: {e}")
+            return pd.DataFrame()
+    
+    async def fetch_pbp(self, season: int, week: Optional[int] = None) -> pd.DataFrame:
+        """Fetch play-by-play data (lightweight subset)"""
+        try:
+            logger.info(f"Fetching PBP for {season}")
+            pbp = nfl.import_pbp_data([season]) if hasattr(nfl, 'import_pbp_data') else pd.DataFrame()
+            if week and not pbp.empty and 'week' in pbp.columns:
+                pbp = pbp[pbp['week'] == week]
+            normalized = self._normalize_pbp_data(pbp)
+            return normalized
+        except Exception as e:
+            logger.warning(f"Failed to fetch PBP: {e}")
+            return pd.DataFrame()
+    
     def _normalize_roster_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
         """Normalize roster data to our schema"""
         try:
             normalized = pd.DataFrame({
-                'player_id': raw_data.get('player_id', ''),
-                'name': raw_data.get('player_name', ''),
-                'position': raw_data.get('position', ''),
-                'team': raw_data.get('team', ''),
-                'jersey_number': raw_data.get('jersey_number'),
-                'status': raw_data.get('status', 'active'),
-                'depth_chart_rank': raw_data.get('depth_chart_order'),
-                'snap_percentage': None,  # Will be filled from snap count data
-                'last_updated': datetime.now()
+                'player_id': self._col(raw_data, 'player_id', ''),
+                'name': self._col(raw_data, 'player_name', ''),
+                'position': self._col(raw_data, 'position', ''),
+                'team': self._col(raw_data, 'team', ''),
+                'jersey_number': self._col(raw_data, 'jersey_number', None),
+                'status': self._col(raw_data, 'status', 'active'),
+                'depth_chart_rank': self._col(raw_data, 'depth_chart_order', None),
+                'snap_percentage': pd.Series([None] * len(raw_data)),  # fill later
+                'last_updated': pd.Series([datetime.now()] * len(raw_data))
             })
             return normalized
         except Exception as e:
@@ -315,16 +375,17 @@ class NFLDataPyAdapter(BaseAdapter):
     def _normalize_schedule_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
         """Normalize schedule data to our schema"""
         try:
+            gameday_series = self._col(raw_data, 'gameday', None)
             normalized = pd.DataFrame({
-                'game_id': raw_data.get('game_id', ''),
-                'season': raw_data.get('season', 0),
-                'week': raw_data.get('week', 0),
-                'game_date': pd.to_datetime(raw_data.get('gameday', '')),
-                'home_team': raw_data.get('home_team', ''),
-                'away_team': raw_data.get('away_team', ''),
-                'stadium': raw_data.get('stadium', ''),
-                'weather_conditions': None,  # Will be populated separately
-                'game_status': raw_data.get('game_type', 'scheduled')
+                'game_id': self._col(raw_data, 'game_id', ''),
+                'season': self._col(raw_data, 'season', 0),
+                'week': self._col(raw_data, 'week', 0),
+                'game_date': pd.to_datetime(gameday_series, errors='coerce'),
+                'home_team': self._col(raw_data, 'home_team', ''),
+                'away_team': self._col(raw_data, 'away_team', ''),
+                'stadium': self._col(raw_data, 'stadium', ''),
+                'weather_conditions': pd.Series([None] * len(raw_data)),
+                'game_status': self._col(raw_data, 'game_type', 'scheduled')
             })
             return normalized
         except Exception as e:
@@ -335,27 +396,27 @@ class NFLDataPyAdapter(BaseAdapter):
         """Normalize stats data to our schema"""
         try:
             normalized = pd.DataFrame({
-                'player_id': raw_data.get('player_id', ''),
-                'game_id': raw_data.get('game_id', ''),
-                'week': raw_data.get('week', 0),
-                'season': raw_data.get('season', 0),
-                'team': raw_data.get('recent_team', ''),
-                'opponent': raw_data.get('opponent_team', ''),
-                'position': raw_data.get('position', ''),
-                'passing_attempts': raw_data.get('passing_attempts'),
-                'passing_completions': raw_data.get('completions'),
-                'passing_yards': raw_data.get('passing_yards'),
-                'passing_touchdowns': raw_data.get('passing_tds'),
-                'interceptions': raw_data.get('interceptions'),
-                'rushing_attempts': raw_data.get('carries'),
-                'rushing_yards': raw_data.get('rushing_yards'),
-                'rushing_touchdowns': raw_data.get('rushing_tds'),
-                'targets': raw_data.get('targets'),
-                'receptions': raw_data.get('receptions'),
-                'receiving_yards': raw_data.get('receiving_yards'),
-                'receiving_touchdowns': raw_data.get('receiving_tds'),
-                'offensive_snaps': None,  # From snap count data
-                'snap_percentage': None
+                'player_id': self._col(raw_data, 'player_id', ''),
+                'game_id': self._col(raw_data, 'game_id', ''),
+                'week': self._col(raw_data, 'week', 0),
+                'season': self._col(raw_data, 'season', 0),
+                'team': self._col(raw_data, 'recent_team', ''),
+                'opponent': self._col(raw_data, 'opponent_team', ''),
+                'position': self._col(raw_data, 'position', ''),
+                'passing_attempts': self._col(raw_data, 'passing_attempts', None),
+                'passing_completions': self._col(raw_data, 'completions', None),
+                'passing_yards': self._col(raw_data, 'passing_yards', None),
+                'passing_touchdowns': self._col(raw_data, 'passing_tds', None),
+                'interceptions': self._col(raw_data, 'interceptions', None),
+                'rushing_attempts': self._col(raw_data, 'carries', None),
+                'rushing_yards': self._col(raw_data, 'rushing_yards', None),
+                'rushing_touchdowns': self._col(raw_data, 'rushing_tds', None),
+                'targets': self._col(raw_data, 'targets', None),
+                'receptions': self._col(raw_data, 'receptions', None),
+                'receiving_yards': self._col(raw_data, 'receiving_yards', None),
+                'receiving_touchdowns': self._col(raw_data, 'receiving_tds', None),
+                'offensive_snaps': pd.Series([None] * len(raw_data)),
+                'snap_percentage': pd.Series([None] * len(raw_data))
             })
             return normalized
         except Exception as e:
@@ -366,22 +427,83 @@ class NFLDataPyAdapter(BaseAdapter):
         """Normalize snap count data"""
         try:
             normalized = pd.DataFrame({
-                'player_id': raw_data.get('player_id', ''),
-                'game_id': raw_data.get('game_id', ''),
-                'week': raw_data.get('week', 0),
-                'season': raw_data.get('season', 0),
-                'team': raw_data.get('team', ''),
-                'position': raw_data.get('position', ''),
-                'offensive_snaps': raw_data.get('offense_snaps'),
-                'defensive_snaps': raw_data.get('defense_snaps'),
-                'special_teams_snaps': raw_data.get('st_snaps'),
-                'offense_pct': raw_data.get('offense_pct'),
-                'defense_pct': raw_data.get('defense_pct'),
-                'st_pct': raw_data.get('st_pct')
+                'player_id': self._col(raw_data, 'player_id', ''),
+                'game_id': self._col(raw_data, 'game_id', ''),
+                'week': self._col(raw_data, 'week', 0),
+                'season': self._col(raw_data, 'season', 0),
+                'team': self._col(raw_data, 'team', ''),
+                'position': self._col(raw_data, 'position', ''),
+                'offensive_snaps': self._col(raw_data, 'offense_snaps', None),
+                'defensive_snaps': self._col(raw_data, 'defense_snaps', None),
+                'special_teams_snaps': self._col(raw_data, 'st_snaps', None),
+                'offense_pct': self._col(raw_data, 'offense_pct', None),
+                'defense_pct': self._col(raw_data, 'defense_pct', None),
+                'st_pct': self._col(raw_data, 'st_pct', None)
             })
             return normalized
         except Exception as e:
             logger.error(f"Failed to normalize snap data: {e}")
+            return pd.DataFrame()
+    
+    def _normalize_depth_chart_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
+        """Normalize depth chart data"""
+        try:
+            normalized = pd.DataFrame({
+                'team': self._col(raw_data, 'team', ''),
+                'player_id': self._col(raw_data, 'player_id', ''),
+                'player_name': self._col(raw_data, 'player_name', ''),
+                'position': self._col(raw_data, 'position', ''),
+                'slot': self._col(raw_data, 'depth_position', ''),
+                'role': self._col(raw_data, 'role', ''),
+                'package': self._col(raw_data, 'package', ''),
+                'depth_chart_rank': self._col(raw_data, 'depth_chart_order', None),
+                'last_updated': pd.Series([datetime.now()] * len(raw_data))
+            })
+            return normalized
+        except Exception as e:
+            logger.error(f"Failed to normalize depth chart data: {e}")
+            return pd.DataFrame()
+    
+    def _normalize_injury_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
+        """Normalize injuries data"""
+        try:
+            normalized = pd.DataFrame({
+                'player_id': self._col(raw_data, 'player_id', ''),
+                'name': self._col(raw_data, 'player_name', ''),
+                'team': self._col(raw_data, 'team', ''),
+                'position': self._col(raw_data, 'position', ''),
+                'practice_status': self._col(raw_data, 'practice_status', ''),
+                'game_status': self._col(raw_data, 'game_status', ''),
+                'designation': self._col(raw_data, 'injury_status', ''),
+                'report_date': pd.to_datetime(self._col(raw_data, 'report_date', None), errors='coerce'),
+                'return_date': pd.to_datetime(self._col(raw_data, 'return_date', None), errors='coerce')
+            })
+            return normalized
+        except Exception as e:
+            logger.error(f"Failed to normalize injury data: {e}")
+            return pd.DataFrame()
+    
+    def _normalize_pbp_data(self, raw_data: pd.DataFrame) -> pd.DataFrame:
+        """Normalize play-by-play to snapshot schema"""
+        try:
+            normalized = pd.DataFrame({
+                'play_id': self._col(raw_data, 'play_id', ''),
+                'game_id': self._col(raw_data, 'game_id', ''),
+                'offense': self._col(raw_data, 'posteam', ''),
+                'defense': self._col(raw_data, 'defteam', ''),
+                'play_type': self._col(raw_data, 'play_type', ''),
+                'epa': self._col(raw_data, 'epa', None),
+                'success': self._col(raw_data, 'success', None),
+                'air_yards': self._col(raw_data, 'air_yards', None),
+                'yac': self._col(raw_data, 'yac_epa', None),
+                'pressure': self._col(raw_data, 'qb_hit', ''),
+                'blitz': self._col(raw_data, 'blitz', ''),
+                'personnel': self._col(raw_data, 'personnel_off', ''),
+                'formation': self._col(raw_data, 'offense_formation', '')
+            })
+            return normalized
+        except Exception as e:
+            logger.error(f"Failed to normalize pbp data: {e}")
             return pd.DataFrame()
 
 class WeatherAdapter(BaseAdapter):
@@ -569,6 +691,29 @@ class UnifiedDataIngestion:
         
         logger.info("Unified data ingestion system initialized")
     
+    def _snapshot_dir(self, date_str: str) -> Path:
+        """Return the snapshot directory path for a given date string."""
+        path = Path("data/snapshots") / date_str
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+    
+    def _write_snapshot_csv(self, df: pd.DataFrame, filename: str, date_str: str) -> Path:
+        """Write a DataFrame to the snapshot CSV file and return its path.
+        If df is empty, still ensure the file exists with headers when possible.
+        """
+        snapshot_path = self._snapshot_dir(date_str) / filename
+        try:
+            if df is not None and not df.empty:
+                df.to_csv(snapshot_path, index=False)
+            else:
+                # Create empty file with no rows if not existing yet
+                if not snapshot_path.exists():
+                    snapshot_path.touch()
+            logger.info(f"Snapshot written: {snapshot_path}")
+        except Exception as e:
+            logger.warning(f"Failed to write snapshot {snapshot_path}: {e}")
+        return snapshot_path
+    
     async def ingest_weekly_data(self, season: int, week: int) -> Dict[str, Any]:
         """Ingest all data for a specific week"""
         logger.info(f"Starting weekly data ingestion for {season} Week {week}")
@@ -582,22 +727,29 @@ class UnifiedDataIngestion:
         }
         
         try:
+            snapshot_date = datetime.now().strftime("%Y-%m-%d")
             # Fetch rosters
             rosters = await self.nfl_adapter.fetch_rosters(season, week)
             results['data_sources']['rosters'] = len(rosters)
+            # Snapshot
+            self._write_snapshot_csv(rosters, "rosters.csv", snapshot_date)
             
             # Fetch schedules
             schedules = await self.nfl_adapter.fetch_schedules(season)
             week_schedules = schedules[schedules['week'] == week] if len(schedules) > 0 else pd.DataFrame()
             results['data_sources']['schedules'] = len(week_schedules)
+            self._write_snapshot_csv(week_schedules, "schedules.csv", snapshot_date)
             
             # Fetch weekly stats
             stats = await self.nfl_adapter.fetch_weekly_stats(season, week)
             results['data_sources']['stats'] = len(stats)
+            # Optional snapshot (name 'weekly_stats.csv')
+            self._write_snapshot_csv(stats, "weekly_stats.csv", snapshot_date)
             
             # Fetch snap counts
             snaps = await self.nfl_adapter.fetch_snap_counts(season, week)
             results['data_sources']['snap_counts'] = len(snaps)
+            self._write_snapshot_csv(snaps, "snaps.csv", snapshot_date)
             
             # Fetch weather data for games
             weather_data = []
@@ -611,7 +763,32 @@ class UnifiedDataIngestion:
                     weather_data.append(weather)
             
             results['data_sources']['weather'] = len(weather_data)
+            # Snapshot weather
+            try:
+                if weather_data:
+                    from dataclasses import asdict
+                    weather_df = pd.DataFrame([asdict(w) for w in weather_data])
+                else:
+                    weather_df = pd.DataFrame()
+                self._write_snapshot_csv(weather_df, "weather.csv", snapshot_date)
+            except Exception as e:
+                logger.warning(f"Failed to snapshot weather data: {e}")
             
+            # Depth charts
+            depth = await self.nfl_adapter.fetch_depth_charts(season, week)
+            results['data_sources']['depth_charts'] = len(depth)
+            self._write_snapshot_csv(depth, "depth_charts.csv", snapshot_date)
+
+            # Injuries
+            injuries = await self.nfl_adapter.fetch_injuries(season, week)
+            results['data_sources']['injuries'] = len(injuries)
+            self._write_snapshot_csv(injuries, "injuries.csv", snapshot_date)
+
+            # PBP
+            pbp = await self.nfl_adapter.fetch_pbp(season, week)
+            results['data_sources']['pbp'] = len(pbp)
+            self._write_snapshot_csv(pbp, "pbp.csv", snapshot_date)
+
             logger.info(f"Weekly data ingestion complete: {results['data_sources']}")
             
         except Exception as e:

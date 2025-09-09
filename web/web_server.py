@@ -223,32 +223,9 @@ def find_available_port(start_port=5000, max_attempts=10):
     return None
 
 if __name__ == '__main__':
-    print("🚀 Starting NFL Betting Analyzer Web Interface...")
-    
-    # Check for environment port first
-    env_port = os.environ.get('FLASK_PORT')
-    if env_port:
-        try:
-            port = int(env_port)
-        except ValueError:
-            port = find_available_port(5000)
-    else:
-        port = find_available_port(5000)
-    
-    if port is None:
-        print("❌ No available ports found in range 5000-5009")
-        print("💡 Please stop other services or specify a different port")
-        exit(1)
-    
-    print(f"📊 Interface will be available at: http://localhost:{port}")
-    print(f"🔧 API endpoints available at: http://localhost:{port}/api/")
-    
-    if port != 5000:
-        print(f"⚠️  Note: Using port {port} instead of 5000 (port conflict resolved)")
-    
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=True,
-        threaded=True
-    )
+    print("⚠️ The Flask web server is deprecated.")
+    print("Please use the unified FastAPI app instead:")
+    print("  uvicorn api.app:app --reload --port 8000")
+    print("Or via CLI:")
+    print("  python nfl_cli.py run-api")
+    raise SystemExit(0)

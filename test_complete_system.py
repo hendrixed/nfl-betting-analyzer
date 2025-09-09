@@ -148,23 +148,18 @@ def test_api_integration():
     print("\nTesting API Integration Readiness...")
     
     try:
-        # Check if enhanced API file exists and is properly configured
-        api_file = "api/enhanced_prediction_api.py"
-        web_file = "web/web_server.py"
-        
+        # Check if unified FastAPI app exists
+        api_file = "api/app.py"
         api_exists = os.path.exists(api_file)
-        web_exists = os.path.exists(web_file)
-        
-        print(f"   Enhanced API file: {'Found' if api_exists else 'Missing'}")
-        print(f"   Web server file: {'Found' if web_exists else 'Missing'}")
+        print(f"   Unified API app: {'Found' if api_exists else 'Missing'}")
         
         # Check web interface
         web_template = "web/templates/index.html"
         template_exists = os.path.exists(web_template)
         print(f"   Web interface: {'Found' if template_exists else 'Missing'}")
         
-        if api_exists and web_exists and template_exists:
-            print("   All API components ready for deployment")
+        if api_exists and template_exists:
+            print("   API and web components ready for deployment")
             return True
         else:
             print("   Some API components missing")

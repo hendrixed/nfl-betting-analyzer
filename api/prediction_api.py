@@ -759,12 +759,4 @@ async def general_exception_handler(request, exc):
         content={"error": "Internal server error", "status_code": 500}
     )
 
-# Development server
-if __name__ == "__main__":
-    uvicorn.run(
-        "prediction_api:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+# Development server runner removed. Use the unified app: `uvicorn api.app:app`.

@@ -94,13 +94,11 @@ def start_fastapi_server(port=8000):
             print("❌ No available ports for FastAPI server")
             return None
     
-    print(f"🚀 Starting FastAPI Prediction Service on port {port}...")
-    
-    api_path = Path(__file__).parent / "api" / "enhanced_prediction_api.py"
+    print(f"🚀 Starting FastAPI Prediction Service on port {port} (api.app)...")
     
     try:
         process = subprocess.Popen([
-            sys.executable, str(api_path)
+            sys.executable, "-m", "uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", str(port)
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
         # Give it a moment to start

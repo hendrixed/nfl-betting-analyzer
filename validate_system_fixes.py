@@ -114,8 +114,7 @@ def test_api_imports():
     print("\n📦 Testing API Import Compatibility...")
     
     tests = [
-        ('Enhanced Prediction API', 'api.enhanced_prediction_api'),
-        ('Web Server', 'web.web_server'),
+        ('Unified API', 'api.app'),
         ('Prediction Bounds', 'core.prediction_bounds')
     ]
     
