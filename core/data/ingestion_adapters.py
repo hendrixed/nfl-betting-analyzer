@@ -20,10 +20,54 @@ try:
     import aiohttp  # type: ignore
 except Exception:
     aiohttp = None  # type: ignore
-import nfl_data_py as nfl
+try:
+    # Optional import: this module must be importable even if nfl_data_py is missing
+    import nfl_data_py as nfl  # type: ignore
+except Exception:
+    nfl = None  # type: ignore
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
+# Minimal required columns for snapshot CSVs (must stay in sync with docs/SNAPSHOT_SCHEMAS.md and CLI verification)
+SNAPSHOT_MIN_COLUMNS: Dict[str, List[str]] = {
+    # Foundation
+    "schedules.csv": [
+        "game_id","season","week","season_type","home_team","away_team",
+        "kickoff_dt_utc","kickoff_dt_local","network","spread_close","total_close","officials_crew","stadium","roof_state"
+    ],
+    "rosters.csv": ["player_id","name","position","team","jersey_number","status","depth_chart_rank","snap_percentage","last_updated"],
+    # Weekly
+    "weekly_stats.csv": [
+        "player_id","game_id","week","season","team","opponent","position",
+        "passing_attempts","passing_completions","passing_yards","passing_touchdowns","interceptions",
+        "rushing_attempts","rushing_yards","rushing_touchdowns",
+        "targets","receptions","receiving_yards","receiving_touchdowns",
+        "offensive_snaps","snap_percentage"
+    ],
+    "snaps.csv": [
+        "player_id","game_id","team","position","offense_snaps","defense_snaps","st_snaps","offense_pct","defense_pct","st_pct"
+    ],
+    "pbp.csv": [
+        "play_id","game_id","offense","defense","play_type","epa","success","air_yards","yac","pressure","blitz","personnel","formation"
+    ],
+    "weather.csv": [
+        "game_id","stadium","temperature","humidity","wind_speed","wind_direction","precipitation","conditions","timestamp"
+    ],
+    # Roster/Status
+    "depth_charts.csv": ["team","player_id","player_name","position","slot","role","package","depth_chart_rank","last_updated"],
+    "injuries.csv": ["player_id","name","team","position","practice_status","game_status","designation","report_date","return_date"],
+    # Odds
+    "odds.csv": ["timestamp","book","market","player_id","team_id","line","over_odds","under_odds"],
+    "odds_history.csv": ["ts_utc","book","market","selection_id","line","price","event_id","is_closing"],
+    # Reference (for tests)
+    "teams.csv": ["team_id","abbr","conference","division","coach","home_stadium_id"],
+    "stadiums.csv": ["stadium_id","name","city","state","lat","lon","surface","roof","elevation"],
+    "players.csv": [
+        "player_id","name","birthdate","age","position","team",
+        "height_inches","weight_lbs","dominant_hand","draft_year","draft_round","draft_pick"
+    ],
+}
 
 # Data Schemas
 @dataclass
@@ -241,6 +285,9 @@ class NFLDataPyAdapter(BaseAdapter):
                 return cached_data
         
         try:
+            if nfl is None:
+                logger.warning("nfl_data_py not installed; returning empty rosters DataFrame")
+                return pd.DataFrame()
             logger.info(f"Fetching roster data for {season}")
             rosters = nfl.import_rosters([season])
             
@@ -270,6 +317,12 @@ class NFLDataPyAdapter(BaseAdapter):
                 return cached_data
         
         try:
+            if nfl is None:
+                logger.warning("nfl_data_py not installed; returning empty schedules DataFrame")
+                return pd.DataFrame(columns=[
+                    'game_id','season','week','season_type','home_team','away_team','kickoff_dt_utc',
+                    'kickoff_dt_local','network','spread_close','total_close','officials_crew','stadium','roof_state'
+                ])
             logger.info(f"Fetching schedule data for {season}")
             schedules = nfl.import_schedules([season])
             
@@ -295,6 +348,9 @@ class NFLDataPyAdapter(BaseAdapter):
                 return cached_data
         
         try:
+            if nfl is None:
+                logger.warning("nfl_data_py not installed; returning empty weekly stats DataFrame")
+                return pd.DataFrame()
             logger.info(f"Fetching weekly stats for {season} Week {week}")
             weekly_data = nfl.import_weekly_data([season])
             weekly_data = weekly_data[weekly_data['week'] == week]
@@ -321,6 +377,9 @@ class NFLDataPyAdapter(BaseAdapter):
                 return cached_data
         
         try:
+            if nfl is None:
+                logger.warning("nfl_data_py not installed; returning empty snap counts DataFrame")
+                return pd.DataFrame()
             logger.info(f"Fetching snap counts for {season} Week {week}")
             snap_data = nfl.import_snap_counts([season])
             snap_data = snap_data[snap_data['week'] == week]
@@ -341,6 +400,9 @@ class NFLDataPyAdapter(BaseAdapter):
         """Fetch depth chart data"""
         date_str = f"{season}-depth"
         try:
+            if nfl is None:
+                logger.warning("nfl_data_py not installed; returning empty depth charts DataFrame")
+                return pd.DataFrame()
             logger.info(f"Fetching depth charts for {season}")
             # nfl_data_py depth charts API varies; attempt common endpoint
             depth = nfl.import_depth_charts([season]) if hasattr(nfl, 'import_depth_charts') else pd.DataFrame()
@@ -355,6 +417,9 @@ class NFLDataPyAdapter(BaseAdapter):
     async def fetch_injuries(self, season: int, week: Optional[int] = None) -> pd.DataFrame:
         """Fetch injury reports"""
         try:
+            if nfl is None:
+                logger.warning("nfl_data_py not installed; returning empty injuries DataFrame")
+                return pd.DataFrame()
             logger.info(f"Fetching injuries for {season}")
             injuries = nfl.import_injuries([season]) if hasattr(nfl, 'import_injuries') else pd.DataFrame()
             if week and not injuries.empty and 'week' in injuries.columns:
@@ -368,6 +433,9 @@ class NFLDataPyAdapter(BaseAdapter):
     async def fetch_pbp(self, season: int, week: Optional[int] = None) -> pd.DataFrame:
         """Fetch play-by-play data (lightweight subset)"""
         try:
+            if nfl is None:
+                logger.warning("nfl_data_py not installed; returning empty PBP DataFrame")
+                return pd.DataFrame()
             logger.info(f"Fetching PBP for {season}")
             pbp = nfl.import_pbp_data([season]) if hasattr(nfl, 'import_pbp_data') else pd.DataFrame()
             if week and not pbp.empty and 'week' in pbp.columns:
@@ -761,20 +829,20 @@ class UnifiedDataIngestion:
         """
         snapshot_path = self._snapshot_dir(date_str) / filename
         try:
-            if df is not None:
-                # Always write header if columns are available
-                if hasattr(df, 'columns') and len(df.columns) > 0:
-                    df.head(0).to_csv(snapshot_path, index=False)
-                    # If not empty, append full content (overwrite with data)
-                    if not df.empty:
-                        df.to_csv(snapshot_path, index=False)
+            min_cols = SNAPSHOT_MIN_COLUMNS.get(filename)
+            if df is not None and hasattr(df, 'columns') and len(df.columns) > 0:
+                # Write header, then overwrite with rows if present
+                df.head(0).to_csv(snapshot_path, index=False)
+                if not df.empty:
+                    df.to_csv(snapshot_path, index=False)
+            else:
+                # No data/columns: write header-only if we know the minimal schema
+                if min_cols:
+                    pd.DataFrame(columns=min_cols).to_csv(snapshot_path, index=False)
                 else:
-                    # Create empty file with no header
+                    # Fallback: create empty file
                     if not snapshot_path.exists():
                         snapshot_path.touch()
-            else:
-                if not snapshot_path.exists():
-                    snapshot_path.touch()
             logger.info(f"Snapshot written: {snapshot_path}")
         except Exception as e:
             logger.warning(f"Failed to write snapshot {snapshot_path}: {e}")
@@ -835,7 +903,8 @@ class UnifiedDataIngestion:
                     from dataclasses import asdict
                     weather_df = pd.DataFrame([asdict(w) for w in weather_data])
                 else:
-                    weather_df = pd.DataFrame()
+                    # Ensure header even if no weather data
+                    weather_df = pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS["weather.csv"])  # type: ignore[index]
                 self._write_snapshot_csv(weather_df, "weather.csv", snapshot_date)
             except Exception as e:
                 logger.warning(f"Failed to snapshot weather data: {e}")
@@ -912,6 +981,8 @@ class UnifiedDataIngestion:
                 # Odds history
                 odds_hist_cols = ['ts_utc', 'book', 'market', 'selection_id', 'line', 'price', 'event_id', 'is_closing']
                 self._write_snapshot_csv(pd.DataFrame(columns=odds_hist_cols), "odds_history.csv", snapshot_date)
+                # Current odds snapshot placeholder
+                self._write_snapshot_csv(pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS["odds.csv"]), "odds.csv", snapshot_date)  # type: ignore[index]
             except Exception as e:
                 logger.warning(f"Failed to write one or more placeholder CSVs: {e}")
 

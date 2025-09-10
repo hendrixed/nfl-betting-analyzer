@@ -236,7 +236,7 @@ def validate_coverage_with_real_data() -> Dict[str, Any]:
 
 def main():
     """Generate coverage matrices and validation report."""
-    print("🔍 GENERATING COVERAGE MATRICES")
+    print("GENERATING COVERAGE MATRICES")
     print("=" * 50)
     
     # Create reports directory
@@ -244,29 +244,29 @@ def main():
     reports_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate stats-feature matrix
-    print("📊 Generating stats-feature matrix...")
+    print("Generating stats-feature matrix...")
     stats_matrix = generate_stats_feature_matrix()
     stats_file = reports_dir / "stats_feature_matrix.csv"
     stats_matrix.to_csv(stats_file, index=False)
-    print(f"   ✅ Saved to {stats_file}")
+    print(f"   Saved to {stats_file}")
     
     # Generate model-market matrix
-    print("🤖 Generating model-market matrix...")
+    print("Generating model-market matrix...")
     model_matrix = generate_model_market_matrix()
     model_file = reports_dir / "model_market_matrix.csv"
     model_matrix.to_csv(model_file, index=False)
-    print(f"   ✅ Saved to {model_file}")
+    print(f"   Saved to {model_file}")
     
     # Validate with real data
-    print("🔬 Validating coverage with real data...")
+    print("Validating coverage with real data...")
     validation_results = validate_coverage_with_real_data()
     validation_file = reports_dir / "coverage_validation.json"
     with open(validation_file, 'w') as f:
         json.dump(validation_results, f, indent=2, default=str)
-    print(f"   ✅ Validation results saved to {validation_file}")
+    print(f"   Validation results saved to {validation_file}")
     
     # Print summary
-    print("\n📈 COVERAGE SUMMARY")
+    print("\nCOVERAGE SUMMARY")
     print("-" * 30)
     print(f"Statistics tracked: {len(stats_matrix)}")
     print(f"Feature categories: {len(stats_matrix.columns) - 1}")
@@ -282,7 +282,7 @@ def main():
         model_val = validation_results['model_validation']
         print(f"Model files available: {model_val.get('model_files_found', 0)}")
     
-    print("\n✅ Coverage matrices generated successfully!")
+    print("\nCoverage matrices generated successfully!")
 
 if __name__ == "__main__":
     main()

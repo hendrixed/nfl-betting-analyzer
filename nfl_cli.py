@@ -483,25 +483,31 @@ def foundation(
 def snapshot_verify(
     date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD)")] = None,
     base: Annotated[str, typer.Option("--base", help="Snapshots base directory")] = "data/snapshots",
+    repair: Annotated[bool, typer.Option("--repair", help="Write header-only CSVs for missing/bad headers using docs/SNAPSHOT_SCHEMAS.md")] = False,
 ):
-    """Verify the latest (or specified) snapshot by checking required CSVs and basic headers."""
+    """Verify the latest (or specified) snapshot by checking required CSVs and headers.
+    See docs/SNAPSHOT_SCHEMAS.md for canonical minimal headers.
+    """
     from pathlib import Path
     import csv
+    from core.data.ingestion_adapters import SNAPSHOT_MIN_COLUMNS
 
     def _latest_snapshot_dir(base_dir: str) -> Optional[Path]:
         try:
             bp = Path(base_dir)
             if not bp.exists():
                 return None
-            # Prefer date-formatted directories YYYY-MM-DD
+            # Prefer date-formatted directories YYYY-MM-DD, skipping empty ones
             date_dirs = [d for d in bp.iterdir() if d.is_dir() and d.name.count('-') == 2]
-            if date_dirs:
-                return sorted(date_dirs)[-1]
-            # Fallback: any directory (e.g., 2025-schedule) if no date dirs exist
-            dirs = [p for p in bp.iterdir() if p.is_dir()]
-            if not dirs:
-                return None
-            return sorted(dirs)[-1]
+            for d in sorted(date_dirs, reverse=True):
+                # Has any CSV?
+                if any(p.suffix == ".csv" for p in d.iterdir() if p.is_file()):
+                    return d
+            # Fallback: any non-empty directory
+            for d in sorted([p for p in bp.iterdir() if p.is_dir()], reverse=True):
+                if any(p.suffix == ".csv" for p in d.iterdir() if p.is_file()):
+                    return d
+            return None
         except Exception:
             return None
 
@@ -509,10 +515,12 @@ def snapshot_verify(
     target_dir = Path(base) / date if date else _latest_snapshot_dir(base)
     if not target_dir or not Path(target_dir).exists():
         console.print(f"[red]Snapshot directory not found:[/red] {target_dir if target_dir else '(none)'}")
+        console.print("Refer to docs/SNAPSHOT_SCHEMAS.md for required files.")
         raise typer.Exit(1)
 
     console.print(f"[bold blue]Verifying snapshot:[/bold blue] {target_dir}")
 
+    # Required files for verification (subset of full mapping)
     expected_files = [
         "rosters.csv",
         "schedules.csv",
@@ -523,24 +531,13 @@ def snapshot_verify(
         "injuries.csv",
         "pbp.csv",
         "odds.csv",
+        # Reference
+        "players.csv",
+        "teams.csv",
+        "stadiums.csv",
     ]
 
-    # Minimal header expectations (subset checks)
-    expected_min_cols = {
-        "rosters.csv": {"player_id", "name", "team", "position"},
-        "schedules.csv": {"game_id", "season", "week", "home_team", "away_team"},
-        "weekly_stats.csv": {"player_id", "week", "season", "team"},
-        # Align with schema tests minimal shape for snaps
-        "snaps.csv": {"player_id", "game_id", "team", "position"},
-        "depth_charts.csv": {"team", "player_id", "position"},
-        "injuries.csv": {"player_id", "team", "position"},
-        "pbp.csv": {"play_id", "game_id"},
-        "odds.csv": {"timestamp", "book", "market", "player_id", "team_id", "line"},
-        # Align with tests: no 'stadium' required, roof_state present
-        "weather.csv": {"game_id", "temperature", "humidity", "wind_speed", "conditions", "roof_state"},
-    }
-
-    table = Table(title="Snapshot Verification")
+    table = Table(title="Snapshot Verification (see docs/SNAPSHOT_SCHEMAS.md)")
     table.add_column("File", style="cyan")
     table.add_column("Exists", style="green")
     table.add_column("Rows", style="magenta")
@@ -554,6 +551,18 @@ def snapshot_verify(
         exists = fpath.exists()
         rows = 0
         header_ok = "No"
+        min_cols_list = SNAPSHOT_MIN_COLUMNS.get(fname, [])
+        min_cols_set = set(min_cols_list)
+
+        if not exists and repair and min_cols_list:
+            # Create header-only file
+            try:
+                import pandas as pd
+                pd.DataFrame(columns=min_cols_list).to_csv(fpath, index=False)
+                exists = True
+            except Exception:
+                pass
+
         if exists:
             try:
                 with open(fpath, newline="", encoding="utf-8") as f:
@@ -561,15 +570,24 @@ def snapshot_verify(
                     header = next(reader, None)
                     if header:
                         header_set = set([h.strip() for h in header])
-                        min_cols = expected_min_cols.get(fname, set())
-                        if min_cols.issubset(header_set):
+                        if min_cols_set.issubset(header_set):
                             header_ok = "Yes"
                         elif header_set:
                             header_ok = "Partial"
-                            header_issues.append((fname, sorted(list(min_cols - header_set))))
+                            missing = sorted(list(min_cols_set - header_set))
+                            header_issues.append((fname, missing))
+                            if repair and min_cols_list:
+                                # Rewrite header-only
+                                import pandas as pd
+                                pd.DataFrame(columns=min_cols_list).to_csv(fpath, index=False)
+                                header_ok = "Yes"
                         else:
                             header_ok = "No"
-                            header_issues.append((fname, sorted(list(min_cols))))
+                            header_issues.append((fname, sorted(list(min_cols_set)) if min_cols_set else ["unknown_schema"]))
+                            if repair and min_cols_list:
+                                import pandas as pd
+                                pd.DataFrame(columns=min_cols_list).to_csv(fpath, index=False)
+                                header_ok = "Yes"
                     for _ in reader:
                         rows += 1
             except Exception:
@@ -583,11 +601,13 @@ def snapshot_verify(
     if missing_files or header_issues:
         if missing_files:
             console.print("[red]Missing required files:[/red] " + ", ".join(missing_files))
-        if header_issues:
+        if header_issues and not repair:
             for fname, missing_cols in header_issues:
                 if missing_cols:
                     console.print(f"[red]{fname} missing columns:[/red] {', '.join(missing_cols)}")
-        raise typer.Exit(1)
+        if not repair:
+            console.print("Refer to docs/SNAPSHOT_SCHEMAS.md for required headers, or rerun with --repair to autofix headers.")
+            raise typer.Exit(1)
     console.print("[green]Snapshot verification complete.[/green]")
 
 # ODDS SNAPSHOT COMMAND
