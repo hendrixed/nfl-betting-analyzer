@@ -191,6 +191,27 @@ class BaseAdapter(ABC):
 class NFLDataPyAdapter(BaseAdapter):
     """Adapter for nfl_data_py library"""
     
+    async def fetch_data(self, data_type: str = "weekly_stats", **kwargs) -> pd.DataFrame:
+        """Fetch data from nfl_data_py - unified entry point"""
+        season = kwargs.get('season', 2025)
+        week = kwargs.get('week', None)
+        
+        if data_type == "rosters":
+            return await self.fetch_rosters(season, week)
+        elif data_type == "schedules":
+            return await self.fetch_schedules(season)
+        elif data_type == "weekly_stats":
+            if week:
+                return await self.fetch_weekly_stats(season, week)
+            else:
+                # Fetch current week or latest available
+                return await self.fetch_weekly_stats(season, 1)
+        elif data_type == "snap_counts":
+            return await self.fetch_snap_counts(season, week or 1)
+        else:
+            logger.warning(f"Unknown data type: {data_type}")
+            return pd.DataFrame()
+    
     def _col(self, df: pd.DataFrame, name: str, default=None) -> pd.Series:
         """Return a column Series if present; otherwise a Series filled with default of proper length."""
         try:
@@ -566,6 +587,19 @@ class WeatherAdapter(BaseAdapter):
             'TEN': (36.1665, -86.7713),   # Nissan Stadium
             'WAS': (38.9076, -76.8645)    # FedExField
         }
+    
+    async def fetch_data(self, **kwargs) -> pd.DataFrame:
+        """Fetch weather data - unified entry point"""
+        game_id = kwargs.get('game_id')
+        stadium = kwargs.get('stadium', '')
+        game_date = kwargs.get('game_date', datetime.now())
+        
+        if game_id and stadium:
+            weather_data = await self.fetch_weather(game_id, stadium, game_date)
+            if weather_data:
+                return pd.DataFrame([asdict(weather_data)])
+        
+        return pd.DataFrame()
     
     async def fetch_weather(self, game_id: str, stadium: str, game_date: datetime) -> Optional[WeatherData]:
         """Fetch weather data for a specific game"""

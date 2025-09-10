@@ -937,6 +937,155 @@ async def home(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         return HTMLResponse(f"<h1>NFL Predictions Dashboard</h1><p>Template error: {e}</p>")
 
+# API ENDPOINTS FOR WEB INTERFACE
+
+@app.get("/api/teams")
+async def get_teams(db: Session = Depends(get_db)):
+    """Get all NFL teams"""
+    try:
+        # Get unique teams from players table
+        teams = db.query(Player.current_team).distinct().filter(Player.current_team.isnot(None)).all()
+        team_list = [{"id": team[0], "name": team[0], "abbreviation": team[0]} for team in teams if team[0]]
+        return {"teams": sorted(team_list, key=lambda x: x["name"])}
+    except Exception as e:
+        logger.error(f"Failed to get teams: {e}")
+        return {"teams": []}
+
+@app.get("/api/players")
+async def get_players(
+    team: Optional[str] = Query(None, description="Filter by team"),
+    position: Optional[str] = Query(None, description="Filter by position"),
+    limit: int = Query(50, ge=1, le=200, description="Number of players to return"),
+    db: Session = Depends(get_db)
+):
+    """Get NFL players with optional filters"""
+    try:
+        query = db.query(Player).filter(Player.is_active == True)
+        
+        if team:
+            query = query.filter(Player.current_team == team.upper())
+        if position:
+            query = query.filter(Player.position == position.upper())
+            
+        players = query.limit(limit).all()
+        
+        player_list = []
+        for player in players:
+            player_list.append({
+                "id": player.player_id,
+                "name": player.name,
+                "position": player.position,
+                "team": player.current_team,
+                "status": "ACT" if player.is_active else "INA"
+            })
+            
+        return {"players": player_list}
+    except Exception as e:
+        logger.error(f"Failed to get players: {e}")
+        return {"players": []}
+
+@app.get("/api/games")
+async def get_games(
+    week: Optional[int] = Query(None, description="Filter by week"),
+    season: Optional[int] = Query(None, description="Filter by season"),
+    limit: int = Query(20, ge=1, le=100, description="Number of games to return"),
+    db: Session = Depends(get_db)
+):
+    """Get NFL games with optional filters"""
+    try:
+        query = db.query(Game).order_by(desc(Game.game_date))
+        
+        if week:
+            query = query.filter(Game.week == week)
+        if season:
+            query = query.filter(Game.season == season)
+            
+        games = query.limit(limit).all()
+        
+        game_list = []
+        for game in games:
+            game_list.append({
+                "id": game.game_id,
+                "home_team": game.home_team,
+                "away_team": game.away_team,
+                "week": game.week,
+                "season": game.season,
+                "game_date": game.game_date.isoformat() if game.game_date else None,
+                "home_score": game.home_score,
+                "away_score": game.away_score
+            })
+            
+        return {"games": game_list}
+    except Exception as e:
+        logger.error(f"Failed to get games: {e}")
+        return {"games": []}
+
+@app.get("/api/stats")
+async def get_stats(
+    player_id: Optional[str] = Query(None, description="Filter by player ID"),
+    game_id: Optional[str] = Query(None, description="Filter by game ID"),
+    limit: int = Query(50, ge=1, le=200, description="Number of stats to return"),
+    db: Session = Depends(get_db)
+):
+    """Get player game statistics"""
+    try:
+        # Join with Game table to get game_date
+        query = db.query(PlayerGameStats, Game.game_date).join(
+            Game, PlayerGameStats.game_id == Game.game_id
+        ).order_by(desc(Game.game_date))
+        
+        if player_id:
+            query = query.filter(PlayerGameStats.player_id == player_id)
+        if game_id:
+            query = query.filter(PlayerGameStats.game_id == game_id)
+            
+        results = query.limit(limit).all()
+        
+        stats_list = []
+        for stat, game_date in results:
+            stats_list.append({
+                "player_id": stat.player_id,
+                "game_id": stat.game_id,
+                "game_date": game_date.isoformat() if game_date else None,
+                "passing_yards": stat.passing_yards,
+                "passing_tds": stat.passing_touchdowns,
+                "rushing_yards": stat.rushing_yards,
+                "rushing_tds": stat.rushing_touchdowns,
+                "receiving_yards": stat.receiving_yards,
+                "receiving_tds": stat.receiving_touchdowns,
+                "receptions": stat.receptions,
+                "fantasy_points_ppr": stat.fantasy_points_ppr
+            })
+            
+        return {"stats": stats_list}
+    except Exception as e:
+        logger.error(f"Failed to get stats: {e}")
+        return {"stats": []}
+
+@app.get("/api/teams/{team_id}/roster")
+async def get_team_roster(team_id: str, db: Session = Depends(get_db)):
+    """Get roster for a specific team"""
+    try:
+        players = db.query(Player).filter(
+            Player.current_team == team_id.upper(),
+            Player.is_active == True
+        ).all()
+        
+        roster = []
+        for player in players:
+            roster.append({
+                "id": player.player_id,
+                "name": player.name,
+                "position": player.position,
+                "team": player.current_team,
+                "status": "ACT" if player.is_active else "INA"
+            })
+            
+        return {"team": team_id.upper(), "roster": roster}
+    except Exception as e:
+        logger.error(f"Failed to get roster for {team_id}: {e}")
+        return {"team": team_id.upper(), "roster": []}
+
 # ENHANCED ENDPOINTS (from enhanced_prediction_api.py)
 
 @app.get("/api/v2/predictions/enhanced/{player_id}")
