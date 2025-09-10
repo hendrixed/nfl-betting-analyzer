@@ -13,7 +13,7 @@ import nfl_data_py as nfl
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from data_foundation import (
+from core.data.data_foundation import (
     MasterPlayer, WeeklyRosterSnapshot, PlayerRole, ValidationReport,
     PlayerGameValidation, TeamDepthChart, DataSourceMetrics
 )

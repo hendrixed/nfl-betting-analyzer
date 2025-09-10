@@ -855,6 +855,66 @@ class UnifiedDataIngestion:
             results['data_sources']['pbp'] = len(pbp)
             self._write_snapshot_csv(pbp, "pbp.csv", snapshot_date)
 
+            # Additional snapshot placeholders to ensure schemas exist
+            try:
+                # Routes
+                routes_cols = [
+                    'season', 'week', 'team_id', 'player_id',
+                    'routes_run', 'route_participation'
+                ]
+                self._write_snapshot_csv(pd.DataFrame(columns=routes_cols), "routes.csv", snapshot_date)
+
+                # Usage shares
+                usage_cols = [
+                    'season', 'week', 'team_id', 'player_id',
+                    'carry_share', 'target_share', 'rz_touch_share', 'gl_carry_share',
+                    'pass_block_snaps', 'align_slot', 'align_wide', 'align_inline', 'align_backfield'
+                ]
+                self._write_snapshot_csv(pd.DataFrame(columns=usage_cols), "usage_shares.csv", snapshot_date)
+
+                # Drives
+                drives_cols = [
+                    'drive_id', 'game_id', 'offense', 'start_q', 'start_clock', 'start_yardline',
+                    'end_q', 'end_clock', 'result', 'plays', 'yards', 'time_elapsed', 'points'
+                ]
+                self._write_snapshot_csv(pd.DataFrame(columns=drives_cols), "drives.csv", snapshot_date)
+
+                # Transactions
+                txn_cols = ['date', 'team_id', 'player_id', 'type', 'detail']
+                self._write_snapshot_csv(pd.DataFrame(columns=txn_cols), "transactions.csv", snapshot_date)
+
+                # Inactives
+                inactives_cols = ['season', 'week', 'team_id', 'player_id', 'pos', 'reason', 'declared_time']
+                self._write_snapshot_csv(pd.DataFrame(columns=inactives_cols), "inactives.csv", snapshot_date)
+
+                # Box score stats
+                box_passing_cols = ['game_id', 'player_id', 'att', 'comp', 'yds', 'td', 'int', 'sacks', 'sack_yards', 'ypa', 'air_yards', 'aDOT', 'fumbles']
+                box_rushing_cols = ['game_id', 'player_id', 'att', 'yds', 'td', 'long', 'ypc', 'fumbles']
+                box_receiving_cols = ['game_id', 'player_id', 'targets', 'rec', 'yds', 'td', 'air_yards', 'yac', 'aDOT', 'drops', 'long']
+                box_defense_cols = ['game_id', 'player_id', 'tackles', 'assists', 'sacks', 'tfl', 'qb_hits', 'ints', 'pbu', 'td']
+                kicking_cols = ['game_id', 'player_id', 'fg_0_39', 'fg_40_49', 'fg_50p', 'fg_att', 'fg_made', 'xp_att', 'xp_made']
+                self._write_snapshot_csv(pd.DataFrame(columns=box_passing_cols), "box_passing.csv", snapshot_date)
+                self._write_snapshot_csv(pd.DataFrame(columns=box_rushing_cols), "box_rushing.csv", snapshot_date)
+                self._write_snapshot_csv(pd.DataFrame(columns=box_receiving_cols), "box_receiving.csv", snapshot_date)
+                self._write_snapshot_csv(pd.DataFrame(columns=box_defense_cols), "box_defense.csv", snapshot_date)
+                self._write_snapshot_csv(pd.DataFrame(columns=kicking_cols), "kicking.csv", snapshot_date)
+
+                # Team context and splits
+                team_context_cols = ['season', 'week', 'team_id', 'opp_id', 'rest_days', 'travel_miles', 'tz_delta', 'pace_sn', 'pace_all', 'PROE', 'lead_pct', 'trail_pct', 'neutral_pct']
+                team_splits_cols = ['season', 'week', 'team_id', 'pace_sn', 'pace_all', 'proe', 'rz_eff', 'g2g_eff', 'third_conv', 'fourth_att', 'vs_pos_rb_yds', 'vs_pos_wr_yds', 'vs_pos_te_yds']
+                self._write_snapshot_csv(pd.DataFrame(columns=team_context_cols), "team_context.csv", snapshot_date)
+                self._write_snapshot_csv(pd.DataFrame(columns=team_splits_cols), "team_splits.csv", snapshot_date)
+
+                # Games metadata
+                games_cols = ['game_id', 'roof_state', 'field_type', 'attendance', 'duration', 'closing_spread', 'closing_total']
+                self._write_snapshot_csv(pd.DataFrame(columns=games_cols), "games.csv", snapshot_date)
+
+                # Odds history
+                odds_hist_cols = ['ts_utc', 'book', 'market', 'selection_id', 'line', 'price', 'event_id', 'is_closing']
+                self._write_snapshot_csv(pd.DataFrame(columns=odds_hist_cols), "odds_history.csv", snapshot_date)
+            except Exception as e:
+                logger.warning(f"Failed to write one or more placeholder CSVs: {e}")
+
             logger.info(f"Weekly data ingestion complete: {results['data_sources']}")
             
         except Exception as e:

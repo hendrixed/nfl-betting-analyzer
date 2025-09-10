@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# Linters & tooling
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Logs & databases
+*.log
+*.db
+*.db-journal
+logs/
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Data caches
+*.parquet
+data/snapshots/**/*.parquet

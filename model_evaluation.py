@@ -25,8 +25,8 @@ from scipy import stats
 from sqlalchemy import create_engine, select, and_, or_, desc
 from sqlalchemy.orm import sessionmaker, Session
 
-# Import our models
-from database_models import (
+# Import our models (canonical)
+from core.database_models import (
     Player, Game, PlayerGameStats, PlayerPrediction, 
     GamePrediction, ModelPerformance, BettingLine
 )

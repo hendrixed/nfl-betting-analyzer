@@ -2,144 +2,6 @@
   "root": "/home/money/CascadeProjects/nfl-betting-analyzer",
   "python": [
     {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/expand_data_coverage.py",
-      "rel": "expand_data_coverage.py",
-      "loc": 407,
-      "doc": "Data Coverage Expander\n\nThis module dramatically expands the data coverage to include\nall active NFL players and recent historical data for comprehensive predictions.",
-      "imports": [
-        "database_models",
-        "datetime",
-        "enhanced_data_collector",
-        "historical_data_standardizer",
-        "logging",
-        "nfl_data_py",
-        "numpy",
-        "pandas",
-        "sqlalchemy",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 387,
-          "args": [],
-          "hash": "85812df4ac5f8f1ce20ee368bf83e29f80bf82eb"
-        }
-      ],
-      "classes": [
-        {
-          "name": "DataCoverageExpander",
-          "lineno": 23,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 26,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "1363f4e6b291a1b93e1c1278ce1a9e26d7ab9727"
-            },
-            {
-              "name": "analyze_current_coverage",
-              "lineno": 40,
-              "args": [
-                "self"
-              ],
-              "hash": "5790f5c4e5188c2215d515c22c1ab9a382e1c809"
-            },
-            {
-              "name": "expand_player_coverage",
-              "lineno": 109,
-              "args": [
-                "self"
-              ],
-              "hash": "c175167c2a46b2f0640ccaf34de0df435ebaea2f"
-            },
-            {
-              "name": "expand_statistical_coverage",
-              "lineno": 198,
-              "args": [
-                "self"
-              ],
-              "hash": "9638417b9042d83df981e5032fcd00746c4f6c9d"
-            },
-            {
-              "name": "_convert_height",
-              "lineno": 331,
-              "args": [
-                "self",
-                "height_str"
-              ],
-              "hash": "8b65cefa2af665a98d4bad4c8ed6b7cdbf891ead"
-            },
-            {
-              "name": "run_complete_expansion",
-              "lineno": 347,
-              "args": [
-                "self"
-              ],
-              "hash": "b4dc10adbcba10fa123fdbcfcb52726a30276cad"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/fix_player_count.py",
-      "rel": "fix_player_count.py",
-      "loc": 95,
-      "doc": "EVIDENCE-BASED PLAYER COUNT FIX\nAnalyze and document the actual player count discrepancy",
-      "imports": [
-        "sqlite3"
-      ],
-      "functions": [
-        {
-          "name": "analyze_player_discrepancy",
-          "lineno": 9,
-          "args": [],
-          "hash": "509f064f29be2fdfe1be686f9ee756304028f818"
-        }
-      ],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/test_real_prediction.py",
-      "rel": "test_real_prediction.py",
-      "loc": 78,
-      "doc": "EVIDENCE-BASED PREDICTION TEST\nTest actual prediction functionality with real code and output",
-      "imports": [
-        "core",
-        "os",
-        "sys",
-        "traceback"
-      ],
-      "functions": [
-        {
-          "name": "test_real_prediction",
-          "lineno": 14,
-          "args": [],
-          "hash": "034f6332cca20ba23d9224259daa04d1a1e2b87f"
-        }
-      ],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/prediction_pipeline.py",
       "rel": "prediction_pipeline.py",
       "loc": 831,
@@ -408,1822 +270,6 @@
       "models_found": []
     },
     {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/player_comparison_optimizer.py",
-      "rel": "player_comparison_optimizer.py",
-      "loc": 606,
-      "doc": "Player Comparison and Lineup Optimization for NFL Betting\nAdvanced analytics for comparing players and optimizing DFS lineups",
-      "imports": [
-        "dataclasses",
-        "itertools",
-        "logging",
-        "matplotlib",
-        "numpy",
-        "pandas",
-        "pathlib",
-        "pulp",
-        "scipy",
-        "seaborn",
-        "sklearn",
-        "sqlite3",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 567,
-          "args": [],
-          "hash": "49787809400d0116fe128977544a4153c5c9cc52"
-        }
-      ],
-      "classes": [
-        {
-          "name": "PlayerComparison",
-          "lineno": 23,
-          "methods": []
-        },
-        {
-          "name": "LineupPlayer",
-          "lineno": 31,
-          "methods": []
-        },
-        {
-          "name": "OptimalLineup",
-          "lineno": 40,
-          "methods": []
-        },
-        {
-          "name": "PlayerComparator",
-          "lineno": 47,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 50,
-              "args": [
-                "self",
-                "database_path"
-              ],
-              "hash": "057e0b4642a687a4457777ee98c7e488b325620b"
-            },
-            {
-              "name": "compare_players",
-              "lineno": 54,
-              "args": [
-                "self",
-                "player1",
-                "player2",
-                "stats_to_compare"
-              ],
-              "hash": "e7bed0febea358e8800f41f02002f2e2784abbd0"
-            },
-            {
-              "name": "find_similar_players",
-              "lineno": 109,
-              "args": [
-                "self",
-                "target_player",
-                "position",
-                "top_n"
-              ],
-              "hash": "158921ad58e42fcfba95aa92b8fabe1288868022"
-            },
-            {
-              "name": "create_comparison_matrix",
-              "lineno": 129,
-              "args": [
-                "self",
-                "players"
-              ],
-              "hash": "920f8cd301c824897cf7fefa5d6a14375a8336e2"
-            },
-            {
-              "name": "_get_player_historical_stats",
-              "lineno": 146,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "51c0d9a18bafa8bc76e18c6e3e1ae4814b265f21"
-            },
-            {
-              "name": "_calculate_stat_averages",
-              "lineno": 168,
-              "args": [
-                "self",
-                "player_data",
-                "stats"
-              ],
-              "hash": "7bf65e6080f894ce4578cbfd0ba1a19e9ee39eae"
-            },
-            {
-              "name": "_get_candidate_players",
-              "lineno": 178,
-              "args": [
-                "self",
-                "position"
-              ],
-              "hash": "9f138503135d8d4df3539bb2aec6aa4456b9cd70"
-            },
-            {
-              "name": "_generate_comparison_recommendation",
-              "lineno": 204,
-              "args": [
-                "self",
-                "player1",
-                "player2",
-                "similarity",
-                "differences"
-              ],
-              "hash": "1bb821375ee65f0988acccf2f261f6d9c8e7814c"
-            }
-          ]
-        },
-        {
-          "name": "LineupOptimizer",
-          "lineno": 218,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 221,
-              "args": [
-                "self"
-              ],
-              "hash": "41ec9620ff28c75b42600bc00a47e840460e45eb"
-            },
-            {
-              "name": "optimize_lineup",
-              "lineno": 232,
-              "args": [
-                "self",
-                "players",
-                "lineup_type"
-              ],
-              "hash": "6bdcd5ab49c4ff690ba403efca045d27147ed40f"
-            },
-            {
-              "name": "generate_multiple_lineups",
-              "lineno": 315,
-              "args": [
-                "self",
-                "players",
-                "num_lineups",
-                "lineup_type"
-              ],
-              "hash": "102d9b18099e73d21fc66f36839737ef409a8458"
-            },
-            {
-              "name": "calculate_lineup_correlation",
-              "lineno": 342,
-              "args": [
-                "self",
-                "lineup"
-              ],
-              "hash": "5697a3975c9514797a4fd17dc29332bb7aabfd48"
-            }
-          ]
-        },
-        {
-          "name": "AdvancedAnalytics",
-          "lineno": 358,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 361,
-              "args": [
-                "self"
-              ],
-              "hash": "c2b0decd10a6a3e9467b674ae072ae39f244077b"
-            },
-            {
-              "name": "calculate_player_consistency",
-              "lineno": 364,
-              "args": [
-                "self",
-                "player_data",
-                "stat"
-              ],
-              "hash": "7fe0aa88be127c347d0f373a4d6475fd94ac1f0b"
-            },
-            {
-              "name": "_grade_consistency",
-              "lineno": 401,
-              "args": [
-                "self",
-                "cv"
-              ],
-              "hash": "d1112cbef509fe54d0d569f147fb48ec4935d2a6"
-            },
-            {
-              "name": "analyze_matchup_history",
-              "lineno": 414,
-              "args": [
-                "self",
-                "player_id",
-                "opponent_team"
-              ],
-              "hash": "97f9677f35571b92a75ce703d92b630b7f7a9317"
-            },
-            {
-              "name": "calculate_value_metrics",
-              "lineno": 427,
-              "args": [
-                "self",
-                "player"
-              ],
-              "hash": "3e9bae93feb6f51c39ee4f875b24336f06d313fd"
-            },
-            {
-              "name": "_determine_value_tier",
-              "lineno": 447,
-              "args": [
-                "self",
-                "ppd"
-              ],
-              "hash": "f071b118cece0d310b8b1b41da69052dc93e0dff"
-            }
-          ]
-        },
-        {
-          "name": "VisualizationEngine",
-          "lineno": 461,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 464,
-              "args": [
-                "self",
-                "output_dir"
-              ],
-              "hash": "2ec0db6f81213dfe3f0e3794882c9fbe6f2d37f5"
-            },
-            {
-              "name": "plot_player_comparison",
-              "lineno": 472,
-              "args": [
-                "self",
-                "comparison",
-                "save_path"
-              ],
-              "hash": "8845938791193aade4958a3384836e65d0943efc"
-            },
-            {
-              "name": "plot_lineup_analysis",
-              "lineno": 506,
-              "args": [
-                "self",
-                "lineup",
-                "save_path"
-              ],
-              "hash": "355c835a0f30c902a66b12b286847321d44bed2f"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": [
-        "sklearn"
-      ]
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/team_matchup_analyzer.py",
-      "rel": "team_matchup_analyzer.py",
-      "loc": 421,
-      "doc": "Advanced Team Matchup Analysis System\nComprehensive team strength ratings, defensive rankings, pace analysis, and matchup-specific predictions.",
-      "imports": [
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "pathlib",
-        "requests",
-        "sqlalchemy",
-        "sqlite3",
-        "sys",
-        "typing",
-        "warnings"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 376,
-          "args": [],
-          "hash": "e9fde0fea370927fba5c32b6a8d771ed4aa08499"
-        }
-      ],
-      "classes": [
-        {
-          "name": "TeamStrength",
-          "lineno": 26,
-          "methods": []
-        },
-        {
-          "name": "DefensiveRankings",
-          "lineno": 36,
-          "methods": []
-        },
-        {
-          "name": "MatchupAnalysis",
-          "lineno": 47,
-          "methods": []
-        },
-        {
-          "name": "TeamMatchupAnalyzer",
-          "lineno": 61,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 64,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "388c16969d095808e13fa3409629481498dee15d"
-            },
-            {
-              "name": "calculate_team_ratings",
-              "lineno": 103,
-              "args": [
-                "self"
-              ],
-              "hash": "f68108f287715f7ecd72c2c0d7614a1ec1ad5944"
-            },
-            {
-              "name": "get_defensive_matchup_rating",
-              "lineno": 193,
-              "args": [
-                "self",
-                "offensive_team",
-                "defensive_team",
-                "stat_category"
-              ],
-              "hash": "da4870cb3d07923d26c057da8359f83d36661cc9"
-            },
-            {
-              "name": "analyze_head_to_head",
-              "lineno": 211,
-              "args": [
-                "self",
-                "team1",
-                "team2"
-              ],
-              "hash": "7a0b9111a5816ddfbb5966af85cfaa9fd79d80da"
-            },
-            {
-              "name": "get_positional_matchup_factors",
-              "lineno": 275,
-              "args": [
-                "self",
-                "player_team",
-                "opponent_team",
-                "position"
-              ],
-              "hash": "5f02cc04ccf05c80687e5e6aa0f101580a1d5d8f"
-            },
-            {
-              "name": "get_strength_of_schedule",
-              "lineno": 328,
-              "args": [
-                "self",
-                "team",
-                "weeks_ahead"
-              ],
-              "hash": "f22168f6e11abae4bd6929b375b4fcb552a2011a"
-            },
-            {
-              "name": "create_matchup_features",
-              "lineno": 344,
-              "args": [
-                "self",
-                "player_team",
-                "opponent_team",
-                "position"
-              ],
-              "hash": "f86681cf13c31f622e72861fe33759a540694b36"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/advanced_feature_engineering.py",
-      "rel": "advanced_feature_engineering.py",
-      "loc": 507,
-      "doc": "Advanced Feature Engineering System\nSophisticated feature creation, selection, and transformation for NFL betting models.",
-      "imports": [
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "sklearn",
-        "sqlalchemy",
-        "sys",
-        "typing",
-        "warnings"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 442,
-          "args": [],
-          "hash": "4e243932a65c73488857249156142889f540204f"
-        }
-      ],
-      "classes": [
-        {
-          "name": "AdvancedFeatureEngineering",
-          "lineno": 25,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 28,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "609338bd39ab936fefb5e73b19b281e4acd66693"
-            },
-            {
-              "name": "create_rolling_features",
-              "lineno": 44,
-              "args": [
-                "self",
-                "df",
-                "target_columns"
-              ],
-              "hash": "8478b1fc28ca69be73bc0ca3df1509861007684c"
-            },
-            {
-              "name": "create_lag_features",
-              "lineno": 87,
-              "args": [
-                "self",
-                "df",
-                "target_columns"
-              ],
-              "hash": "ed6c9f5c7f7910d88b018d82025966a9af1d1fd7"
-            },
-            {
-              "name": "create_interaction_features",
-              "lineno": 114,
-              "args": [
-                "self",
-                "df"
-              ],
-              "hash": "f3562b7947a5c3b1c119b8575e8a99e7f41ee0f2"
-            },
-            {
-              "name": "create_opponent_adjusted_features",
-              "lineno": 155,
-              "args": [
-                "self",
-                "df"
-              ],
-              "hash": "6b95801ab762c198b5b00671770798355fa9fe7e"
-            },
-            {
-              "name": "create_streaks_and_momentum",
-              "lineno": 182,
-              "args": [
-                "self",
-                "df"
-              ],
-              "hash": "54c604a5384ed9fd77f426b3e25b386b4e4d8c07"
-            },
-            {
-              "name": "create_seasonal_features",
-              "lineno": 211,
-              "args": [
-                "self",
-                "df"
-              ],
-              "hash": "ca89763b60e4fadbb64bf5ac74a0a19fe7420dba"
-            },
-            {
-              "name": "select_features",
-              "lineno": 239,
-              "args": [
-                "self",
-                "X",
-                "y",
-                "method",
-                "k"
-              ],
-              "hash": "19c02db9a88f9e95a320520e654d2f03a9dfa4e9"
-            },
-            {
-              "name": "transform_features",
-              "lineno": 278,
-              "args": [
-                "self",
-                "X",
-                "method"
-              ],
-              "hash": "321aae84f0874ba0c98fd924dd361e599019dced"
-            },
-            {
-              "name": "create_polynomial_features",
-              "lineno": 304,
-              "args": [
-                "self",
-                "X",
-                "degree",
-                "max_features"
-              ],
-              "hash": "7b4813f22ae3be4e7b872cf2906d2c306f397c1d"
-            },
-            {
-              "name": "apply_pca",
-              "lineno": 332,
-              "args": [
-                "self",
-                "X",
-                "n_components"
-              ],
-              "hash": "d70d9ae40909b3cf652cf555e855fc5f24bc028b"
-            },
-            {
-              "name": "engineer_comprehensive_features",
-              "lineno": 352,
-              "args": [
-                "self",
-                "player_id",
-                "target"
-              ],
-              "hash": "8a6fc36a3a903538ea1bb72279d99d6134119508"
-            },
-            {
-              "name": "get_feature_importance_report",
-              "lineno": 409,
-              "args": [
-                "self"
-              ],
-              "hash": "7739a669dd650cba9c8167084f8dacbc74be04ad"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": [
-        "sklearn"
-      ]
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/verify_production_readiness.py",
-      "rel": "verify_production_readiness.py",
-      "loc": 651,
-      "doc": "Production Readiness Verification\n\nThis script performs comprehensive verification that the NFL prediction system\nis ready for production deployment and can generate real predictions.",
-      "imports": [
-        "asyncio",
-        "database_models",
-        "datetime",
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "real_time_nfl_system",
-        "sqlalchemy",
-        "sys",
-        "time",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 636,
-          "args": [],
-          "hash": "df91e964cf982d7078e74c4fdcf859ab3998a253"
-        }
-      ],
-      "classes": [
-        {
-          "name": "ProductionReadinessVerifier",
-          "lineno": 25,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 28,
-              "args": [
-                "self"
-              ],
-              "hash": "4049cdd36684aa87d7abb84e6668160468026c2f"
-            },
-            {
-              "name": "run_comprehensive_verification",
-              "lineno": 36,
-              "args": [
-                "self"
-              ],
-              "hash": "33bce948aa2b3b30d319e17104314313ff31de30"
-            },
-            {
-              "name": "_verify_system_initialization",
-              "lineno": 95,
-              "args": [
-                "self"
-              ],
-              "hash": "a9664372534760460e87024df6f13a9aca8f3282"
-            },
-            {
-              "name": "_verify_data_availability",
-              "lineno": 133,
-              "args": [
-                "self"
-              ],
-              "hash": "ddbadad94afa2fad55f2bc755304cd6bdd51d89b"
-            },
-            {
-              "name": "_verify_model_functionality",
-              "lineno": 207,
-              "args": [
-                "self"
-              ],
-              "hash": "53f84b749d9226381d16cb72c638094ba7ff8e51"
-            },
-            {
-              "name": "_verify_prediction_generation",
-              "lineno": 287,
-              "args": [
-                "self"
-              ],
-              "hash": "03d44aa9c172e49e930a677ae3c43e2e2439df5f"
-            },
-            {
-              "name": "_verify_data_quality",
-              "lineno": 380,
-              "args": [
-                "self"
-              ],
-              "hash": "9a25fd5c8c74f2ca28c146515e5d906a151456dc"
-            },
-            {
-              "name": "_verify_performance",
-              "lineno": 454,
-              "args": [
-                "self"
-              ],
-              "hash": "73004ef7221c2a01b4561c60986025447cc954ad"
-            },
-            {
-              "name": "_verify_production_config",
-              "lineno": 501,
-              "args": [
-                "self"
-              ],
-              "hash": "3ddc04e49e1c98219515ca88a01e84cb978f79c9"
-            },
-            {
-              "name": "_verify_error_handling",
-              "lineno": 531,
-              "args": [
-                "self"
-              ],
-              "hash": "e6531dfed777c42b491b4785372a277596e8d13e"
-            },
-            {
-              "name": "_generate_production_recommendations",
-              "lineno": 581,
-              "args": [
-                "self"
-              ],
-              "hash": "8d7e5700f39854a89153301d823f38a45ad2a256"
-            },
-            {
-              "name": "_print_final_assessment",
-              "lineno": 613,
-              "args": [
-                "self",
-                "assessment"
-              ],
-              "hash": "0a6f50609c75ff0b726b96d85a35805fa86958be"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/nfl_ultimate_system.py",
-      "rel": "nfl_ultimate_system.py",
-      "loc": 47,
-      "doc": "Stub module for NFLUltimateSystem and ComprehensiveAnalysis to satisfy tests.",
-      "imports": [
-        "__future__",
-        "dataclasses",
-        "typing"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "UltimateEnhancedPredictor",
-          "lineno": 10,
-          "methods": []
-        },
-        {
-          "name": "SocialSentimentAnalyzer",
-          "lineno": 15,
-          "methods": []
-        },
-        {
-          "name": "ComprehensiveAnalysis",
-          "lineno": 22,
-          "methods": []
-        },
-        {
-          "name": "NFLUltimateSystem",
-          "lineno": 33,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 34,
-              "args": [
-                "self"
-              ],
-              "hash": "17516ee3b30f5a99ba9c41624e0746979e561f7b"
-            },
-            {
-              "name": "analyze_player",
-              "lineno": 37,
-              "args": [
-                "self",
-                "player_id",
-                "position"
-              ],
-              "hash": "53c9bdc659442a392c734df105718c5e1c5067dd"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/enhanced_data_collector.py",
-      "rel": "enhanced_data_collector.py",
-      "loc": 5,
-      "doc": "Compatibility shim that re-exports enhanced data collector symbols\nfrom core.data.enhanced_data_collector.",
-      "imports": [
-        "core"
-      ],
-      "functions": [],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/enhanced_logging.py",
-      "rel": "enhanced_logging.py",
-      "loc": 445,
-      "doc": "Enhanced Logging and Error Handling System\nCentralized logging configuration with structured logging, error tracking, and monitoring",
-      "imports": [
-        "dataclasses",
-        "datetime",
-        "enum",
-        "functools",
-        "json",
-        "logging",
-        "pathlib",
-        "sys",
-        "time",
-        "traceback",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "performance_monitor",
-          "lineno": 229,
-          "args": [
-            "component",
-            "operation"
-          ],
-          "hash": "8e19e8077614634f954db1412c7f06fb680ea6c9"
-        },
-        {
-          "name": "error_handler",
-          "lineno": 277,
-          "args": [
-            "component",
-            "operation",
-            "reraise"
-          ],
-          "hash": "badae012f0ca0643d41c5bb15a53742e1bd16af0"
-        },
-        {
-          "name": "log_prediction_start",
-          "lineno": 352,
-          "args": [
-            "logger",
-            "player_id",
-            "operation"
-          ],
-          "hash": "751db747d4874e974192103f2724ce5d81804314"
-        },
-        {
-          "name": "log_prediction_success",
-          "lineno": 361,
-          "args": [
-            "logger",
-            "player_id",
-            "operation",
-            "confidence",
-            "execution_time_ms"
-          ],
-          "hash": "4beaa77e9f9e7f3fd3c77f989fe60db9587132b7"
-        },
-        {
-          "name": "log_api_request",
-          "lineno": 376,
-          "args": [
-            "logger",
-            "endpoint",
-            "user_id",
-            "request_id",
-            "execution_time_ms"
-          ],
-          "hash": "293b6e76b76f2548bdb005ad494a3400a3434cf4"
-        },
-        {
-          "name": "log_database_operation",
-          "lineno": 388,
-          "args": [
-            "logger",
-            "operation",
-            "table",
-            "rows_affected",
-            "execution_time_ms"
-          ],
-          "hash": "07c6da2318109bb559b635ef004ed94f65f08f6c"
-        },
-        {
-          "name": "main",
-          "lineno": 404,
-          "args": [],
-          "hash": "51dfbb7c6270443a3d534c9eccf7387c5988574a"
-        }
-      ],
-      "classes": [
-        {
-          "name": "LogLevel",
-          "lineno": 20,
-          "methods": []
-        },
-        {
-          "name": "LogContext",
-          "lineno": 29,
-          "methods": []
-        },
-        {
-          "name": "StructuredFormatter",
-          "lineno": 41,
-          "methods": [
-            {
-              "name": "format",
-              "lineno": 44,
-              "args": [
-                "self",
-                "record"
-              ],
-              "hash": "412344eaf276397729effce393d7795579d76bc6"
-            }
-          ]
-        },
-        {
-          "name": "NFLLogger",
-          "lineno": 78,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 81,
-              "args": [
-                "self",
-                "name",
-                "log_dir"
-              ],
-              "hash": "a7b14a4c532eca4664f7ec4bf7b428b474a35548"
-            },
-            {
-              "name": "_setup_handlers",
-              "lineno": 94,
-              "args": [
-                "self"
-              ],
-              "hash": "0d46560ee31d49a23926910e9d2829137d938f71"
-            },
-            {
-              "name": "debug",
-              "lineno": 141,
-              "args": [
-                "self",
-                "message",
-                "context"
-              ],
-              "hash": "a26e2168dca7f4a90d4f91084a6ecb9a71266590"
-            },
-            {
-              "name": "info",
-              "lineno": 145,
-              "args": [
-                "self",
-                "message",
-                "context"
-              ],
-              "hash": "639c0605d75beceb52b9410aa406dc6d97de626a"
-            },
-            {
-              "name": "warning",
-              "lineno": 149,
-              "args": [
-                "self",
-                "message",
-                "context"
-              ],
-              "hash": "e7e16eb699a2b695f93ddb776ad3f05b34357b49"
-            },
-            {
-              "name": "error",
-              "lineno": 153,
-              "args": [
-                "self",
-                "message",
-                "context",
-                "exc_info"
-              ],
-              "hash": "f50ca194dd61416601dc8b8564d6bc1430c5de80"
-            },
-            {
-              "name": "critical",
-              "lineno": 157,
-              "args": [
-                "self",
-                "message",
-                "context",
-                "exc_info"
-              ],
-              "hash": "d4363617031a7004426bb4f0d657b3bf0f09654d"
-            },
-            {
-              "name": "performance",
-              "lineno": 161,
-              "args": [
-                "self",
-                "message",
-                "execution_time_ms",
-                "context"
-              ],
-              "hash": "d0d87cf24a9f8ea3278e826c4ab75f9c6892bdbf"
-            },
-            {
-              "name": "_log",
-              "lineno": 175,
-              "args": [
-                "self",
-                "level",
-                "message",
-                "context",
-                "exc_info",
-                "extra"
-              ],
-              "hash": "9946b1a164c2981f8c1c44d6fdbc819a99a97a26"
-            }
-          ]
-        },
-        {
-          "name": "ErrorTracker",
-          "lineno": 190,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 193,
-              "args": [
-                "self",
-                "logger"
-              ],
-              "hash": "9a96d4d596aafb1e9434ab9273499ad5fb4202eb"
-            },
-            {
-              "name": "track_error",
-              "lineno": 198,
-              "args": [
-                "self",
-                "error",
-                "context"
-              ],
-              "hash": "93b4b280337b5b42470b643830a421f97ce9817e"
-            },
-            {
-              "name": "get_error_summary",
-              "lineno": 216,
-              "args": [
-                "self"
-              ],
-              "hash": "1233b2ee4598ecb874daf99d2ea70a917e4e4c34"
-            }
-          ]
-        },
-        {
-          "name": "LoggingConfig",
-          "lineno": 308,
-          "methods": [
-            {
-              "name": "setup_system_logging",
-              "lineno": 312,
-              "args": [
-                "log_level",
-                "log_dir"
-              ],
-              "hash": "e284f5a4e2790f250471a10ffc4cdb9401f2dc86"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/real_time_data_integration.py",
-      "rel": "real_time_data_integration.py",
-      "loc": 537,
-      "doc": "Real-Time Data Integration for NFL Betting Analyzer\nIntegrates live odds, injury reports, weather data, and market movements",
-      "imports": [
-        "aiohttp",
-        "asyncio",
-        "config_manager",
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "os",
-        "pandas",
-        "pathlib",
-        "requests",
-        "sqlalchemy",
-        "sqlite3",
-        "time",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 491,
-          "args": [],
-          "hash": "7a7ce8adddbe4f2c9c698616745d822a5a1ff3ef"
-        }
-      ],
-      "classes": [
-        {
-          "name": "InjuryReport",
-          "lineno": 25,
-          "methods": []
-        },
-        {
-          "name": "WeatherData",
-          "lineno": 32,
-          "methods": []
-        },
-        {
-          "name": "LiveOdds",
-          "lineno": 41,
-          "methods": []
-        },
-        {
-          "name": "RealTimeDataIntegrator",
-          "lineno": 50,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 53,
-              "args": [
-                "self",
-                "config_manager"
-              ],
-              "hash": "5a43557ebf40fe8dcb7bd0b0ae841b1ab6a3a090"
-            },
-            {
-              "name": "get_injury_reports",
-              "lineno": 79,
-              "args": [
-                "self"
-              ],
-              "hash": "f3683f32d2a5ddcaf8fedecd8350c0199353ad8a"
-            },
-            {
-              "name": "get_weather_data",
-              "lineno": 116,
-              "args": [
-                "self",
-                "game_locations"
-              ],
-              "hash": "439a6e73d7664819eaefb291b702232c0e4ff000"
-            },
-            {
-              "name": "get_live_odds",
-              "lineno": 158,
-              "args": [
-                "self"
-              ],
-              "hash": "e7f2169a695b7368a6f0c01b840e73d540f9ea41"
-            },
-            {
-              "name": "_should_update",
-              "lineno": 200,
-              "args": [
-                "self",
-                "data_type"
-              ],
-              "hash": "394ea5ffe3a0ba5fd7077ff21b06fd2088514885"
-            },
-            {
-              "name": "_is_dome_stadium",
-              "lineno": 208,
-              "args": [
-                "self",
-                "location"
-              ],
-              "hash": "2792e6fda9a88990a4a41d28944b5a52bdfd9107"
-            },
-            {
-              "name": "get_injury_impact_factor",
-              "lineno": 216,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "40cbd779c2906a7e8144bf98237e0cc0c7e8852f"
-            },
-            {
-              "name": "get_weather_impact_factor",
-              "lineno": 233,
-              "args": [
-                "self",
-                "game_location",
-                "position"
-              ],
-              "hash": "27a00d3a0e4732aacf88d5c81d860a1911b824c3"
-            },
-            {
-              "name": "get_market_value_score",
-              "lineno": 271,
-              "args": [
-                "self",
-                "player_id",
-                "stat_type",
-                "predicted_value"
-              ],
-              "hash": "5e14194e6c867e7021699e9ba58072e2be4b7b15"
-            },
-            {
-              "name": "close",
-              "lineno": 289,
-              "args": [
-                "self"
-              ],
-              "hash": "1c95cf64ec49f875cc3ded45fdd2976fe5f5c95d"
-            }
-          ]
-        },
-        {
-          "name": "MarketMovementTracker",
-          "lineno": 294,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 297,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "f2402ede24e7f85702b62dcf1893d1183ab25ed7"
-            },
-            {
-              "name": "_init_database",
-              "lineno": 301,
-              "args": [
-                "self"
-              ],
-              "hash": "e0b1e524aae2efc072c026e4bea7385ff56e814c"
-            },
-            {
-              "name": "record_market_data",
-              "lineno": 323,
-              "args": [
-                "self",
-                "odds_data"
-              ],
-              "hash": "fb8b9db2d8f30901131709fa03e3983e1f02d5a9"
-            },
-            {
-              "name": "get_line_movement",
-              "lineno": 342,
-              "args": [
-                "self",
-                "player_id",
-                "stat_type",
-                "hours_back"
-              ],
-              "hash": "05446968dafd4512bf35051e9f3bae34968ac746"
-            },
-            {
-              "name": "_detect_sharp_money",
-              "lineno": 379,
-              "args": [
-                "self",
-                "df"
-              ],
-              "hash": "71cf8f66380b4352ce2dc99f4d08da9a78424829"
-            }
-          ]
-        },
-        {
-          "name": "EnhancedPredictionAdjuster",
-          "lineno": 397,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 400,
-              "args": [
-                "self",
-                "data_integrator",
-                "movement_tracker"
-              ],
-              "hash": "bfa77a0fd4fe3d601c0c697562ec6be10d837864"
-            },
-            {
-              "name": "adjust_prediction",
-              "lineno": 405,
-              "args": [
-                "self",
-                "player_id",
-                "position",
-                "base_prediction",
-                "stat_type",
-                "game_location"
-              ],
-              "hash": "2ee12a120e2f4cfc8018f457419edb170bf1d9ab"
-            },
-            {
-              "name": "_calculate_confidence_modifier",
-              "lineno": 445,
-              "args": [
-                "self",
-                "factors"
-              ],
-              "hash": "bd5aa829a3df4a43555879b16c77145bd9eb3e27"
-            },
-            {
-              "name": "_generate_betting_recommendation",
-              "lineno": 463,
-              "args": [
-                "self",
-                "prediction",
-                "factors",
-                "line_movement"
-              ],
-              "hash": "8070b7be3ddca99473ed12b4fcf6f6a59102387d"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/historical_trend_analyzer.py",
-      "rel": "historical_trend_analyzer.py",
-      "loc": 625,
-      "doc": "Historical Trend Analyzer\n\nThis module identifies and analyzes historical trends and patterns in NFL data\nto enhance predictive accuracy and identify key performance indicators.",
-      "imports": [
-        "collections",
-        "database_models",
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "pandas",
-        "sqlalchemy",
-        "typing"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "PlayerTrend",
-          "lineno": 24,
-          "methods": []
-        },
-        {
-          "name": "TeamTrend",
-          "lineno": 57,
-          "methods": []
-        },
-        {
-          "name": "SeasonalPattern",
-          "lineno": 91,
-          "methods": []
-        },
-        {
-          "name": "HistoricalTrendAnalyzer",
-          "lineno": 117,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 120,
-              "args": [
-                "self",
-                "session"
-              ],
-              "hash": "e8d899faf79c15eb40ba3d957721a4a6d41d4916"
-            },
-            {
-              "name": "analyze_player_trends",
-              "lineno": 134,
-              "args": [
-                "self",
-                "player_id",
-                "season"
-              ],
-              "hash": "db54fa0268c0fc6a741e68be6bd03a182f151cd7"
-            },
-            {
-              "name": "_get_player_recent_games",
-              "lineno": 190,
-              "args": [
-                "self",
-                "player_id",
-                "num_games"
-              ],
-              "hash": "48a44b0b182d8326540ef8e864d53f48be6a4795"
-            },
-            {
-              "name": "_calculate_recent_form",
-              "lineno": 235,
-              "args": [
-                "self",
-                "games"
-              ],
-              "hash": "b9c5f9b08c8f6a54e48a41f59388aec19a2de478"
-            },
-            {
-              "name": "_determine_seasonal_trend",
-              "lineno": 257,
-              "args": [
-                "self",
-                "games"
-              ],
-              "hash": "36770b800ed9985fd8b55106a4abbfffca480564"
-            },
-            {
-              "name": "_calculate_consistency",
-              "lineno": 282,
-              "args": [
-                "self",
-                "games"
-              ],
-              "hash": "502aacb84df9405128ed294d351167e02528b9c8"
-            },
-            {
-              "name": "_analyze_situational_performance",
-              "lineno": 305,
-              "args": [
-                "self",
-                "trend",
-                "player_id"
-              ],
-              "hash": "892d70750d4d834e4e2c25c5a2bf2de0a83f0d39"
-            },
-            {
-              "name": "_calculate_predictive_indicators",
-              "lineno": 391,
-              "args": [
-                "self",
-                "trend",
-                "games"
-              ],
-              "hash": "297054a1eda0a04aaf2a90a72ae75c2e624f53ab"
-            },
-            {
-              "name": "analyze_team_trends",
-              "lineno": 435,
-              "args": [
-                "self",
-                "team",
-                "season"
-              ],
-              "hash": "ff54e58e94b77cc3c05d75e7889c12ba509d8d6f"
-            },
-            {
-              "name": "analyze_seasonal_patterns",
-              "lineno": 479,
-              "args": [
-                "self",
-                "season",
-                "week"
-              ],
-              "hash": "8e8d1c716b97fc7ce4074fea7bfbd1bb852bb97b"
-            },
-            {
-              "name": "get_trend_based_multipliers",
-              "lineno": 542,
-              "args": [
-                "self",
-                "player_trend"
-              ],
-              "hash": "803243aa9fd254e3b4626d80e18c4e037a19ba78"
-            },
-            {
-              "name": "identify_breakout_candidates",
-              "lineno": 579,
-              "args": [
-                "self",
-                "position",
-                "min_games"
-              ],
-              "hash": "527eb7c9095ea7bf8e81e2c1e7211e34abd23c7c"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/historical_data_standardizer.py",
-      "rel": "historical_data_standardizer.py",
-      "loc": 759,
-      "doc": "Historical Data Standardizer\n\nThis module standardizes historical NFL data across multiple seasons (2020-2024)\nto ensure consistent terminology, complete statistical coverage, and proper\nplayer identity mapping for accurate predictions.",
-      "imports": [
-        "asyncio",
-        "data_foundation",
-        "database_models",
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "nfl_data_py",
-        "numpy",
-        "pandas",
-        "pathlib",
-        "player_identity_resolver",
-        "sqlalchemy",
-        "stat_terminology_mapper",
-        "typing"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "HistoricalDataReport",
-          "lineno": 32,
-          "methods": []
-        },
-        {
-          "name": "StandardizedStatRecord",
-          "lineno": 45,
-          "methods": []
-        },
-        {
-          "name": "HistoricalDataStandardizer",
-          "lineno": 84,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 87,
-              "args": [
-                "self",
-                "session",
-                "target_seasons"
-              ],
-              "hash": "563d4622ca35787c5310444e30b5f5900ea98480"
-            },
-            {
-              "name": "standardize_all_historical_data",
-              "lineno": 98,
-              "args": [
-                "self"
-              ],
-              "hash": "50bdc8213dc2c2ba4ba3f41cace4357d62ebd5ff"
-            },
-            {
-              "name": "standardize_season",
-              "lineno": 134,
-              "args": [
-                "self",
-                "season"
-              ],
-              "hash": "979a2631cfe86a98e02410fad68282643b70f013"
-            },
-            {
-              "name": "_store_standardization_results",
-              "lineno": 180,
-              "args": [
-                "self",
-                "season",
-                "season_report"
-              ],
-              "hash": "a00e0c522cb9ec01aa8d060ce2f41b884eb2df5f"
-            },
-            {
-              "name": "_analyze_existing_data",
-              "lineno": 220,
-              "args": [
-                "self"
-              ],
-              "hash": "34ace22b94620589dfb4e5b5e0070f24ba6ee306"
-            },
-            {
-              "name": "_standardize_player_identities",
-              "lineno": 260,
-              "args": [
-                "self"
-              ],
-              "hash": "9a4ccfc9a10c90fa81aafa66ca6be179983f85a8"
-            },
-            {
-              "name": "_store_identity_mappings",
-              "lineno": 305,
-              "args": [
-                "self",
-                "mapping",
-                "player_data"
-              ],
-              "hash": "617999931f89e967836309c89de1c4068ce7cab2"
-            },
-            {
-              "name": "_standardize_statistical_terminology",
-              "lineno": 355,
-              "args": [
-                "self"
-              ],
-              "hash": "2bdc3803fc1e1c887a5e01e70774a29693970ea6"
-            },
-            {
-              "name": "_store_terminology_mappings",
-              "lineno": 389,
-              "args": [
-                "self",
-                "season",
-                "mappings"
-              ],
-              "hash": "c02af8e4a7f7439f92b4b8a0400166b653a53729"
-            },
-            {
-              "name": "_standardize_season_data",
-              "lineno": 406,
-              "args": [
-                "self",
-                "season",
-                "player_mapping",
-                "stat_mappings"
-              ],
-              "hash": "c4d9e201fc0fc88ba70d43259c9b3e844102fc0f"
-            },
-            {
-              "name": "_create_standardized_record",
-              "lineno": 491,
-              "args": [
-                "self",
-                "row",
-                "standardized_player_id",
-                "season",
-                "stat_mapping",
-                "snap_data"
-              ],
-              "hash": "52c500933a9a9ee78d6abcde3db1ae741d719457"
-            },
-            {
-              "name": "_calculate_standardized_fantasy_points",
-              "lineno": 569,
-              "args": [
-                "self",
-                "mapped_stats",
-                "row",
-                "scoring_type"
-              ],
-              "hash": "462e483ef741004e3cbb5cea893923df3d7849ad"
-            },
-            {
-              "name": "_calculate_record_completeness",
-              "lineno": 606,
-              "args": [
-                "self",
-                "record"
-              ],
-              "hash": "1410d62293034c5465c06b93423130458acbd521"
-            },
-            {
-              "name": "_store_standardized_records",
-              "lineno": 636,
-              "args": [
-                "self",
-                "records"
-              ],
-              "hash": "b83e15d294d42c0e7aed5137d30d7b725ad419fc"
-            },
-            {
-              "name": "_calculate_season_quality_score",
-              "lineno": 682,
-              "args": [
-                "self",
-                "records",
-                "season_report"
-              ],
-              "hash": "b6620a708c0b62b5d3bc5fd203530d12a7934805"
-            },
-            {
-              "name": "_store_season_standardization_record",
-              "lineno": 702,
-              "args": [
-                "self",
-                "season_report"
-              ],
-              "hash": "e2072c064a46dd37cfca442eee5c35afc1c55bfa"
-            },
-            {
-              "name": "_update_overall_report",
-              "lineno": 719,
-              "args": [
-                "self",
-                "season_report"
-              ],
-              "hash": "65d365321b0b5f8080668e24d9fc2879f46e9906"
-            },
-            {
-              "name": "_validate_standardized_data",
-              "lineno": 727,
-              "args": [
-                "self"
-              ],
-              "hash": "857b1a9cef3fc0feef4c7f37743d5ef9fdb5480d"
-            },
-            {
-              "name": "_generate_standardization_report",
-              "lineno": 743,
-              "args": [
-                "self"
-              ],
-              "hash": "30f3890434e4d101d6ba58df4766e60acf0d40fc"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/historical_validation_lite.py",
-      "rel": "historical_validation_lite.py",
-      "loc": 353,
-      "doc": "Historical Data Validation - Lightweight Version\n\nQuick validation suite to verify the historical data standardization\nprocess completed successfully and data quality is acceptable.",
-      "imports": [
-        "data_foundation",
-        "database_models",
-        "dataclasses",
-        "datetime",
-        "logging",
-        "numpy",
-        "pandas",
-        "sqlalchemy",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 330,
-          "args": [],
-          "hash": "0b3705fff7ea29adaf8b4b233c70ad5d057c1052"
-        }
-      ],
-      "classes": [
-        {
-          "name": "QuickValidationReport",
-          "lineno": 24,
-          "methods": []
-        },
-        {
-          "name": "HistoricalValidationLite",
-          "lineno": 48,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 51,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "b7593bb117dc791167c5b187e7f7c436e53137d9"
-            },
-            {
-              "name": "run_quick_validation",
-              "lineno": 57,
-              "args": [
-                "self"
-              ],
-              "hash": "19c6d90463cca14e252febe6b5bbede71808ca60"
-            },
-            {
-              "name": "_check_data_coverage",
-              "lineno": 107,
-              "args": [
-                "self"
-              ],
-              "hash": "95c2e0d28dc705d0a277ffec594fd5d00746d53d"
-            },
-            {
-              "name": "_validate_player_consistency",
-              "lineno": 129,
-              "args": [
-                "self"
-              ],
-              "hash": "de06115b8c2ce1cb9785fffc99c7f604f34fd3f8"
-            },
-            {
-              "name": "_validate_statistical_completeness",
-              "lineno": 163,
-              "args": [
-                "self"
-              ],
-              "hash": "544eb19a2d3e112da43558b0270c36c1ed3a2f18"
-            },
-            {
-              "name": "_validate_terminology_consistency",
-              "lineno": 222,
-              "args": [
-                "self"
-              ],
-              "hash": "0ec0d296fc7e68c5a940858118af39a93472976a"
-            },
-            {
-              "name": "_identify_issues",
-              "lineno": 242,
-              "args": [
-                "self",
-                "player_metrics",
-                "stat_metrics"
-              ],
-              "hash": "1588850c951cfe063feaf2a189814be5f6e8425d"
-            },
-            {
-              "name": "_generate_recommendations",
-              "lineno": 270,
-              "args": [
-                "self",
-                "overall_score",
-                "issues",
-                "warnings"
-              ],
-              "hash": "926515690296c62c90d2f1947a3458c40356e126"
-            },
-            {
-              "name": "print_validation_report",
-              "lineno": 295,
-              "args": [
-                "self",
-                "report"
-              ],
-              "hash": "fb795f6356dbce918ce8b089ed856552c0eea234"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/verify_environment.py",
       "rel": "verify_environment.py",
       "loc": 104,
@@ -2259,6 +305,56 @@
       "models_found": [
         "sklearn"
       ]
+    },
+    {
+      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/generate_coverage_matrices.py",
+      "rel": "generate_coverage_matrices.py",
+      "loc": 288,
+      "doc": "Coverage Matrix Generator\nGenerates coverage matrices showing which features are available for which statistics\nand which models support which markets for validation and reporting.",
+      "imports": [
+        "core",
+        "datetime",
+        "json",
+        "numpy",
+        "os",
+        "pandas",
+        "pathlib",
+        "sqlalchemy",
+        "sys",
+        "typing"
+      ],
+      "functions": [
+        {
+          "name": "generate_stats_feature_matrix",
+          "lineno": 23,
+          "args": [],
+          "hash": "1b1d8d2ad573161452156792efb8ae1ed75994af"
+        },
+        {
+          "name": "generate_model_market_matrix",
+          "lineno": 118,
+          "args": [],
+          "hash": "87f82dcf11f0c9d5efbe180c545642005528d7bf"
+        },
+        {
+          "name": "validate_coverage_with_real_data",
+          "lineno": 168,
+          "args": [],
+          "hash": "4bcb6461de465aa6f24946a2a8b542d8fd98ae6f"
+        },
+        {
+          "name": "main",
+          "lineno": 237,
+          "args": [],
+          "hash": "cc9b4b4a6e3ce7c0f416c316fa8415a9e0b72b9d"
+        }
+      ],
+      "classes": [],
+      "has_cli": false,
+      "has_fastapi": false,
+      "has_typer": false,
+      "has_argparse": false,
+      "models_found": []
     },
     {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/feature_engineering.py",
@@ -2540,368 +636,6 @@
       ]
     },
     {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/advanced_ml_models.py",
-      "rel": "advanced_ml_models.py",
-      "loc": 512,
-      "doc": "Advanced Machine Learning Models for NFL Betting Predictions\nEnhanced with XGBoost, LightGBM, Neural Networks, and Ensemble Methods",
-      "imports": [
-        "joblib",
-        "json",
-        "lightgbm",
-        "logging",
-        "numpy",
-        "pandas",
-        "pathlib",
-        "sklearn",
-        "tensorflow",
-        "typing",
-        "warnings",
-        "xgboost"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "AdvancedMLModels",
-          "lineno": 53,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 56,
-              "args": [
-                "self",
-                "model_dir"
-              ],
-              "hash": "f2eed08c488d974521adcfbfd9f3d696fb9ca153"
-            },
-            {
-              "name": "create_xgboost_model",
-              "lineno": 92,
-              "args": [
-                "self"
-              ],
-              "hash": "b96bc7d01497dbca549dfadb804568bb9d96d62a"
-            },
-            {
-              "name": "create_lightgbm_model",
-              "lineno": 101,
-              "args": [
-                "self"
-              ],
-              "hash": "c9d1eeffd8769e95242aa5ab1a2d7284ad5bd61c"
-            },
-            {
-              "name": "create_neural_network",
-              "lineno": 110,
-              "args": [
-                "self",
-                "input_dim"
-              ],
-              "hash": "8c9a8f6056160c2ac1304bfda2286034213acf72"
-            },
-            {
-              "name": "create_ensemble_model",
-              "lineno": 145,
-              "args": [
-                "self",
-                "X_train"
-              ],
-              "hash": "61c0484304a7f2fd6ebe53b38118f48ae141ea03"
-            },
-            {
-              "name": "create_stacked_model",
-              "lineno": 171,
-              "args": [
-                "self",
-                "X_train"
-              ],
-              "hash": "c6950bb4a4793e2417495a7b239a8d4d77d85bcb"
-            },
-            {
-              "name": "hyperparameter_tuning",
-              "lineno": 193,
-              "args": [
-                "self",
-                "model",
-                "X_train",
-                "y_train",
-                "param_grid"
-              ],
-              "hash": "5509202a115a76d475d69f0a1f5d42613f7c2a12"
-            },
-            {
-              "name": "train_advanced_model",
-              "lineno": 213,
-              "args": [
-                "self",
-                "X_train",
-                "y_train",
-                "model_type"
-              ],
-              "hash": "889c6123cc20391559bb12eb79293e3f5d24a600"
-            },
-            {
-              "name": "save_advanced_model",
-              "lineno": 290,
-              "args": [
-                "self",
-                "model",
-                "scaler",
-                "performance",
-                "model_name",
-                "model_type"
-              ],
-              "hash": "afae7013841407f11e579da78005ab6ce4d5887a"
-            },
-            {
-              "name": "load_advanced_model",
-              "lineno": 327,
-              "args": [
-                "self",
-                "model_name",
-                "model_type"
-              ],
-              "hash": "f93953a260e9217b03a067b6fd8155be496580be"
-            }
-          ]
-        },
-        {
-          "name": "NeuralNetworkWrapper",
-          "lineno": 351,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 354,
-              "args": [
-                "self",
-                "input_dim",
-                "hidden_layers",
-                "dropout_rate",
-                "learning_rate",
-                "epochs",
-                "batch_size"
-              ],
-              "hash": "0125856ba76c6e6c35af71ee657df75a1aded80b"
-            },
-            {
-              "name": "fit",
-              "lineno": 365,
-              "args": [
-                "self",
-                "X",
-                "y"
-              ],
-              "hash": "3e6fddb799b4f0dbfea1f0a005736bede7383817"
-            },
-            {
-              "name": "predict",
-              "lineno": 412,
-              "args": [
-                "self",
-                "X"
-              ],
-              "hash": "d03bcf4ebda5409e431b3d5fb9daf015057a7209"
-            }
-          ]
-        },
-        {
-          "name": "ModelComparison",
-          "lineno": 421,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 424,
-              "args": [
-                "self"
-              ],
-              "hash": "c2b0decd10a6a3e9467b674ae072ae39f244077b"
-            },
-            {
-              "name": "compare_models",
-              "lineno": 427,
-              "args": [
-                "self",
-                "X_train",
-                "y_train",
-                "X_test",
-                "y_test"
-              ],
-              "hash": "260631e362d0177f0c3348f7015a7d058cd1c019"
-            },
-            {
-              "name": "get_best_model",
-              "lineno": 477,
-              "args": [
-                "self",
-                "comparison_results",
-                "metric"
-              ],
-              "hash": "b4699d3c5be134aa58664ddb1cc8ba839c1a2637"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": [
-        "lightgbm",
-        "sklearn",
-        "tensorflow",
-        "xgboost"
-      ]
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/advanced_game_context.py",
-      "rel": "advanced_game_context.py",
-      "loc": 451,
-      "doc": "Advanced Game Context System\nStadium characteristics, rest days, game situation, and environmental factors.",
-      "imports": [
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "pathlib",
-        "requests",
-        "sqlalchemy",
-        "sqlite3",
-        "sys",
-        "typing",
-        "warnings"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 388,
-          "args": [],
-          "hash": "fc694df21e8ad9fa1292e476c54676441ebbe38b"
-        }
-      ],
-      "classes": [
-        {
-          "name": "AdvancedGameContext",
-          "lineno": 26,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 29,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "37e1d93c6008dad1619077d9dccebbe93f5b07ef"
-            },
-            {
-              "name": "get_stadium_factors",
-              "lineno": 107,
-              "args": [
-                "self",
-                "team"
-              ],
-              "hash": "69eb7f765ba7c3a139b16f5452188cb25c8a27b7"
-            },
-            {
-              "name": "_calculate_elevation_factor",
-              "lineno": 122,
-              "args": [
-                "self",
-                "elevation"
-              ],
-              "hash": "bf1fc456955141f4997e4745ea1f3b585b314b45"
-            },
-            {
-              "name": "_calculate_crowd_factor",
-              "lineno": 133,
-              "args": [
-                "self",
-                "capacity"
-              ],
-              "hash": "9510b50ceb084124927bb7df80a79e3a1b2f72ea"
-            },
-            {
-              "name": "_get_home_field_advantage",
-              "lineno": 142,
-              "args": [
-                "self",
-                "team"
-              ],
-              "hash": "744dce2308ff9f0e61b372d54223b80ea8822779"
-            },
-            {
-              "name": "get_weather_impact",
-              "lineno": 158,
-              "args": [
-                "self",
-                "temperature",
-                "wind_speed",
-                "precipitation",
-                "dome"
-              ],
-              "hash": "00e4c99593741f5bd0ca65b3f17fce13f71f82cf"
-            },
-            {
-              "name": "_calculate_weather_severity",
-              "lineno": 220,
-              "args": [
-                "self",
-                "temperature",
-                "wind_speed",
-                "precipitation"
-              ],
-              "hash": "6115402d0d49cceeb2ea1363b5154df24ec44316"
-            },
-            {
-              "name": "get_rest_and_travel_factors",
-              "lineno": 258,
-              "args": [
-                "self",
-                "team",
-                "rest_days",
-                "travel_distance"
-              ],
-              "hash": "97ce2f0a04994d6bfd380daded7cb64db20bcbfb"
-            },
-            {
-              "name": "get_game_situation_factors",
-              "lineno": 286,
-              "args": [
-                "self",
-                "score_differential",
-                "time_remaining",
-                "down",
-                "distance",
-                "field_position"
-              ],
-              "hash": "8fab4d2dcdd7086317dfa2beafcea21fb8877f25"
-            },
-            {
-              "name": "create_game_context_features",
-              "lineno": 334,
-              "args": [
-                "self",
-                "home_team",
-                "away_team",
-                "temperature",
-                "wind_speed",
-                "precipitation",
-                "rest_days_home",
-                "rest_days_away",
-                "travel_distance"
-              ],
-              "hash": "c630ba6a6e46b92fda9e951a3780cd81af29ffb4"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/validation_backtesting_framework.py",
       "rel": "validation_backtesting_framework.py",
       "loc": 681,
@@ -3067,559 +801,6 @@
       ]
     },
     {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/deploy_production.py",
-      "rel": "deploy_production.py",
-      "loc": 345,
-      "doc": "Production Deployment Script\n\nDeploys the NFL prediction system for production use",
-      "imports": [
-        "datetime",
-        "os",
-        "pathlib",
-        "shutil",
-        "sqlite3",
-        "subprocess",
-        "sys",
-        "verify_production_readiness"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 335,
-          "args": [],
-          "hash": "bb511933fd9b109725701086d4db6b35dc06ad07"
-        }
-      ],
-      "classes": [
-        {
-          "name": "ProductionDeployer",
-          "lineno": 14,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 17,
-              "args": [
-                "self"
-              ],
-              "hash": "d3375bf7aa7b701a2acea921be085d2c3c4d2683"
-            },
-            {
-              "name": "deploy",
-              "lineno": 21,
-              "args": [
-                "self"
-              ],
-              "hash": "82d389c92e14119846ab2ca468dcada758454d1a"
-            },
-            {
-              "name": "_check_environment",
-              "lineno": 60,
-              "args": [
-                "self"
-              ],
-              "hash": "d4a3d59ea4fa8c8dd12c176a033be57d40a91521"
-            },
-            {
-              "name": "_backup_system",
-              "lineno": 84,
-              "args": [
-                "self"
-              ],
-              "hash": "b6528b56a91e4cfcf5b7d492200559768bd50683"
-            },
-            {
-              "name": "_install_dependencies",
-              "lineno": 107,
-              "args": [
-                "self"
-              ],
-              "hash": "97dd64d230fff3f22d0c1d89d803ff82206e67d6"
-            },
-            {
-              "name": "_optimize_database",
-              "lineno": 121,
-              "args": [
-                "self"
-              ],
-              "hash": "83346c2990b294962c7c22e946a968e3e1c07719"
-            },
-            {
-              "name": "_verify_deployment",
-              "lineno": 153,
-              "args": [
-                "self"
-              ],
-              "hash": "71a45f9f408913078d88c8ba8c8993105a98cac4"
-            },
-            {
-              "name": "_create_production_scripts",
-              "lineno": 166,
-              "args": [
-                "self"
-              ],
-              "hash": "abd3f4bd93dde10cad5ad6d84fd80ad9c5ba4600"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/data_validator.py",
-      "rel": "data_validator.py",
-      "loc": 4,
-      "doc": "Compatibility shim for tests: re-export validator symbols from core.data.data_validator",
-      "imports": [
-        "core"
-      ],
-      "functions": [],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/run_full_standardization.py",
-      "rel": "run_full_standardization.py",
-      "loc": 273,
-      "doc": "Run Full Historical Data Standardization (2020-2024)\n\nThis script runs the complete historical data standardization process\nacross all NFL seasons from 2020 to 2024.",
-      "imports": [
-        "asyncio",
-        "config_manager",
-        "database_models",
-        "datetime",
-        "historical_data_standardizer",
-        "logging",
-        "sqlalchemy",
-        "sys"
-      ],
-      "functions": [
-        {
-          "name": "run_full_standardization",
-          "lineno": 31,
-          "args": [],
-          "hash": "a72e82604a4818adc1c36476ac344827ef441750"
-        },
-        {
-          "name": "validate_standardized_data",
-          "lineno": 152,
-          "args": [],
-          "hash": "596fa918ae27aadcbf9263502993ef76979593a1"
-        },
-        {
-          "name": "main",
-          "lineno": 246,
-          "args": [],
-          "hash": "aa53f147361701dd22dd7b1c7ca9b959a791e79b"
-        }
-      ],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/advanced_situational_analytics.py",
-      "rel": "advanced_situational_analytics.py",
-      "loc": 551,
-      "doc": "Advanced Situational Analytics for NFL Betting\nRed Zone, Third Down, Goal Line, and Game Script Analysis",
-      "imports": [
-        "dataclasses",
-        "datetime",
-        "logging",
-        "numpy",
-        "pandas",
-        "sqlalchemy",
-        "sqlite3",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 505,
-          "args": [],
-          "hash": "74e2e606346dc6cb0d766d93c80743440a1af8fc"
-        }
-      ],
-      "classes": [
-        {
-          "name": "SituationalStats",
-          "lineno": 18,
-          "methods": []
-        },
-        {
-          "name": "GameScript",
-          "lineno": 31,
-          "methods": []
-        },
-        {
-          "name": "SituationalAnalyzer",
-          "lineno": 40,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 43,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "50146fae0db0aaf8c8b1f0e3a68803a199c627fb"
-            },
-            {
-              "name": "calculate_red_zone_efficiency",
-              "lineno": 57,
-              "args": [
-                "self",
-                "player_id",
-                "position"
-              ],
-              "hash": "eda9fc09ea2f3274aa10b1ebb8d613dd6bf41790"
-            },
-            {
-              "name": "calculate_third_down_impact",
-              "lineno": 96,
-              "args": [
-                "self",
-                "player_id",
-                "position"
-              ],
-              "hash": "7df779ed997e60043f6d4c98b2a0778762a56c7d"
-            },
-            {
-              "name": "analyze_goal_line_usage",
-              "lineno": 137,
-              "args": [
-                "self",
-                "player_id",
-                "position"
-              ],
-              "hash": "089583622c4dbfc7a147eac921f803988e28ef14"
-            },
-            {
-              "name": "calculate_game_script_impact",
-              "lineno": 183,
-              "args": [
-                "self",
-                "team",
-                "opponent"
-              ],
-              "hash": "db5aa7ba3fb95af9ad47e63d6694b013601e4dcb"
-            },
-            {
-              "name": "get_situational_multiplier",
-              "lineno": 239,
-              "args": [
-                "self",
-                "player_id",
-                "position",
-                "game_script"
-              ],
-              "hash": "b7f23cb4619e82cd77682a809dcc9996e4c12159"
-            }
-          ]
-        },
-        {
-          "name": "AdvancedPlayerMetrics",
-          "lineno": 281,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 284,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "78e96fb0916c0f5f7ab4eb2fb36d56b6b7164ec4"
-            },
-            {
-              "name": "calculate_target_share",
-              "lineno": 287,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "ddaae4ff027490aa03eb65f65132f83875898455"
-            },
-            {
-              "name": "calculate_snap_count_impact",
-              "lineno": 334,
-              "args": [
-                "self",
-                "player_id",
-                "position"
-              ],
-              "hash": "7100f8fb0f6273b3d8766ae90f12a6cc4822ed74"
-            },
-            {
-              "name": "calculate_route_running_metrics",
-              "lineno": 374,
-              "args": [
-                "self",
-                "player_id",
-                "position"
-              ],
-              "hash": "1c86d618f29682d2c1f5861634ff8c8feed9dc5a"
-            },
-            {
-              "name": "_grade_route_running",
-              "lineno": 420,
-              "args": [
-                "self",
-                "separation",
-                "big_play_rate"
-              ],
-              "hash": "3830cf47cbe0a157190228c3b5f92956b304d0f8"
-            }
-          ]
-        },
-        {
-          "name": "CoachingAnalytics",
-          "lineno": 434,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 437,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "087f5ee80e3998c5b57a0e5e0ecd6c72fd992898"
-            },
-            {
-              "name": "get_coaching_multiplier",
-              "lineno": 449,
-              "args": [
-                "self",
-                "player_id",
-                "position"
-              ],
-              "hash": "e7cb45e1d8e083a2aa01f30796dfbd901af953b7"
-            },
-            {
-              "name": "analyze_situational_coaching",
-              "lineno": 482,
-              "args": [
-                "self",
-                "team",
-                "situation"
-              ],
-              "hash": "fef5d9c5d326ebe4379694acc32274a49dac488b"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/api_integrations.py",
-      "rel": "api_integrations.py",
-      "loc": 643,
-      "doc": "API Integrations and Web Scraping System\nComprehensive data collection from multiple NFL data sources.",
-      "imports": [
-        "aiohttp",
-        "asyncio",
-        "bs4",
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "re",
-        "requests",
-        "sqlalchemy",
-        "sqlite3",
-        "sys",
-        "time",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 588,
-          "args": [],
-          "hash": "da7bd7b19835e5b85173d5ceebed8d42cfb74d21"
-        }
-      ],
-      "classes": [
-        {
-          "name": "DataSource",
-          "lineno": 30,
-          "methods": []
-        },
-        {
-          "name": "APIIntegrations",
-          "lineno": 39,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 42,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "2ad9b4f5164202fd547a509cc8211694e7fa60c2"
-            },
-            {
-              "name": "_init_data_collection_db",
-              "lineno": 105,
-              "args": [
-                "self"
-              ],
-              "hash": "46893bfd80ae213d4c82483d4498d5644624489f"
-            },
-            {
-              "name": "_check_rate_limit",
-              "lineno": 141,
-              "args": [
-                "self",
-                "source_name"
-              ],
-              "hash": "769f3e799143ac7a7ded4a2658acbc1bba55e5fa"
-            },
-            {
-              "name": "fetch_espn_data",
-              "lineno": 167,
-              "args": [
-                "self",
-                "data_type"
-              ],
-              "hash": "e9d2ef1c6dc61543290dd853f013eaf2cebaf359"
-            },
-            {
-              "name": "fetch_sleeper_data",
-              "lineno": 201,
-              "args": [
-                "self",
-                "data_type"
-              ],
-              "hash": "7466e660ee890c9d946f89754a16887a5c0a66e2"
-            },
-            {
-              "name": "scrape_pro_football_reference",
-              "lineno": 237,
-              "args": [
-                "self",
-                "page_type"
-              ],
-              "hash": "db0f91e00baf1b3c6cffeaef586091095d97d915"
-            },
-            {
-              "name": "_parse_html_table",
-              "lineno": 289,
-              "args": [
-                "self",
-                "table"
-              ],
-              "hash": "73885647a19fd7e5b4f27d94ab05c0d67c1e1f5c"
-            },
-            {
-              "name": "fetch_fantasy_pros_data",
-              "lineno": 314,
-              "args": [
-                "self",
-                "position"
-              ],
-              "hash": "ec0e05bfc5253b1204211669920c3611abef580f"
-            },
-            {
-              "name": "_generate_mock_projections",
-              "lineno": 327,
-              "args": [
-                "self",
-                "position"
-              ],
-              "hash": "c85c6a8418248704b24b07c6f0071aba2404766f"
-            },
-            {
-              "name": "fetch_odds_data",
-              "lineno": 358,
-              "args": [
-                "self",
-                "sport"
-              ],
-              "hash": "f5281c72644276b1b7b253fe3d94e340f97ed777"
-            },
-            {
-              "name": "_generate_mock_odds",
-              "lineno": 371,
-              "args": [
-                "self"
-              ],
-              "hash": "94975ddee5c0a3e4bf1857cd799eae2ac58c737e"
-            },
-            {
-              "name": "_cache_raw_data",
-              "lineno": 401,
-              "args": [
-                "self",
-                "source_name",
-                "data_type",
-                "raw_data",
-                "expires_hours"
-              ],
-              "hash": "175b92782376cabf993ae64ceffa5eefbf6d3c27"
-            },
-            {
-              "name": "_log_data_collection",
-              "lineno": 425,
-              "args": [
-                "self",
-                "source_name",
-                "data_type",
-                "records_collected",
-                "success",
-                "error_message"
-              ],
-              "hash": "39418dec42f7c5304a843d21e7e3a77824918af9"
-            },
-            {
-              "name": "run_comprehensive_data_collection",
-              "lineno": 447,
-              "args": [
-                "self"
-              ],
-              "hash": "858129c15be869fa3ee19687cc04522588c7767c"
-            },
-            {
-              "name": "get_data_collection_status",
-              "lineno": 512,
-              "args": [
-                "self"
-              ],
-              "hash": "93f34b316ec17a5f8dfc09a346d73673f08760c4"
-            },
-            {
-              "name": "cleanup_old_data",
-              "lineno": 556,
-              "args": [
-                "self",
-                "days_to_keep"
-              ],
-              "hash": "f2e429cfdd6987fbaac0773ac7949f708f5efe13"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/database_models.py",
       "rel": "database_models.py",
       "loc": 5,
@@ -3636,516 +817,6 @@
       "models_found": []
     },
     {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/comprehensive_stats_engine.py",
-      "rel": "comprehensive_stats_engine.py",
-      "loc": 556,
-      "doc": "Comprehensive Stats Engine\n\nThis module expands statistical coverage to include ALL possible NFL statistics\nfor complete player analysis and betting insights.",
-      "imports": [
-        "dataclasses",
-        "datetime",
-        "logging",
-        "nfl_data_py",
-        "numpy",
-        "pandas",
-        "simplified_database_models",
-        "sqlalchemy",
-        "traceback",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 489,
-          "args": [],
-          "hash": "f61a2e276b54f7dbfd125fc6a82baf27fe2e47ec"
-        }
-      ],
-      "classes": [
-        {
-          "name": "ComprehensivePlayerStats",
-          "lineno": 22,
-          "methods": []
-        },
-        {
-          "name": "ComprehensiveStatsEngine",
-          "lineno": 161,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 164,
-              "args": [
-                "self",
-                "session"
-              ],
-              "hash": "20af710302b640c95c9a069d15bd052650a80354"
-            },
-            {
-              "name": "get_player_comprehensive_stats",
-              "lineno": 191,
-              "args": [
-                "self",
-                "player_name",
-                "active_only"
-              ],
-              "hash": "d66db37048d28b96714ac58dabab5b2865f8fa64"
-            },
-            {
-              "name": "get_comprehensive_player_stats",
-              "lineno": 243,
-              "args": [
-                "self",
-                "player_id",
-                "weeks_back"
-              ],
-              "hash": "7aa37024cbcb401d5974fc6a9328a9ab01f10cbf"
-            },
-            {
-              "name": "_calculate_comprehensive_stats",
-              "lineno": 280,
-              "args": [
-                "self",
-                "player",
-                "recent_stats"
-              ],
-              "hash": "28504e22c237646d26ca2b5e07aa65eddba3dd81"
-            },
-            {
-              "name": "_add_advanced_calculations",
-              "lineno": 334,
-              "args": [
-                "self",
-                "stats",
-                "recent_stats"
-              ],
-              "hash": "d5191dce4753fa71c9e3392edd418de5888e389a"
-            },
-            {
-              "name": "_add_position_specific_analysis",
-              "lineno": 384,
-              "args": [
-                "self",
-                "stats",
-                "position"
-              ],
-              "hash": "e498a2af20a13f295cb63c8db0276850046243d0"
-            },
-            {
-              "name": "_add_betting_calculations",
-              "lineno": 420,
-              "args": [
-                "self",
-                "stats"
-              ],
-              "hash": "0a28d4c63c6ecec6dc7b59a8d4f7271101d6163c"
-            },
-            {
-              "name": "_calculate_passer_rating",
-              "lineno": 439,
-              "args": [
-                "self",
-                "attempts",
-                "completions",
-                "yards",
-                "tds",
-                "ints"
-              ],
-              "hash": "bbe992e96f0744a92a126f316983f6f01ba942be"
-            },
-            {
-              "name": "get_all_position_comprehensive_stats",
-              "lineno": 456,
-              "args": [
-                "self",
-                "position",
-                "limit",
-                "active_only"
-              ],
-              "hash": "c494f32d6132b214fdc426e779309b3952f5f8c9"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/test_model_training.py",
-      "rel": "test_model_training.py",
-      "loc": 108,
-      "doc": "Test script for model training with simplified approach",
-      "imports": [
-        "core",
-        "numpy",
-        "pandas",
-        "sklearn",
-        "sqlalchemy"
-      ],
-      "functions": [
-        {
-          "name": "test_simple_model_training",
-          "lineno": 13,
-          "args": [],
-          "hash": "61e7aeaf5222d1657c32889cf5af66c7abd0db49"
-        }
-      ],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": [
-        "sklearn"
-      ]
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/social_sentiment_analyzer.py",
-      "rel": "social_sentiment_analyzer.py",
-      "loc": 458,
-      "doc": "Social Sentiment and News Impact Analysis for NFL Betting\nTwitter sentiment, news analysis, injury reports, and public perception tracking",
-      "imports": [
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "pandas",
-        "re",
-        "requests",
-        "sqlite3",
-        "textblob",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 416,
-          "args": [],
-          "hash": "22a582f032b3d045b221ff8ad13d17262108dd64"
-        }
-      ],
-      "classes": [
-        {
-          "name": "SentimentData",
-          "lineno": 29,
-          "methods": []
-        },
-        {
-          "name": "NewsImpact",
-          "lineno": 40,
-          "methods": []
-        },
-        {
-          "name": "SocialSentimentAnalyzer",
-          "lineno": 49,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 52,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "d00a15e5396f556083e5c8217efed29858429689"
-            },
-            {
-              "name": "_init_sentiment_database",
-              "lineno": 76,
-              "args": [
-                "self"
-              ],
-              "hash": "d5a6bb542ad61b494cabe71e5b58cd60ca147aa0"
-            },
-            {
-              "name": "analyze_player_sentiment",
-              "lineno": 119,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "eaac022a1de1904406a224b33dd79f8b54d6a3f9"
-            },
-            {
-              "name": "_generate_mock_sentiment",
-              "lineno": 183,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "8b9a5be9ce9440360ba33c165c6dad236e32937b"
-            },
-            {
-              "name": "_calculate_news_impact",
-              "lineno": 211,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "d1710d22040fe2a134c3b19c5c169c2ce82c41b7"
-            },
-            {
-              "name": "get_sentiment_multiplier",
-              "lineno": 246,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "6e66eac4c096c9d1e4f53e555bc00e22468d2c22"
-            },
-            {
-              "name": "analyze_injury_sentiment",
-              "lineno": 271,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "b8488c5b12bc8d1c5d5c9296dad233c369a4f177"
-            }
-          ]
-        },
-        {
-          "name": "NewsImpactAnalyzer",
-          "lineno": 296,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 299,
-              "args": [
-                "self"
-              ],
-              "hash": "8a4a7f83d0edaccec31a50ddaa82bf95dff5c8fd"
-            },
-            {
-              "name": "analyze_headline_impact",
-              "lineno": 306,
-              "args": [
-                "self",
-                "headline",
-                "player_id"
-              ],
-              "hash": "6c5c1239fd1c00d001c3e2991a24e9ea9d449699"
-            },
-            {
-              "name": "get_news_multiplier",
-              "lineno": 348,
-              "args": [
-                "self",
-                "player_id",
-                "recent_headlines"
-              ],
-              "hash": "a73c093f27342d7982bee30b85311447e3b6bb6d"
-            }
-          ]
-        },
-        {
-          "name": "PublicPerceptionTracker",
-          "lineno": 372,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 375,
-              "args": [
-                "self"
-              ],
-              "hash": "797651426c79eb518f76ee9ba0bb18fca6a95357"
-            },
-            {
-              "name": "identify_contrarian_opportunities",
-              "lineno": 382,
-              "args": [
-                "self",
-                "sentiment_data"
-              ],
-              "hash": "7764b70ff8f49a19b28efb04023b07e69c705be4"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/advanced_analytics.py",
-      "rel": "advanced_analytics.py",
-      "loc": 661,
-      "doc": "Advanced Analytics System\nImplements EPA (Expected Points Added), WPA (Win Probability Added), and Next Gen Stats integration.",
-      "imports": [
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "requests",
-        "sqlalchemy",
-        "sqlite3",
-        "sys",
-        "time",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 607,
-          "args": [],
-          "hash": "2e117bb06f3d6522b7003f69cc67ddd0783d5a2b"
-        }
-      ],
-      "classes": [
-        {
-          "name": "AdvancedPlayerStats",
-          "lineno": 26,
-          "methods": []
-        },
-        {
-          "name": "AdvancedAnalytics",
-          "lineno": 58,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 61,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "e719b735387c9947ec334875c8208c8d1c57813c"
-            },
-            {
-              "name": "_init_analytics_database",
-              "lineno": 102,
-              "args": [
-                "self"
-              ],
-              "hash": "f4af46c7c3aee91dbd54382177cc4011d9ed1daf"
-            },
-            {
-              "name": "calculate_player_epa",
-              "lineno": 169,
-              "args": [
-                "self",
-                "player_id",
-                "weeks"
-              ],
-              "hash": "67412b55a295134c286e00dc5ef88ce23805922e"
-            },
-            {
-              "name": "_calculate_passing_epa",
-              "lineno": 229,
-              "args": [
-                "self",
-                "df"
-              ],
-              "hash": "618cd382abec04a08f70630288697b2866773859"
-            },
-            {
-              "name": "_calculate_rushing_epa",
-              "lineno": 263,
-              "args": [
-                "self",
-                "df"
-              ],
-              "hash": "2e8fad45faa6d671b7c09188260b18210e6dce83"
-            },
-            {
-              "name": "_calculate_receiving_epa",
-              "lineno": 296,
-              "args": [
-                "self",
-                "df"
-              ],
-              "hash": "66565d05b6e456289bf4a4f3c71d06fc44f1ed9c"
-            },
-            {
-              "name": "calculate_player_wpa",
-              "lineno": 331,
-              "args": [
-                "self",
-                "player_id",
-                "weeks"
-              ],
-              "hash": "37c400ac23b2896d7c7ac5c8825a205a91b56df9"
-            },
-            {
-              "name": "fetch_next_gen_stats",
-              "lineno": 349,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "07877ecfeceb12c7485cec0f7638b7450fbc8f25"
-            },
-            {
-              "name": "calculate_advanced_efficiency_metrics",
-              "lineno": 383,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "bc88ff0c4d1952045c88e37ee343aaa2f1d228bb"
-            },
-            {
-              "name": "_calculate_passer_rating",
-              "lineno": 459,
-              "args": [
-                "self",
-                "attempts",
-                "yards",
-                "tds",
-                "ints"
-              ],
-              "hash": "1e945e948e81e361bfbed1c1bed6236feb8cab26"
-            },
-            {
-              "name": "_get_default_epa_stats",
-              "lineno": 474,
-              "args": [
-                "self"
-              ],
-              "hash": "03c50526792c1d23eac3266145f5b3270ccc393e"
-            },
-            {
-              "name": "get_comprehensive_analytics",
-              "lineno": 485,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "c5227ba4b1bde2ba7115c64a12fb1fdd5ae480af"
-            },
-            {
-              "name": "generate_analytics_report",
-              "lineno": 544,
-              "args": [
-                "self",
-                "player_ids"
-              ],
-              "hash": "9557776dd88f7fd9e25f50ba5f4107a864061112"
-            },
-            {
-              "name": "_get_position_breakdown",
-              "lineno": 578,
-              "args": [
-                "self",
-                "analytics"
-              ],
-              "hash": "7e5e1f76f4dc1c0bb00801fecd7c6eb167b1b090"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/data_foundation.py",
       "rel": "data_foundation.py",
       "loc": 4,
@@ -4155,176 +826,6 @@
       ],
       "functions": [],
       "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/real_time_market_data.py",
-      "rel": "real_time_market_data.py",
-      "loc": 400,
-      "doc": "Real-Time Market Data Integration\nFetches live odds, line movements, and market efficiency data for NFL prop bets.",
-      "imports": [
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "requests",
-        "sqlalchemy",
-        "sqlite3",
-        "sys",
-        "time",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 352,
-          "args": [],
-          "hash": "f5ead637e9b874b1a55ad8a352a6c3c4b5ede949"
-        }
-      ],
-      "classes": [
-        {
-          "name": "RealTimeMarketData",
-          "lineno": 24,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 27,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "17690fa12c515495a5718236461e0eb48727925f"
-            },
-            {
-              "name": "fetch_nfl_odds",
-              "lineno": 45,
-              "args": [
-                "self",
-                "markets"
-              ],
-              "hash": "de7018a88709a578340c7b2505821a3e7f6bac91"
-            },
-            {
-              "name": "_generate_mock_odds_data",
-              "lineno": 79,
-              "args": [
-                "self",
-                "market"
-              ],
-              "hash": "6d3afa94fdbefba55772afc4082da738a680b849"
-            },
-            {
-              "name": "fetch_player_props",
-              "lineno": 152,
-              "args": [
-                "self",
-                "player_name"
-              ],
-              "hash": "489ab6710e0a4b382075a2bde97aef8a87993ba1"
-            },
-            {
-              "name": "calculate_market_efficiency",
-              "lineno": 186,
-              "args": [
-                "self",
-                "odds_data"
-              ],
-              "hash": "98e78ca4f3a0a66e78faa0dfce1e0c50f61fb46b"
-            },
-            {
-              "name": "detect_line_movements",
-              "lineno": 225,
-              "args": [
-                "self",
-                "current_odds",
-                "historical_odds"
-              ],
-              "hash": "cbbb141b4b0dc4d8d3aa3bd16dbfddc520cc2f15"
-            },
-            {
-              "name": "find_arbitrage_opportunities",
-              "lineno": 259,
-              "args": [
-                "self",
-                "odds_data"
-              ],
-              "hash": "39a43f964e0ee2c78a8597b5cf01e45a09cf8809"
-            },
-            {
-              "name": "_calculate_arbitrage",
-              "lineno": 284,
-              "args": [
-                "self",
-                "game",
-                "bookmaker_odds",
-                "market"
-              ],
-              "hash": "35734f74c46400393c92d6c4d4defb9ab0042aae"
-            },
-            {
-              "name": "get_market_summary",
-              "lineno": 323,
-              "args": [
-                "self"
-              ],
-              "hash": "854aaf37b554a1d4b01fd1728bf3dca92edaca1e"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/ultimate_enhanced_predictor.py",
-      "rel": "ultimate_enhanced_predictor.py",
-      "loc": 28,
-      "doc": "Stub module for UltimateEnhancedPredictor to satisfy imports in tests.",
-      "imports": [
-        "dataclasses",
-        "typing"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "UltimatePrediction",
-          "lineno": 9,
-          "methods": []
-        },
-        {
-          "name": "UltimateEnhancedPredictor",
-          "lineno": 17,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 18,
-              "args": [
-                "self"
-              ],
-              "hash": "a070ae11b4d8f4bb3035749caabf3363832493a6"
-            },
-            {
-              "name": "generate_ultimate_prediction",
-              "lineno": 21,
-              "args": [
-                "self",
-                "player_id"
-              ],
-              "hash": "09a38109e8c027f94d1d609d610c36ddf2e46cd4"
-            }
-          ]
-        }
-      ],
       "has_cli": false,
       "has_fastapi": false,
       "has_typer": false,
@@ -4568,790 +1069,6 @@
       "models_found": []
     },
     {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/stat_terminology_mapper.py",
-      "rel": "stat_terminology_mapper.py",
-      "loc": 286,
-      "doc": "Statistical Terminology Mapper\n\nThis module creates consistent mapping between different statistical terminology\nused across NFL seasons and data sources to ensure uniform data processing.",
-      "imports": [
-        "logging",
-        "pandas",
-        "re",
-        "typing"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "StatTerminologyMapper",
-          "lineno": 15,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 18,
-              "args": [
-                "self"
-              ],
-              "hash": "b39b24c934a885712d9b9bf5260400dab6e8890b"
-            },
-            {
-              "name": "create_season_mapping",
-              "lineno": 106,
-              "args": [
-                "self",
-                "season",
-                "available_columns"
-              ],
-              "hash": "59b39b68331067c49a70f7c66d07ce53d6058f3f"
-            },
-            {
-              "name": "validate_position_coverage",
-              "lineno": 160,
-              "args": [
-                "self",
-                "position",
-                "available_stats"
-              ],
-              "hash": "75c331784b73f9dd54d54e40281126269993953d"
-            },
-            {
-              "name": "get_fantasy_point_calculation_mapping",
-              "lineno": 169,
-              "args": [
-                "self"
-              ],
-              "hash": "a064f558bab733b2bcc931b46b7eb216d32ac908"
-            },
-            {
-              "name": "normalize_column_name",
-              "lineno": 208,
-              "args": [
-                "self",
-                "column_name"
-              ],
-              "hash": "e69c9fca7ee759389118a2fa158cc6d1019c50c6"
-            },
-            {
-              "name": "get_stat_category",
-              "lineno": 237,
-              "args": [
-                "self",
-                "stat_name"
-              ],
-              "hash": "edcf127a466419c3c56b207f8049ed7afb5ac1a7"
-            },
-            {
-              "name": "validate_mapping_completeness",
-              "lineno": 259,
-              "args": [
-                "self",
-                "mapping",
-                "position"
-              ],
-              "hash": "2a4e0881dcc5ad65925179a4a1502e22b953864d"
-            },
-            {
-              "name": "create_reverse_mapping",
-              "lineno": 278,
-              "args": [
-                "self",
-                "forward_mapping"
-              ],
-              "hash": "2f4fa94b7e17cce967319c350053950b136a6a96"
-            },
-            {
-              "name": "get_all_possible_variations",
-              "lineno": 283,
-              "args": [
-                "self",
-                "standard_term"
-              ],
-              "hash": "0f9451a698f2be401b1c63ae8d753c35b9f36cff"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/player_identity_resolver.py",
-      "rel": "player_identity_resolver.py",
-      "loc": 651,
-      "doc": "Player Identity Resolver\n\nThis module resolves player identity conflicts across multiple seasons\nand creates consistent player ID mapping to ensure accurate historical tracking.",
-      "imports": [
-        "collections",
-        "dataclasses",
-        "difflib",
-        "logging",
-        "numpy",
-        "pandas",
-        "re",
-        "typing"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "PlayerIdentityConflict",
-          "lineno": 20,
-          "methods": []
-        },
-        {
-          "name": "PlayerMasterRecord",
-          "lineno": 31,
-          "methods": []
-        },
-        {
-          "name": "PlayerIdentityResolver",
-          "lineno": 44,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 47,
-              "args": [
-                "self"
-              ],
-              "hash": "bab45db58f460ae11bb1a71ad2a5c1e3236e24e9"
-            },
-            {
-              "name": "create_identity_mapping",
-              "lineno": 73,
-              "args": [
-                "self",
-                "player_data"
-              ],
-              "hash": "61b8ac1433aafef1dea8cdb8590ecacdf0f321ec"
-            },
-            {
-              "name": "_clean_player_data",
-              "lineno": 102,
-              "args": [
-                "self",
-                "player_data"
-              ],
-              "hash": "ea3277972bdcea5db6ac8f0324e1d46301ea83d2"
-            },
-            {
-              "name": "_clean_name",
-              "lineno": 141,
-              "args": [
-                "self",
-                "name"
-              ],
-              "hash": "16c8bdcb5ec84099e8de30f1dd0f21fc7e81bc42"
-            },
-            {
-              "name": "_normalize_name",
-              "lineno": 158,
-              "args": [
-                "self",
-                "name"
-              ],
-              "hash": "39179efdf254fae765ce2b2d2a1cb799c2b1b525"
-            },
-            {
-              "name": "_standardize_position",
-              "lineno": 178,
-              "args": [
-                "self",
-                "position"
-              ],
-              "hash": "41bf15e7e636d0449d383c4bd375fed923d4d88b"
-            },
-            {
-              "name": "_identify_identity_conflicts",
-              "lineno": 208,
-              "args": [
-                "self",
-                "player_data"
-              ],
-              "hash": "31d45ff617f1ccd0d96ac00e687e0aa487e49663"
-            },
-            {
-              "name": "_analyze_group_for_conflicts",
-              "lineno": 248,
-              "args": [
-                "self",
-                "group"
-              ],
-              "hash": "e7514556c2910ab6adab8324d0b675951a57f4cd"
-            },
-            {
-              "name": "_calculate_name_similarity",
-              "lineno": 289,
-              "args": [
-                "self",
-                "name1",
-                "name2"
-              ],
-              "hash": "104f3e7027bbbcc1dcef3415bf8d037805877ab3"
-            },
-            {
-              "name": "_check_nickname_patterns",
-              "lineno": 326,
-              "args": [
-                "self",
-                "name1",
-                "name2"
-              ],
-              "hash": "aecd469ce2470bc5050c76dcd5a345b0a8f7c907"
-            },
-            {
-              "name": "_calculate_position_consistency",
-              "lineno": 364,
-              "args": [
-                "self",
-                "positions"
-              ],
-              "hash": "355ae1e826dc8da1ac7344925669c51c7d003cf1"
-            },
-            {
-              "name": "_calculate_team_consistency",
-              "lineno": 380,
-              "args": [
-                "self",
-                "teams",
-                "seasons"
-              ],
-              "hash": "8c6438de16a8ad484ad352bd901968fb00dc870c"
-            },
-            {
-              "name": "_calculate_temporal_consistency",
-              "lineno": 396,
-              "args": [
-                "self",
-                "seasons"
-              ],
-              "hash": "b9c5a1e1b866dbbd345d8eadff61b859604c59c0"
-            },
-            {
-              "name": "_find_similar_name_conflicts",
-              "lineno": 411,
-              "args": [
-                "self",
-                "player_data"
-              ],
-              "hash": "96b9da25c5c7fb09cb6db02a69ed572de44c8595"
-            },
-            {
-              "name": "_resolve_identity_conflicts",
-              "lineno": 463,
-              "args": [
-                "self",
-                "conflicts",
-                "player_data"
-              ],
-              "hash": "995fcd7ee50e0a5a494845a441994c45847fe8f5"
-            },
-            {
-              "name": "_validate_conflict_resolution",
-              "lineno": 524,
-              "args": [
-                "self",
-                "conflict",
-                "player_data"
-              ],
-              "hash": "f9881f945d1da8f2a59fe8bb229a067c9efb319c"
-            },
-            {
-              "name": "_create_master_record_from_conflict",
-              "lineno": 551,
-              "args": [
-                "self",
-                "conflict",
-                "player_data"
-              ],
-              "hash": "f54778ac2b8ee87255b8848ffd6582872447f590"
-            },
-            {
-              "name": "_create_master_record_from_id",
-              "lineno": 585,
-              "args": [
-                "self",
-                "player_id",
-                "player_data"
-              ],
-              "hash": "b3e2c8639ee7a924c1d28ad4ba6d6c845ebc87f2"
-            },
-            {
-              "name": "_create_id_mapping",
-              "lineno": 612,
-              "args": [
-                "self",
-                "master_records"
-              ],
-              "hash": "a6029fa7adc7c313b013b4f83f29a688c64714b8"
-            },
-            {
-              "name": "_validate_mapping_quality",
-              "lineno": 623,
-              "args": [
-                "self",
-                "mapping",
-                "player_data"
-              ],
-              "hash": "d4fa83ec866c017ef849060a2410759a36623cc2"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/test_server_fixes.py",
-      "rel": "test_server_fixes.py",
-      "loc": 190,
-      "doc": "Test script to verify all server fixes are working correctly",
-      "imports": [
-        "os",
-        "pathlib",
-        "requests",
-        "subprocess",
-        "sys",
-        "time"
-      ],
-      "functions": [
-        {
-          "name": "test_flask_server",
-          "lineno": 13,
-          "args": [],
-          "hash": "67b0b27b0b8a41da195ffeba0e017a3d46f98dc7"
-        },
-        {
-          "name": "test_fastapi_server",
-          "lineno": 65,
-          "args": [],
-          "hash": "4c713f6a1d2a4db2b19153a2a854be038df075f2"
-        },
-        {
-          "name": "test_import_fixes",
-          "lineno": 128,
-          "args": [],
-          "hash": "283722cffa0912bd4565cedbf1c7516f86867017"
-        },
-        {
-          "name": "main",
-          "lineno": 151,
-          "args": [],
-          "hash": "198ddb01d3ce3083be42191a1dc304ab32209a11"
-        }
-      ],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/real_time_nfl_system.py",
-      "rel": "real_time_nfl_system.py",
-      "loc": 73,
-      "doc": "Compatibility real-time system facade used by legacy/integration tests.\nProvides a thin wrapper around enhanced collectors and validators under core/.",
-      "imports": [
-        "__future__",
-        "core",
-        "data_validator",
-        "dataclasses",
-        "datetime",
-        "enhanced_data_collector",
-        "typing"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "GameInfo",
-          "lineno": 17,
-          "methods": []
-        },
-        {
-          "name": "RealTimeNFLSystem",
-          "lineno": 26,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 27,
-              "args": [
-                "self",
-                "db_path",
-                "current_season"
-              ],
-              "hash": "4fa81be53f20253c987e3147acf0edbcd8ab94ee"
-            },
-            {
-              "name": "get_upcoming_games",
-              "lineno": 41,
-              "args": [
-                "self",
-                "days_ahead"
-              ],
-              "hash": "1e99fb005fd4d1f2cc6381534450f7215a7f0e62"
-            },
-            {
-              "name": "get_game_players",
-              "lineno": 45,
-              "args": [
-                "self",
-                "game"
-              ],
-              "hash": "477b7708443865a0533bb8d1b44ba784301d8c28"
-            },
-            {
-              "name": "_ensure_roster_cache",
-              "lineno": 58,
-              "args": [
-                "self",
-                "week"
-              ],
-              "hash": "c9bcf9c7b75fd4baaf32fb185becc3595b3deec2"
-            },
-            {
-              "name": "_get_fallback_players",
-              "lineno": 67,
-              "args": [
-                "self",
-                "game"
-              ],
-              "hash": "c7d39044847ca3690359dac7ea97d05385e11971"
-            },
-            {
-              "name": "predict_player_performance",
-              "lineno": 71,
-              "args": [
-                "self",
-                "player",
-                "game"
-              ],
-              "hash": "6bee9cca9d59b4aa2fdfc75558294a5472b22db2"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/opponent_defensive_analysis.py",
-      "rel": "opponent_defensive_analysis.py",
-      "loc": 479,
-      "doc": "Opponent Defensive Analysis System\nDefensive rankings, matchup-specific adjustments, and opponent-based predictions.",
-      "imports": [
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "pathlib",
-        "requests",
-        "sqlalchemy",
-        "sqlite3",
-        "sys",
-        "typing",
-        "warnings"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 416,
-          "args": [],
-          "hash": "cedf7dfedd5ba38278ab46476319deca70f20545"
-        }
-      ],
-      "classes": [
-        {
-          "name": "OpponentDefensiveAnalysis",
-          "lineno": 26,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 29,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "6ce9d42b7da1873ab042d1122b9fb6bd2ae1e3c8"
-            },
-            {
-              "name": "get_team_defensive_tier",
-              "lineno": 95,
-              "args": [
-                "self",
-                "team"
-              ],
-              "hash": "c80daec813e50979f56128da62e606ad655509ea"
-            },
-            {
-              "name": "calculate_defensive_rankings",
-              "lineno": 102,
-              "args": [
-                "self",
-                "games"
-              ],
-              "hash": "4e97b53325185af280937eb81e6a3e1199fc58c1"
-            },
-            {
-              "name": "get_position_matchup_difficulty",
-              "lineno": 174,
-              "args": [
-                "self",
-                "opponent_team",
-                "position",
-                "stat_type"
-              ],
-              "hash": "701bfa2a4cf6f2e3397f61e178b7b51dd0831476"
-            },
-            {
-              "name": "_calculate_defensive_percentile",
-              "lineno": 221,
-              "args": [
-                "self",
-                "team",
-                "position"
-              ],
-              "hash": "629a247bda29e025bd947fab394a0021a1df3eab"
-            },
-            {
-              "name": "get_recent_defensive_trends",
-              "lineno": 245,
-              "args": [
-                "self",
-                "team",
-                "games"
-              ],
-              "hash": "eb37efd4e3d873a0af8a3f998ba67b6008c26bcf"
-            },
-            {
-              "name": "calculate_coaching_adjustments",
-              "lineno": 295,
-              "args": [
-                "self",
-                "team"
-              ],
-              "hash": "b6a8843da4bb0440a848ec1573c2efca132e05df"
-            },
-            {
-              "name": "create_opponent_adjustment_features",
-              "lineno": 314,
-              "args": [
-                "self",
-                "opponent_team",
-                "position",
-                "stat_type"
-              ],
-              "hash": "632499f782560da1a7cb7ccc40e0214abe534659"
-            },
-            {
-              "name": "get_injury_adjusted_defense",
-              "lineno": 355,
-              "args": [
-                "self",
-                "team",
-                "key_injuries"
-              ],
-              "hash": "803d4f8167fd62512945f512f2e82adc8e8674c1"
-            },
-            {
-              "name": "generate_matchup_report",
-              "lineno": 385,
-              "args": [
-                "self",
-                "player_position",
-                "opponent_team"
-              ],
-              "hash": "093b99e0cd52bdf4d0fd22b5c96522ede4dec41f"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/comprehensive_matchup_analyzer.py",
-      "rel": "comprehensive_matchup_analyzer.py",
-      "loc": 624,
-      "doc": "Comprehensive Matchup Analyzer\n\nThis module provides comprehensive matchup analysis including historical\nteam performance, offensive vs defensive matchups, and predictive\nmatchup factors for enhanced player predictions.",
-      "imports": [
-        "database_models",
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "pandas",
-        "sqlalchemy",
-        "typing"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "TeamMatchupProfile",
-          "lineno": 24,
-          "methods": []
-        },
-        {
-          "name": "PositionalMatchup",
-          "lineno": 70,
-          "methods": []
-        },
-        {
-          "name": "ComprehensiveMatchupReport",
-          "lineno": 96,
-          "methods": []
-        },
-        {
-          "name": "ComprehensiveMatchupAnalyzer",
-          "lineno": 126,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 129,
-              "args": [
-                "self",
-                "session"
-              ],
-              "hash": "48845c76d7f8a32d9fa7b46ec9254dec1b6df7be"
-            },
-            {
-              "name": "generate_comprehensive_matchup_report",
-              "lineno": 146,
-              "args": [
-                "self",
-                "home_team",
-                "away_team",
-                "week",
-                "season"
-              ],
-              "hash": "55f6607733e3c4a5a643181eb435d66aaf6ff40f"
-            },
-            {
-              "name": "_generate_team_profile",
-              "lineno": 203,
-              "args": [
-                "self",
-                "team",
-                "season",
-                "week"
-              ],
-              "hash": "0bb444643be32e5888a486bab129ce4b3962f3b5"
-            },
-            {
-              "name": "_enhance_team_profile",
-              "lineno": 259,
-              "args": [
-                "self",
-                "profile"
-              ],
-              "hash": "c24436056b75ba4fd0dbad641b61c10d3ee0f861"
-            },
-            {
-              "name": "_analyze_positional_matchup",
-              "lineno": 311,
-              "args": [
-                "self",
-                "offense_team",
-                "defense_team",
-                "position",
-                "season"
-              ],
-              "hash": "69b2848eb2621d559c51576f3ff891bbc807f1e3"
-            },
-            {
-              "name": "_calculate_scheme_advantage",
-              "lineno": 371,
-              "args": [
-                "self",
-                "offense_team",
-                "defense_team",
-                "position"
-              ],
-              "hash": "5baa810352379a3027f22047e0e263418e11a85e"
-            },
-            {
-              "name": "_calculate_personnel_advantage",
-              "lineno": 394,
-              "args": [
-                "self",
-                "offense_team",
-                "defense_team",
-                "position"
-              ],
-              "hash": "d8198b9c89203b4d9cef304bd29b776b951682c4"
-            },
-            {
-              "name": "_analyze_game_level_factors",
-              "lineno": 406,
-              "args": [
-                "self",
-                "home_team",
-                "away_team",
-                "season",
-                "week"
-              ],
-              "hash": "7cbee6ca4bebee11ca463710c5db40899c2b13a8"
-            },
-            {
-              "name": "_add_overall_assessment",
-              "lineno": 463,
-              "args": [
-                "self",
-                "report"
-              ],
-              "hash": "4ec7b12a104b69b49c756d5f6b540ab8b93a61fe"
-            },
-            {
-              "name": "get_historical_head_to_head",
-              "lineno": 500,
-              "args": [
-                "self",
-                "team1",
-                "team2",
-                "seasons"
-              ],
-              "hash": "db0c07eb5ec8b9e34651f3e5a37cb9472a648de9"
-            },
-            {
-              "name": "get_positional_strength_rankings",
-              "lineno": 543,
-              "args": [
-                "self",
-                "season"
-              ],
-              "hash": "5add2b4f5c9fff44cfe486838ce75379e68afcac"
-            },
-            {
-              "name": "calculate_matchup_multiplier",
-              "lineno": 581,
-              "args": [
-                "self",
-                "player_position",
-                "offense_team",
-                "defense_team"
-              ],
-              "hash": "9d89a26e6c50cffbd46e07750193e0a1fd9492c7"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/audit_repo.py",
       "rel": "audit_repo.py",
       "loc": 363,
@@ -5478,318 +1195,6 @@
       "has_fastapi": true,
       "has_typer": true,
       "has_argparse": true,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/advanced_market_analytics.py",
-      "rel": "advanced_market_analytics.py",
-      "loc": 499,
-      "doc": "Advanced Market Analytics and Betting Intelligence\nSharp money detection, line movement patterns, public betting data, and value identification",
-      "imports": [
-        "aiohttp",
-        "asyncio",
-        "collections",
-        "dataclasses",
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "pandas",
-        "requests",
-        "sqlite3",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 458,
-          "args": [],
-          "hash": "f7d90a4e635b69e6573aebdf433359123afbfbc8"
-        }
-      ],
-      "classes": [
-        {
-          "name": "MarketIntelligence",
-          "lineno": 22,
-          "methods": []
-        },
-        {
-          "name": "BettingEdge",
-          "lineno": 35,
-          "methods": []
-        },
-        {
-          "name": "AdvancedMarketAnalyzer",
-          "lineno": 43,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 46,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "4a2ec0be0d8e1c2d25e872b1b9f095bd2593b282"
-            },
-            {
-              "name": "_init_market_database",
-              "lineno": 60,
-              "args": [
-                "self"
-              ],
-              "hash": "a72258e82918961c5cef14857a34da58b8ec31a2"
-            },
-            {
-              "name": "detect_sharp_money_movement",
-              "lineno": 123,
-              "args": [
-                "self",
-                "player_id",
-                "stat_type"
-              ],
-              "hash": "7f25e88727d28815d9094e8eb2bba5d93e465930"
-            },
-            {
-              "name": "_generate_sharp_money_recommendation",
-              "lineno": 186,
-              "args": [
-                "self",
-                "indicators",
-                "strength"
-              ],
-              "hash": "7e19b30347099ac61600e06136df81dd72bcb9a9"
-            },
-            {
-              "name": "calculate_market_value",
-              "lineno": 198,
-              "args": [
-                "self",
-                "player_id",
-                "stat_type",
-                "predicted_value",
-                "confidence"
-              ],
-              "hash": "ff603cd2fa6b72df6d7930f4b139f6f60296853b"
-            },
-            {
-              "name": "_get_current_market_line",
-              "lineno": 259,
-              "args": [
-                "self",
-                "player_id",
-                "stat_type"
-              ],
-              "hash": "54d8b0ab924fd3df00f65750afb076a26160c438"
-            },
-            {
-              "name": "analyze_correlation_opportunities",
-              "lineno": 277,
-              "args": [
-                "self",
-                "players"
-              ],
-              "hash": "9b5dbc484d7b3488908e768265ff36b86407eb62"
-            },
-            {
-              "name": "_suggest_correlation_strategy",
-              "lineno": 306,
-              "args": [
-                "self",
-                "correlation_type",
-                "strength"
-              ],
-              "hash": "0284694470d5dbc68375a54db017a34b2a86e96d"
-            },
-            {
-              "name": "track_betting_performance",
-              "lineno": 316,
-              "args": [
-                "self",
-                "bet_results"
-              ],
-              "hash": "33dd103ee6b624614da8cb8d07a9170e77925c7a"
-            },
-            {
-              "name": "_grade_performance",
-              "lineno": 365,
-              "args": [
-                "self",
-                "win_rate",
-                "roi"
-              ],
-              "hash": "5e0fa324bb7d5289df93da9c91bae743e7f7a555"
-            }
-          ]
-        },
-        {
-          "name": "PublicBettingAnalyzer",
-          "lineno": 380,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 383,
-              "args": [
-                "self"
-              ],
-              "hash": "1e496fe1fdb1cf00c233e80d9eae968d88e0e7d3"
-            },
-            {
-              "name": "analyze_public_betting_patterns",
-              "lineno": 390,
-              "args": [
-                "self",
-                "betting_data"
-              ],
-              "hash": "7fcb994ecc1b569f3f634c1e124da23b820b260f"
-            },
-            {
-              "name": "_analyze_public_bias",
-              "lineno": 437,
-              "args": [
-                "self",
-                "betting_data"
-              ],
-              "hash": "e9a58a3955f5222fb78e1c368b09519c76baeb41"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/injury_data_integration.py",
-      "rel": "injury_data_integration.py",
-      "loc": 367,
-      "doc": "NFL Injury Data Integration System\nReal-time injury reports, player status, and impact analysis for betting predictions.",
-      "imports": [
-        "datetime",
-        "json",
-        "logging",
-        "numpy",
-        "os",
-        "pandas",
-        "pathlib",
-        "requests",
-        "sqlalchemy",
-        "sqlite3",
-        "sys",
-        "typing",
-        "warnings"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 320,
-          "args": [],
-          "hash": "4facfcb26ca3740d6cb108ede1f6636d31a72b8c"
-        }
-      ],
-      "classes": [
-        {
-          "name": "InjuryDataIntegrator",
-          "lineno": 26,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 29,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "77aef5f6d4be24af29014fa9659d2ba937a153b7"
-            },
-            {
-              "name": "fetch_espn_injury_data",
-              "lineno": 66,
-              "args": [
-                "self"
-              ],
-              "hash": "20c03cc5783fe7b9b443d3ce9b3fa5ecf8ab644b"
-            },
-            {
-              "name": "fetch_sleeper_injury_data",
-              "lineno": 109,
-              "args": [
-                "self"
-              ],
-              "hash": "13d91b5a36118ad33df201460e8e67baf302fa36"
-            },
-            {
-              "name": "get_cached_injury_data",
-              "lineno": 143,
-              "args": [
-                "self"
-              ],
-              "hash": "bae61819b9bafab97c35f115104a0fa96d55e597"
-            },
-            {
-              "name": "update_injury_data",
-              "lineno": 155,
-              "args": [
-                "self"
-              ],
-              "hash": "654b1cf7ba245d32202388d75af96b9a2d75da18"
-            },
-            {
-              "name": "calculate_injury_impact",
-              "lineno": 198,
-              "args": [
-                "self",
-                "player_name",
-                "position"
-              ],
-              "hash": "86e7d3696493da8b556f4bd6bb296acd0978452d"
-            },
-            {
-              "name": "get_team_injury_report",
-              "lineno": 214,
-              "args": [
-                "self",
-                "team_abbr"
-              ],
-              "hash": "63d41876a0b03313fa1b7799357fba4344bb86d5"
-            },
-            {
-              "name": "adjust_predictions_for_injuries",
-              "lineno": 251,
-              "args": [
-                "self",
-                "predictions",
-                "player_name",
-                "position"
-              ],
-              "hash": "7f4a40101e92f7155a7061b271420b82f6115399"
-            },
-            {
-              "name": "get_injury_trends",
-              "lineno": 268,
-              "args": [
-                "self",
-                "days"
-              ],
-              "hash": "cbc5d9bfc7c489e441d34c89ba83bc8fa0d87876"
-            },
-            {
-              "name": "create_injury_features",
-              "lineno": 301,
-              "args": [
-                "self",
-                "player_name",
-                "team"
-              ],
-              "hash": "27177b1e3380156fcac37efe5f4a8670056afdfb"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
       "models_found": []
     },
     {
@@ -6265,69 +1670,6 @@
       "models_found": []
     },
     {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/validate_system_fixes.py",
-      "rel": "validate_system_fixes.py",
-      "loc": 255,
-      "doc": "System Validation Script\nTests all critical fixes implemented for the NFL Betting Analyzer",
-      "imports": [
-        "core",
-        "datetime",
-        "os",
-        "sys",
-        "traceback"
-      ],
-      "functions": [
-        {
-          "name": "test_database_connections",
-          "lineno": 15,
-          "args": [],
-          "hash": "6a902b0e80772abce2c5dcec9df2c963d004d8ba"
-        },
-        {
-          "name": "test_streamlined_models",
-          "lineno": 38,
-          "args": [],
-          "hash": "dad63a9b3f52075ee0b23ba62a72280756ad1572"
-        },
-        {
-          "name": "test_prediction_bounds",
-          "lineno": 74,
-          "args": [],
-          "hash": "3eb0cc1799adc0b6a4fe5c840d0849bba48500c3"
-        },
-        {
-          "name": "test_api_imports",
-          "lineno": 112,
-          "args": [],
-          "hash": "5b046ae6523fe4c2bb745fdd916863a8f3d96e50"
-        },
-        {
-          "name": "test_retired_players",
-          "lineno": 137,
-          "args": [],
-          "hash": "9980f48daabb2ab4dd24a0f20ae9e698c23901e2"
-        },
-        {
-          "name": "test_data_integrity",
-          "lineno": 171,
-          "args": [],
-          "hash": "c1512f77dd5256a0fbfbe76ad7fd435ea098e6d9"
-        },
-        {
-          "name": "main",
-          "lineno": 213,
-          "args": [],
-          "hash": "ff220aadf0b689598f3be83d8d664cb6f2fe39f4"
-        }
-      ],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/nfl_cli.py",
       "rel": "nfl_cli.py",
       "loc": 1069,
@@ -6503,51 +1845,6 @@
       "has_cli": false,
       "has_fastapi": false,
       "has_typer": true,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/psutil.py",
-      "rel": "psutil.py",
-      "loc": 15,
-      "doc": "Minimal psutil shim for tests that only need memory_info().\nThis avoids adding a heavy dependency in constrained environments.",
-      "imports": [
-        "dataclasses"
-      ],
-      "functions": [],
-      "classes": [
-        {
-          "name": "_MemInfo",
-          "lineno": 8,
-          "methods": []
-        },
-        {
-          "name": "Process",
-          "lineno": 11,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 12,
-              "args": [
-                "self",
-                "pid"
-              ],
-              "hash": "579c20bfd043a1c3f776371852c947cffbd5ee41"
-            },
-            {
-              "name": "memory_info",
-              "lineno": 14,
-              "args": [
-                "self"
-              ],
-              "hash": "836ecea3ebf17d09405e9e08b4696ef074d8c59d"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
       "has_argparse": false,
       "models_found": []
     },
@@ -6782,7 +2079,7 @@
     {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/api/app.py",
       "rel": "api/app.py",
-      "loc": 1016,
+      "loc": 1165,
       "doc": "Unified NFL Predictions API\nConsolidated FastAPI application combining prediction endpoints, web interface, \nand enhanced features with WebSocket support, rate limiting, and caching.",
       "imports": [
         "asyncio",
@@ -7037,8 +2334,58 @@
           "hash": "4140a16c9923b5ccf739bb42393e6d2659a607d0"
         },
         {
+          "name": "get_teams",
+          "lineno": 943,
+          "args": [
+            "db"
+          ],
+          "hash": "ee92eab543b0ce6e682de7dd4c6cbd0b798a5561"
+        },
+        {
+          "name": "get_players",
+          "lineno": 955,
+          "args": [
+            "team",
+            "position",
+            "limit",
+            "db"
+          ],
+          "hash": "7b5d56c19e8e247f7ca3a8eae801b70d0b3e08a9"
+        },
+        {
+          "name": "get_games",
+          "lineno": 988,
+          "args": [
+            "week",
+            "season",
+            "limit",
+            "db"
+          ],
+          "hash": "ca3f116ab8fee4168e06872500c7b34af9b66284"
+        },
+        {
+          "name": "get_stats",
+          "lineno": 1024,
+          "args": [
+            "player_id",
+            "game_id",
+            "limit",
+            "db"
+          ],
+          "hash": "c49d1c48fd3c169e71eb807cc8dbef905c3ec91f"
+        },
+        {
+          "name": "get_team_roster",
+          "lineno": 1066,
+          "args": [
+            "team_id",
+            "db"
+          ],
+          "hash": "b1db2c055de8fe4150e4bda0a72122c2f7902900"
+        },
+        {
           "name": "get_enhanced_player_prediction",
-          "lineno": 945,
+          "lineno": 1094,
           "args": [
             "request",
             "player_id",
@@ -7050,7 +2397,7 @@
         },
         {
           "name": "http_exception_handler",
-          "lineno": 994,
+          "lineno": 1143,
           "args": [
             "request",
             "exc"
@@ -7059,7 +2406,7 @@
         },
         {
           "name": "general_exception_handler",
-          "lineno": 1001,
+          "lineno": 1150,
           "args": [
             "request",
             "exc"
@@ -7271,15 +2618,18 @@
     {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/tests/test_system.py",
       "rel": "tests/test_system.py",
-      "loc": 370,
+      "loc": 321,
       "doc": "Comprehensive NFL Betting Analyzer System Tests.",
       "imports": [
+        "api",
         "config_manager",
         "data_collector",
         "database_models",
         "feature_engineering",
+        "generate_coverage_matrices",
         "ml_models",
-        "nfl_interactive_main",
+        "model_evaluation",
+        "nfl_cli",
         "nfl_ultimate_system",
         "numpy",
         "os",
@@ -7288,13 +2638,12 @@
         "prediction_pipeline",
         "psutil",
         "pytest",
-        "run_nfl_system",
-        "social_sentiment_analyzer",
         "sqlite3",
         "sys",
         "tempfile",
         "ultimate_enhanced_predictor",
-        "unittest"
+        "unittest",
+        "validation_backtesting_framework"
       ],
       "functions": [],
       "classes": [
@@ -7308,19 +2657,19 @@
               "args": [
                 "self"
               ],
-              "hash": "0e01f2a5468b2e63782ba2613182cd080d235a65"
+              "hash": "38d1300af064a196621e4838dde6c639f9162581"
             },
             {
               "name": "test_advanced_imports",
-              "lineno": 29,
+              "lineno": 30,
               "args": [
                 "self"
               ],
-              "hash": "9726a3dc634c7f56790b5a8608b68c82b2cc1311"
+              "hash": "812fe6af8a8ad4b5d6ef0043d5514e89e4e78d20"
             },
             {
               "name": "test_utility_imports",
-              "lineno": 40,
+              "lineno": 39,
               "args": [
                 "self"
               ],
@@ -7330,11 +2679,11 @@
         },
         {
           "name": "TestDatabaseModels",
-          "lineno": 51,
+          "lineno": 50,
           "methods": [
             {
               "name": "test_player_model_creation",
-              "lineno": 54,
+              "lineno": 53,
               "args": [
                 "self"
               ],
@@ -7342,7 +2691,7 @@
             },
             {
               "name": "test_game_model_creation",
-              "lineno": 69,
+              "lineno": 68,
               "args": [
                 "self"
               ],
@@ -7350,7 +2699,7 @@
             },
             {
               "name": "test_player_game_stats_model",
-              "lineno": 85,
+              "lineno": 84,
               "args": [
                 "self"
               ],
@@ -7360,11 +2709,11 @@
         },
         {
           "name": "TestConfigurationSystem",
-          "lineno": 101,
+          "lineno": 100,
           "methods": [
             {
               "name": "test_config_files_exist",
-              "lineno": 104,
+              "lineno": 103,
               "args": [
                 "self"
               ],
@@ -7372,7 +2721,7 @@
             },
             {
               "name": "test_config_loading",
-              "lineno": 111,
+              "lineno": 110,
               "args": [
                 "self"
               ],
@@ -7380,7 +2729,7 @@
             },
             {
               "name": "test_config_validation",
-              "lineno": 121,
+              "lineno": 120,
               "args": [
                 "self"
               ],
@@ -7390,27 +2739,35 @@
         },
         {
           "name": "TestPredictionSystem",
-          "lineno": 133,
+          "lineno": 132,
           "methods": [
             {
               "name": "mock_predictor",
-              "lineno": 137,
+              "lineno": 136,
               "args": [
                 "self"
               ],
               "hash": "62fe2535a13c6db0604230e4b61095e063c8132c"
             },
             {
-              "name": "test_ultimate_predictor_initialization",
-              "lineno": 151,
+              "name": "test_validation_framework_initialization",
+              "lineno": 150,
               "args": [
                 "self"
               ],
-              "hash": "801da9e442ca030d9c8742e863ee7141bac392b8"
+              "hash": "3082fdd695de6824b24c2ee1a27356cd6f457a54"
+            },
+            {
+              "name": "test_model_evaluation_initialization",
+              "lineno": 159,
+              "args": [
+                "self"
+              ],
+              "hash": "0476626f1e1100d417d195fa699d2711df2bb079"
             },
             {
               "name": "test_prediction_structure",
-              "lineno": 160,
+              "lineno": 167,
               "args": [
                 "self",
                 "mock_predictor"
@@ -7420,87 +2777,56 @@
           ]
         },
         {
-          "name": "TestSentimentAnalysis",
-          "lineno": 169,
+          "name": "TestValidationFramework",
+          "lineno": 176,
           "methods": [
             {
-              "name": "test_sentiment_analyzer_import",
-              "lineno": 172,
+              "name": "test_validation_framework_import",
+              "lineno": 179,
               "args": [
                 "self"
               ],
-              "hash": "ea4c12e70fd8553c933fb64170cb34a4db52a44a"
+              "hash": "17810f4883d35c186589c226dedb6479af4e1cfd"
             },
             {
-              "name": "test_sentiment_analysis_output",
-              "lineno": 181,
+              "name": "test_backtest_framework_structure",
+              "lineno": 186,
               "args": [
-                "self",
-                "mock_sentiment"
+                "self"
               ],
-              "hash": "d63087b0733fb6c0909e3435b16fcc6adaf82f1d"
+              "hash": "372ab907681027fbb34e3ebcdf755368c92fb271"
             }
           ]
         },
         {
-          "name": "TestUltimateSystem",
-          "lineno": 199,
+          "name": "TestCoverageValidation",
+          "lineno": 195,
           "methods": [
             {
-              "name": "test_ultimate_system_import",
-              "lineno": 202,
+              "name": "test_coverage_generation_import",
+              "lineno": 198,
               "args": [
                 "self"
               ],
-              "hash": "99656aa61fff6919646d872694aea37747e0212c"
+              "hash": "bc3651f0a4ab85b752dca34457f61264d1131483"
             },
             {
-              "name": "test_comprehensive_analysis_structure",
-              "lineno": 212,
-              "args": [
-                "self",
-                "mock_sentiment",
-                "mock_predictor"
-              ],
-              "hash": "c5deaadeeaca2228c637e52fed2c60d96db09249"
-            }
-          ]
-        },
-        {
-          "name": "TestInteractiveInterface",
-          "lineno": 232,
-          "methods": [
-            {
-              "name": "test_interactive_main_import",
-              "lineno": 235,
+              "name": "test_coverage_matrix_structure",
+              "lineno": 205,
               "args": [
                 "self"
               ],
-              "hash": "82dc52bbd4e462e838de1ab567a0e9c90f5f5190"
-            }
-          ]
-        },
-        {
-          "name": "TestCLISystem",
-          "lineno": 243,
-          "methods": [
-            {
-              "name": "test_cli_commands_available",
-              "lineno": 246,
-              "args": [
-                "self"
-              ],
-              "hash": "19e970fb7892fb481da6dd7fdde934c1a3cd4119"
+              "hash": "02f8bbc75b25fdee656114183e24e4d916448dbf"
             }
           ]
         },
         {
           "name": "TestDataIntegrity",
-          "lineno": 262,
+          "lineno": 213,
           "methods": [
             {
               "name": "test_requirements_file_exists",
-              "lineno": 265,
+              "lineno": 216,
               "args": [
                 "self"
               ],
@@ -7508,7 +2834,7 @@
             },
             {
               "name": "test_gitignore_exists",
-              "lineno": 275,
+              "lineno": 226,
               "args": [
                 "self"
               ],
@@ -7516,7 +2842,7 @@
             },
             {
               "name": "test_documentation_exists",
-              "lineno": 285,
+              "lineno": 236,
               "args": [
                 "self"
               ],
@@ -7526,11 +2852,11 @@
         },
         {
           "name": "TestPerformanceAndReliability",
-          "lineno": 299,
+          "lineno": 250,
           "methods": [
             {
               "name": "test_memory_usage_reasonable",
-              "lineno": 302,
+              "lineno": 253,
               "args": [
                 "self"
               ],
@@ -7538,7 +2864,7 @@
             },
             {
               "name": "test_error_handling_robustness",
-              "lineno": 325,
+              "lineno": 276,
               "args": [
                 "self"
               ],
@@ -7548,11 +2874,11 @@
         },
         {
           "name": "TestSystemIntegration",
-          "lineno": 341,
+          "lineno": 292,
           "methods": [
             {
               "name": "test_complete_prediction_workflow",
-              "lineno": 345,
+              "lineno": 296,
               "args": [
                 "self"
               ],
@@ -8081,104 +3407,6 @@
       "models_found": []
     },
     {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/tests/test_enhanced_realtime.py",
-      "rel": "tests/test_enhanced_realtime.py",
-      "loc": 295,
-      "doc": "Integration Test for Enhanced Real-Time NFL System\n\nThis script tests the integrated enhanced data architecture within\nthe real-time prediction system to ensure proper functionality.",
-      "imports": [
-        "asyncio",
-        "data_foundation",
-        "datetime",
-        "logging",
-        "real_time_nfl_system",
-        "sys",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 269,
-          "args": [],
-          "hash": "004675808526d7f6e7a5c69edc13240964adfd36"
-        }
-      ],
-      "classes": [
-        {
-          "name": "EnhancedRealtimeSystemTester",
-          "lineno": 26,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 29,
-              "args": [
-                "self"
-              ],
-              "hash": "4f8233b8cb260e4ba2f239486c75672345a023c8"
-            },
-            {
-              "name": "test_system_integration",
-              "lineno": 36,
-              "args": [
-                "self"
-              ],
-              "hash": "0a1cb96259983e268b65406e8ee1cc86385eeb19"
-            },
-            {
-              "name": "_analyze_player_quality",
-              "lineno": 97,
-              "args": [
-                "self",
-                "players"
-              ],
-              "hash": "3c135b6eef1c3d6ef44e52be2b31653d3ec6db3a"
-            },
-            {
-              "name": "_test_roster_cache",
-              "lineno": 146,
-              "args": [
-                "self",
-                "week"
-              ],
-              "hash": "d0dfa3bb2590393ef55c020e903e4363e4c546de"
-            },
-            {
-              "name": "_test_fallback_system",
-              "lineno": 164,
-              "args": [
-                "self",
-                "game_info"
-              ],
-              "hash": "88aece92cc5dd482bc84c092265ef2aac53b0102"
-            },
-            {
-              "name": "_test_predictions",
-              "lineno": 184,
-              "args": [
-                "self",
-                "game_info",
-                "players"
-              ],
-              "hash": "a2cc305c3ad9ed62eedc174209bf778c1447c43a"
-            },
-            {
-              "name": "generate_test_report",
-              "lineno": 220,
-              "args": [
-                "self",
-                "success"
-              ],
-              "hash": "adb680a2350d8bb10dc759b15970a983f243b9f3"
-            }
-          ]
-        }
-      ],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/tests/test_schema_reference.py",
       "rel": "tests/test_schema_reference.py",
       "loc": 51,
@@ -8337,43 +3565,6 @@
           "lineno": 60,
           "args": [],
           "hash": "f7b7e06af97bf4229f2da9b7dc34a10217b471b2"
-        }
-      ],
-      "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/tests/test_historical_standardizer.py",
-      "rel": "tests/test_historical_standardizer.py",
-      "loc": 254,
-      "doc": "Test Historical Data Standardizer\n\nThis script tests the historical data standardization system on a single season\nto validate functionality before running on all historical data.",
-      "imports": [
-        "asyncio",
-        "config_manager",
-        "database_models",
-        "datetime",
-        "historical_data_standardizer",
-        "logging",
-        "sqlalchemy",
-        "sys",
-        "traceback"
-      ],
-      "functions": [
-        {
-          "name": "test_historical_standardizer",
-          "lineno": 26,
-          "args": [],
-          "hash": "fffd42ea2c83a233403a71578bf9a73325ecc3d9"
-        },
-        {
-          "name": "run_full_standardization",
-          "lineno": 188,
-          "args": [],
-          "hash": "2c472615b9d074fa1194c4438ce36eeb522521c8"
         }
       ],
       "classes": [],
@@ -8765,100 +3956,6 @@
         }
       ],
       "classes": [],
-      "has_cli": false,
-      "has_fastapi": false,
-      "has_typer": false,
-      "has_argparse": false,
-      "models_found": []
-    },
-    {
-      "path": "/home/money/CascadeProjects/nfl-betting-analyzer/tests/test_enhanced_system.py",
-      "rel": "tests/test_enhanced_system.py",
-      "loc": 280,
-      "doc": "Test Enhanced NFL Data System\n\nThis script tests the new hierarchical data architecture to ensure\nit correctly identifies starters, validates data quality, and eliminates\nincorrect backup player statistics.",
-      "imports": [
-        "asyncio",
-        "data_foundation",
-        "data_validator",
-        "database_models",
-        "datetime",
-        "enhanced_data_collector",
-        "logging",
-        "sqlalchemy",
-        "sys",
-        "typing"
-      ],
-      "functions": [
-        {
-          "name": "main",
-          "lineno": 251,
-          "args": [],
-          "hash": "b18d1cade7960acc8cb8c031036953cc3c682010"
-        }
-      ],
-      "classes": [
-        {
-          "name": "EnhancedSystemTester",
-          "lineno": 31,
-          "methods": [
-            {
-              "name": "__init__",
-              "lineno": 34,
-              "args": [
-                "self",
-                "db_path"
-              ],
-              "hash": "348019fd19b426ebaad456331796394513f0f263"
-            },
-            {
-              "name": "test_data_collection",
-              "lineno": 47,
-              "args": [
-                "self",
-                "week"
-              ],
-              "hash": "b3d3b343f98900c5038343946e4cb4514ace1ab2"
-            },
-            {
-              "name": "_analyze_roster_snapshots",
-              "lineno": 91,
-              "args": [
-                "self",
-                "snapshots"
-              ],
-              "hash": "9324895478e91dca4262b53931f533ab8b0e69c4"
-            },
-            {
-              "name": "_generate_test_report",
-              "lineno": 139,
-              "args": [
-                "self",
-                "snapshots",
-                "stats",
-                "quality_report"
-              ],
-              "hash": "6d74dbeeac2b2ae0c1384434327769b8700efcb6"
-            },
-            {
-              "name": "test_player_role_classification",
-              "lineno": 218,
-              "args": [
-                "self",
-                "snapshots"
-              ],
-              "hash": "bf6ad48ab1286e1c2fc4962c3a13254b9d350c51"
-            },
-            {
-              "name": "cleanup",
-              "lineno": 246,
-              "args": [
-                "self"
-              ],
-              "hash": "4b1fe93db3e3bddefd6f8fa931bbc703117f6f59"
-            }
-          ]
-        }
-      ],
       "has_cli": false,
       "has_fastapi": false,
       "has_typer": false,
@@ -9404,7 +4501,7 @@
     {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/core/models/feature_engineering.py",
       "rel": "core/models/feature_engineering.py",
-      "loc": 970,
+      "loc": 993,
       "doc": "NFL Feature Engineering Module\nAdvanced feature engineering for accurate NFL betting predictions.\nTasks 140-155: Feature extraction, engineering, selection, and validation.",
       "imports": [
         "data",
@@ -9422,7 +4519,7 @@
       "functions": [
         {
           "name": "main",
-          "lineno": 941,
+          "lineno": 964,
           "args": [],
           "hash": "a3208e72e13fcbd30a80e1cd3e2c997af59f7da9"
         }
@@ -9474,11 +4571,11 @@
                 "week",
                 "position"
               ],
-              "hash": "bfa29379994621c03ac6d2b56ed0bc00d93a68a2"
+              "hash": "567875432637651a6ccaede82e0ff5531abd6032"
             },
             {
               "name": "_compute_matchup_features",
-              "lineno": 218,
+              "lineno": 226,
               "args": [
                 "self",
                 "player_id",
@@ -9489,7 +4586,7 @@
             },
             {
               "name": "_compute_situational_features",
-              "lineno": 299,
+              "lineno": 307,
               "args": [
                 "self",
                 "player_id",
@@ -9500,18 +4597,18 @@
             },
             {
               "name": "_compute_team_context_features",
-              "lineno": 350,
+              "lineno": 358,
               "args": [
                 "self",
                 "team",
                 "season",
                 "week"
               ],
-              "hash": "1683bcdc13bd9d1a278079fb78be933bf1f32bfd"
+              "hash": "d98d20eda09f2dde6035e7c24048567e2bb1af78"
             },
             {
               "name": "_compute_advanced_metrics",
-              "lineno": 399,
+              "lineno": 422,
               "args": [
                 "self",
                 "player_id",
@@ -9523,7 +4620,7 @@
             },
             {
               "name": "prepare_training_data",
-              "lineno": 472,
+              "lineno": 495,
               "args": [
                 "self",
                 "feature_data",
@@ -9534,7 +4631,7 @@
             },
             {
               "name": "select_features",
-              "lineno": 515,
+              "lineno": 538,
               "args": [
                 "self",
                 "model_features",
@@ -9545,7 +4642,7 @@
             },
             {
               "name": "engineer_all_features",
-              "lineno": 550,
+              "lineno": 573,
               "args": [
                 "self",
                 "target_stat"
@@ -9554,7 +4651,7 @@
             },
             {
               "name": "prepare_model_features",
-              "lineno": 615,
+              "lineno": 638,
               "args": [
                 "self",
                 "feature_set",
@@ -9565,7 +4662,7 @@
             },
             {
               "name": "_get_eligible_players",
-              "lineno": 729,
+              "lineno": 752,
               "args": [
                 "self"
               ],
@@ -9573,7 +4670,7 @@
             },
             {
               "name": "_engineer_player_features",
-              "lineno": 738,
+              "lineno": 761,
               "args": [
                 "self",
                 "player_id"
@@ -9582,7 +4679,7 @@
             },
             {
               "name": "_engineer_team_features",
-              "lineno": 795,
+              "lineno": 818,
               "args": [
                 "self",
                 "team_code"
@@ -9591,7 +4688,7 @@
             },
             {
               "name": "_engineer_matchup_features",
-              "lineno": 814,
+              "lineno": 837,
               "args": [
                 "self",
                 "player_id"
@@ -9600,7 +4697,7 @@
             },
             {
               "name": "_engineer_situational_features",
-              "lineno": 826,
+              "lineno": 849,
               "args": [
                 "self",
                 "player_id"
@@ -9609,7 +4706,7 @@
             },
             {
               "name": "_get_target_variable",
-              "lineno": 839,
+              "lineno": 862,
               "args": [
                 "self",
                 "player_id",
@@ -9619,7 +4716,7 @@
             },
             {
               "name": "_calculate_feature_importance",
-              "lineno": 862,
+              "lineno": 885,
               "args": [
                 "self",
                 "features_df",
@@ -9629,7 +4726,7 @@
             },
             {
               "name": "_select_features",
-              "lineno": 885,
+              "lineno": 908,
               "args": [
                 "self",
                 "features_df",
@@ -9640,7 +4737,7 @@
             },
             {
               "name": "_calculate_trend",
-              "lineno": 902,
+              "lineno": 925,
               "args": [
                 "self",
                 "values"
@@ -9649,7 +4746,7 @@
             },
             {
               "name": "_calculate_consistency",
-              "lineno": 914,
+              "lineno": 937,
               "args": [
                 "self",
                 "values"
@@ -9658,7 +4755,7 @@
             },
             {
               "name": "_calculate_boom_rate",
-              "lineno": 922,
+              "lineno": 945,
               "args": [
                 "self",
                 "values"
@@ -9667,7 +4764,7 @@
             },
             {
               "name": "_calculate_bust_rate",
-              "lineno": 931,
+              "lineno": 954,
               "args": [
                 "self",
                 "values"
@@ -11394,7 +6491,7 @@
     {
       "path": "/home/money/CascadeProjects/nfl-betting-analyzer/core/data/ingestion_adapters.py",
       "rel": "core/data/ingestion_adapters.py",
-      "loc": 887,
+      "loc": 921,
       "doc": "NFL Data Ingestion Adapters\nUnified adapters for NFL data sources with caching, schema validation, and error handling.",
       "imports": [
         "abc",
@@ -11415,7 +6512,7 @@
       "functions": [
         {
           "name": "main",
-          "lineno": 863,
+          "lineno": 897,
           "args": [],
           "hash": "f7007ec092436a80c118c6d8335aaaa2b8c1e2d6"
         }
@@ -11546,8 +6643,17 @@
           "lineno": 191,
           "methods": [
             {
-              "name": "_col",
+              "name": "fetch_data",
               "lineno": 194,
+              "args": [
+                "self",
+                "data_type"
+              ],
+              "hash": "9a4d4edecc63518e32a8c9d24fea3fa5041e6304"
+            },
+            {
+              "name": "_col",
+              "lineno": 215,
               "args": [
                 "self",
                 "df",
@@ -11558,7 +6664,7 @@
             },
             {
               "name": "fetch_rosters",
-              "lineno": 213,
+              "lineno": 234,
               "args": [
                 "self",
                 "season",
@@ -11568,7 +6674,7 @@
             },
             {
               "name": "fetch_schedules",
-              "lineno": 242,
+              "lineno": 263,
               "args": [
                 "self",
                 "season"
@@ -11577,7 +6683,7 @@
             },
             {
               "name": "fetch_weekly_stats",
-              "lineno": 267,
+              "lineno": 288,
               "args": [
                 "self",
                 "season",
@@ -11587,7 +6693,7 @@
             },
             {
               "name": "fetch_snap_counts",
-              "lineno": 293,
+              "lineno": 314,
               "args": [
                 "self",
                 "season",
@@ -11597,7 +6703,7 @@
             },
             {
               "name": "fetch_depth_charts",
-              "lineno": 319,
+              "lineno": 340,
               "args": [
                 "self",
                 "season",
@@ -11607,7 +6713,7 @@
             },
             {
               "name": "fetch_injuries",
-              "lineno": 334,
+              "lineno": 355,
               "args": [
                 "self",
                 "season",
@@ -11617,7 +6723,7 @@
             },
             {
               "name": "fetch_pbp",
-              "lineno": 347,
+              "lineno": 368,
               "args": [
                 "self",
                 "season",
@@ -11627,7 +6733,7 @@
             },
             {
               "name": "_normalize_roster_data",
-              "lineno": 360,
+              "lineno": 381,
               "args": [
                 "self",
                 "raw_data"
@@ -11636,7 +6742,7 @@
             },
             {
               "name": "_normalize_schedule_data",
-              "lineno": 379,
+              "lineno": 400,
               "args": [
                 "self",
                 "raw_data"
@@ -11645,7 +6751,7 @@
             },
             {
               "name": "_normalize_stats_data",
-              "lineno": 411,
+              "lineno": 432,
               "args": [
                 "self",
                 "raw_data"
@@ -11654,7 +6760,7 @@
             },
             {
               "name": "_normalize_snap_data",
-              "lineno": 442,
+              "lineno": 463,
               "args": [
                 "self",
                 "raw_data"
@@ -11663,7 +6769,7 @@
             },
             {
               "name": "_normalize_depth_chart_data",
-              "lineno": 467,
+              "lineno": 488,
               "args": [
                 "self",
                 "raw_data"
@@ -11672,7 +6778,7 @@
             },
             {
               "name": "_normalize_injury_data",
-              "lineno": 486,
+              "lineno": 507,
               "args": [
                 "self",
                 "raw_data"
@@ -11681,7 +6787,7 @@
             },
             {
               "name": "_normalize_pbp_data",
-              "lineno": 505,
+              "lineno": 526,
               "args": [
                 "self",
                 "raw_data"
@@ -11692,11 +6798,11 @@
         },
         {
           "name": "WeatherAdapter",
-          "lineno": 528,
+          "lineno": 549,
           "methods": [
             {
               "name": "__init__",
-              "lineno": 531,
+              "lineno": 552,
               "args": [
                 "self",
                 "cache_manager"
@@ -11704,8 +6810,16 @@
               "hash": "8041f86335b6af16b985f2cff36c964493da3ce1"
             },
             {
+              "name": "fetch_data",
+              "lineno": 591,
+              "args": [
+                "self"
+              ],
+              "hash": "1245a05d29d1a98c918648c607ccd3be4b9e751e"
+            },
+            {
               "name": "fetch_weather",
-              "lineno": 570,
+              "lineno": 604,
               "args": [
                 "self",
                 "game_id",
@@ -11716,7 +6830,7 @@
             },
             {
               "name": "_fetch_nws_weather",
-              "lineno": 607,
+              "lineno": 641,
               "args": [
                 "self",
                 "game_id",
@@ -11727,7 +6841,7 @@
             },
             {
               "name": "_stadium_to_team",
-              "lineno": 663,
+              "lineno": 697,
               "args": [
                 "self",
                 "stadium"
@@ -11736,7 +6850,7 @@
             },
             {
               "name": "_find_closest_period",
-              "lineno": 675,
+              "lineno": 709,
               "args": [
                 "self",
                 "periods",
@@ -11746,7 +6860,7 @@
             },
             {
               "name": "_extract_wind_speed",
-              "lineno": 680,
+              "lineno": 714,
               "args": [
                 "self",
                 "wind_speed_str"
@@ -11755,7 +6869,7 @@
             },
             {
               "name": "_extract_wind_direction",
-              "lineno": 687,
+              "lineno": 721,
               "args": [
                 "self",
                 "wind_direction_str"
@@ -11764,7 +6878,7 @@
             },
             {
               "name": "_dataframe_to_weather",
-              "lineno": 691,
+              "lineno": 725,
               "args": [
                 "self",
                 "row"
@@ -11775,11 +6889,11 @@
         },
         {
           "name": "UnifiedDataIngestion",
-          "lineno": 705,
+          "lineno": 739,
           "methods": [
             {
               "name": "__init__",
-              "lineno": 708,
+              "lineno": 742,
               "args": [
                 "self",
                 "session",
@@ -11789,7 +6903,7 @@
             },
             {
               "name": "_snapshot_dir",
-              "lineno": 718,
+              "lineno": 752,
               "args": [
                 "self",
                 "date_str"
@@ -11798,7 +6912,7 @@
             },
             {
               "name": "_write_snapshot_csv",
-              "lineno": 724,
+              "lineno": 758,
               "args": [
                 "self",
                 "df",
@@ -11809,7 +6923,7 @@
             },
             {
               "name": "ingest_weekly_data",
-              "lineno": 749,
+              "lineno": 783,
               "args": [
                 "self",
                 "season",
@@ -11819,7 +6933,7 @@
             },
             {
               "name": "ingest_season_foundation",
-              "lineno": 833,
+              "lineno": 867,
               "args": [
                 "self",
                 "season"
@@ -12002,18 +7116,25 @@
     }
   ],
   "data_files": [
-    "audit_report.json",
     "data/snapshots/2025-09-09/depth_charts.csv",
     "data/snapshots/2025-09-09/injuries.csv",
     "data/snapshots/2025-09-09/odds.csv",
     "data/snapshots/2025-09-09/pbp.csv",
+    "data/snapshots/2025-09-09/players.csv",
     "data/snapshots/2025-09-09/reference_players.csv",
     "data/snapshots/2025-09-09/reference_stadiums.csv",
     "data/snapshots/2025-09-09/reference_teams.csv",
     "data/snapshots/2025-09-09/rosters.csv",
     "data/snapshots/2025-09-09/schedule.csv",
+    "data/snapshots/2025-09-09/schedules.csv",
     "data/snapshots/2025-09-09/snaps.csv",
+    "data/snapshots/2025-09-09/snaps_usage.csv",
+    "data/snapshots/2025-09-09/stadiums.csv",
+    "data/snapshots/2025-09-09/teams.csv",
     "data/snapshots/2025-09-09/weather.csv",
+    "data/snapshots/2025-09-09/weekly_stats.csv",
+    "data/snapshots/2025-W1-snaps/snap_counts.parquet",
+    "data/snapshots/2025-schedule/schedules.parquet",
     "models/performance/QB_fantasy_points_model_performance.json",
     "models/performance/QB_passing_touchdowns_model_performance.json",
     "models/performance/QB_passing_yards_model_performance.json",
@@ -12033,12 +7154,14 @@
     "models/streamlined/TE_fantasy_points_ppr_ridge.pkl.meta.json",
     "models/streamlined/WR_fantasy_points_ppr_ridge.pkl.meta.json",
     "reports/backtests/player_rec_yds/backtest_results_20250909_153905.json",
+    "reports/backtests/player_rec_yds/backtest_results_20250909_170832.json",
+    "reports/coverage/coverage_validation.json",
     "reports/coverage/model_market_matrix.csv",
     "reports/coverage/stats_feature_matrix.csv"
   ],
   "notebooks": [],
   "config_files": {
-    "pyproject.toml": false,
+    "pyproject.toml": true,
     "requirements.txt": true,
     "requirements-dev.txt": false,
     "setup.cfg": false,
@@ -12104,13 +7227,10 @@
       "networkx>=3.1",
       "pulp>=2.7.0",
       "cvxpy>=1.3.0"
-    ]
+    ],
+    "pyproject.toml:project.dependencies": []
   },
   "duplicates": {
-    "c2b0decd10a6a3e9467b674ae072ae39f244077b": [
-      "player_comparison_optimizer.py:AdvancedAnalytics.__init__@361",
-      "advanced_ml_models.py:ModelComparison.__init__@424"
-    ],
     "28e8725a90b3558f96666c38661f3088b8b3b630": [
       "tests/test_schema_reference.py:latest_snapshot_dir@7",
       "tests/test_schema_rosters_depth_injuries.py:latest_snapshot_dir@7",
@@ -12123,14 +7243,7 @@
   },
   "maybe_dead": [
     "APIConfig",
-    "APIIntegrations",
     "APIKeysConfig",
-    "AdvancedFeatureEngineering",
-    "AdvancedGameContext",
-    "AdvancedMLModels",
-    "AdvancedMarketAnalyzer",
-    "AdvancedPlayerMetrics",
-    "AdvancedPlayerStats",
     "AutomatedWorkflowManager",
     "BaseAdapter",
     "BaseMLModel",
@@ -12139,89 +7252,53 @@
     "BettingLine",
     "BettingRecommendation",
     "ClassInfo",
-    "CoachingAnalytics",
-    "ComprehensiveMatchupAnalyzer",
-    "ComprehensiveStatsEngine",
+    "ComprehensiveValidator",
     "ConnectionManager",
     "DataConfig",
-    "DataCoverageExpander",
     "DatabaseConfig",
-    "DefensiveRankings",
     "DirectoriesConfig",
+    "EnhancedNFLDataCollector",
     "EnhancedPlayerInfo",
-    "EnhancedPredictionAdjuster",
-    "EnhancedRealtimeSystemTester",
-    "EnhancedSystemTester",
-    "ErrorTracker",
     "EvaluationMetrics",
     "FeatureSet",
     "GameDataCollector",
-    "GameInfo",
     "GameSchedule",
-    "GameScript",
     "GradientBoostingModel",
-    "HistoricalDataReport",
-    "HistoricalTrendAnalyzer",
-    "HistoricalValidationLite",
+    "HistoricalDataStandardization",
     "HistoricalValidationReport",
-    "InjuryDataIntegrator",
     "InjuryReport",
     "LightGBMModel",
-    "LineupOptimizer",
-    "LiveOdds",
-    "LogLevel",
     "LoggingConfig",
     "MarketAnalysis",
-    "MarketIntelligence",
-    "MarketMovementTracker",
-    "MatchupAnalysis",
-    "ModelComparison",
     "ModelEnsemble",
     "ModelResult",
     "NFL2025DataCollector",
     "NFLDataProcessingPipeline",
     "NFLPredictionPipeline",
     "NFLScheduleLoader",
-    "NFLUltimateSystem",
     "NeuralNetworkModel",
-    "NewsImpact",
-    "NewsImpactAnalyzer",
-    "OpponentDefensiveAnalysis",
-    "OptimalLineup",
     "PipelineConfig",
-    "PlayerComparator",
     "PlayerDataCollector",
     "PlayerGameValidation",
-    "PlayerIdentityResolver",
+    "PlayerIdentityMapping",
     "PlayerRole",
     "PlayerRoster",
     "PlayerStats",
     "PredictionBoundsValidator",
     "PredictionConfig",
     "PredictionRequest",
-    "Process",
     "ProcessingConfig",
-    "ProductionDeployer",
-    "PublicBettingAnalyzer",
-    "PublicPerceptionTracker",
-    "QuickValidationReport",
     "RandomForestModel",
-    "RealTimeDataIntegrator",
-    "RealTimeMarketData",
     "RealTimePrediction",
     "RepoReport",
-    "SituationalAnalyzer",
-    "SituationalStats",
-    "StandardizedStatRecord",
-    "StatTerminologyMapper",
+    "RoleBasedStatsCollector",
+    "StatTerminologyMapping",
     "StatsDataCollector",
     "SystemMetaConfig",
     "SystemValidator",
     "TeamDepthChart",
-    "TeamMatchupAnalyzer",
-    "TeamStrength",
-    "TestCLISystem",
     "TestConfigurationSystem",
+    "TestCoverageValidation",
     "TestDataIntegrity",
     "TestDataQualityValidator",
     "TestDatabaseModels",
@@ -12229,28 +7306,21 @@
     "TestEnsembleModel",
     "TestFeatureEngineeringCore",
     "TestFeatureIntegration",
-    "TestInteractiveInterface",
     "TestModelConfig",
     "TestNFLFeatureEngineer",
     "TestNFLPredictionEngine",
     "TestNFLPredictionModel",
     "TestPerformanceAndReliability",
     "TestPredictionSystem",
-    "TestSentimentAnalysis",
     "TestStatsValidator",
     "TestSystemImports",
     "TestSystemIntegration",
-    "TestUltimateSystem",
-    "UltimateEnhancedPredictor",
-    "UltimatePrediction",
-    "ValidationBacktestingFramework",
+    "TestValidationFramework",
     "ValidationReport",
     "ValidationSeverity",
-    "VisualizationEngine",
     "WeeklyDataQualityReport",
     "WeeklyRosterSnapshot",
     "XGBoostModel",
-    "_MemInfo",
     "backtest",
     "classify_position_group",
     "create_access_token",
@@ -12265,20 +7335,19 @@
     "get_db",
     "get_enhanced_player_prediction",
     "get_game_predictions",
+    "get_games",
     "get_models",
     "get_player_details",
     "get_player_fantasy_predictions",
     "get_player_predictions",
-    "get_players",
     "get_props",
+    "get_stats",
+    "get_team_roster",
+    "get_teams",
     "health_check",
     "home",
     "http_exception_handler",
     "lifespan",
-    "log_api_request",
-    "log_database_operation",
-    "log_prediction_start",
-    "log_prediction_success",
     "merge_player_data",
     "migrate_database",
     "mock_cache_manager",
@@ -12305,19 +7374,10 @@
     "sync_roster",
     "temp_models_dir",
     "test_admin_snapshot_and_props_offers",
-    "test_api_imports",
     "test_book_normalization_variants",
-    "test_data_integrity",
-    "test_database_connections",
-    "test_fastapi_server",
-    "test_flask_server",
-    "test_import_fixes",
     "test_market_normalization_variants",
-    "test_prediction_bounds",
-    "test_retired_players",
     "test_rosters_schema",
     "test_rosters_schema_and_pk",
-    "test_streamlined_models",
     "test_to_internal_ok",
     "test_to_internal_unknown_market",
     "validate_player_role_consistency",

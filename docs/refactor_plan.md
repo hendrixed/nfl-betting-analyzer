@@ -1,6 +1,55 @@
 # NFL Betting Analyzer Refactor Plan
 
-Based on the audit report analysis, this document outlines the KEEP/REFACTOR/REMOVE decisions for the repository refactoring.
+## Status Update (2025-09-09 local)
+
+- Canonicalization (Phase B Steps 1–3) completed:
+  - All imports now use `core/*`.
+  - Unique legacy feature engineering interfaces (`AdvancedFeatureEngineer`, `FeatureConfig`) ported into `core/models/feature_engineering.py`.
+  - Root duplicates removed: `database_models.py`, `data_collector.py`, `data_foundation.py`, `feature_engineering.py`.
+  - Evidence: `pytest -q` => 86 passed, 11 skipped, 3 warnings.
+- Hard Rule alignment:
+  - Single entrypoints retained: `api/app.py`, `nfl_cli.py`.
+  - Model gating aligned to `models/streamlined/*.pkl` in API (`/health`, predictions) and CLI (`project`, `sim`).
+  - Snapshot verification (`nfl_cli.py snapshot-verify`) now fails on missing files/headers.
+
+This plan adheres to HARD RULES and focuses on Phase B canonicalization with a concise 5-commit sequence to fold logic into `core/*` without feature changes.
+
+## Phase B — Canonicalization: 5-commit sequence
+
+1) Canonicalize Imports (repo-wide)
+   - Replace all imports from root duplicates to `core/*`:
+     - `feature_engineering` → `core.models.feature_engineering`
+     - `database_models` → `core.database_models`
+     - `data_collector` → `core.data.data_collector`
+     - `data_foundation` → `core.data.data_foundation`
+   - Ensure `api/app.py` and `nfl_cli.py` only import from `core/*`.
+   - Evidence: grep diff showing only `core/*` imports; `pytest -q` green.
+
+2) Fold Unique Logic from Root Duplicates
+   - Compare root-level files to canonical `core/*` and copy any unique helpers/docstrings:
+     - `feature_engineering.py` → merge helpers into `core/models/feature_engineering.py` (append-only, no behavior change).
+     - `database_models.py` → verify schema parity with `core/database_models.py`; migrate any new fields.
+     - `data_collector.py`, `data_foundation.py` → ensure parity with `core/data/*`; merge missing enums/validators.
+   - Evidence: short code diff snippets embedded in commit; `pytest -q` green.
+
+3) Delete Root Duplicates (post-green)
+   - Remove root: `feature_engineering.py`, `database_models.py`, `data_collector.py`, `data_foundation.py`.
+   - Update docs and references where necessary (none expected after step 1).
+   - Evidence: tree snapshot, `pytest -q` green; imports only from `core/*`.
+
+4) Enforce Model Gating Everywhere
+   - Verify API and CLI both require `models/streamlined/*.pkl`:
+     - `api/app.py` → `models_available()` gate already checks `models/streamlined`.
+     - `nfl_cli.py` → ensure projection/prediction paths check presence of `models/streamlined/*.pkl` (already present for projections/fantasy).
+   - Add a lightweight check in any code paths still missing gating.
+   - Evidence: `/health` reflects `models_loaded`, CLI `project` fails gracefully when missing; `tests/test_api_contract.py` to be added in later phase.
+
+5) Final Canonicalization Sweep
+   - Run repo-wide search to ensure no remaining imports from root duplicates.
+   - Remove stale references in docs where applicable; confirm only single API/CLI remain.
+   - Evidence: grep results attached in commit; `pytest -q` green.
+
+Acceptance for Phase B: tests green after each commit; only `core/*` imports remain.
 
 ## Summary of Current State
 - **80 Python modules** with significant duplication and fragmentation

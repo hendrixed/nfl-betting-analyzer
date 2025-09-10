@@ -24,8 +24,8 @@ from pathlib import Path
 import json
 import time
 
-# Import our models
-from database_models import (
+# Import our models (canonical)
+from core.database_models import (
     Player, Team, Game, PlayerGameStats, BettingLine,
     Base, create_all_tables
 )

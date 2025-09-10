@@ -40,8 +40,8 @@ except ImportError:
     nn = DummyNN()
     print("PyTorch not available. Neural network models will be disabled.")
 
-# Import our models
-from database_models import PlayerPrediction, GamePrediction, ModelPerformance
+# Import our models (canonical)
+from core.database_models import PlayerPrediction, GamePrediction, ModelPerformance
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

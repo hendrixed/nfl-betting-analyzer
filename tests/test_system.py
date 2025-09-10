@@ -19,7 +19,7 @@ class TestSystemImports:
     def test_core_imports(self):
         """Test that core modules can be imported."""
         try:
-            import database_models
+            from core import database_models as database_models
             import config_manager
             from api import app
             import nfl_cli
@@ -39,8 +39,8 @@ class TestSystemImports:
     def test_utility_imports(self):
         """Test utility modules."""
         try:
-            import data_collector
-            import feature_engineering
+            from core.data import data_collector as data_collector
+            from core.models import feature_engineering as feature_engineering
             import ml_models
             import prediction_pipeline
             assert True
@@ -52,7 +52,7 @@ class TestDatabaseModels:
     
     def test_player_model_creation(self):
         """Test Player model can be created."""
-        from database_models import Player
+        from core.database_models import Player
         
         player = Player(
             player_id="pmahomes_qb",
@@ -67,7 +67,7 @@ class TestDatabaseModels:
     
     def test_game_model_creation(self):
         """Test Game model can be created."""
-        from database_models import Game
+        from core.database_models import Game
         
         game = Game(
             game_id="2024_01_KC_DEN",
@@ -83,7 +83,7 @@ class TestDatabaseModels:
     
     def test_player_game_stats_model(self):
         """Test PlayerGameStats model."""
-        from database_models import PlayerGameStats
+        from core.database_models import PlayerGameStats
         
         stats = PlayerGameStats(
             player_id="pmahomes_qb",
@@ -302,7 +302,7 @@ class TestSystemIntegration:
             assert config is not None
             
             # Test database models
-            from database_models import Player
+            from core.database_models import Player
             test_player = Player(
                 player_id="test_qb",
                 name="Test QB",

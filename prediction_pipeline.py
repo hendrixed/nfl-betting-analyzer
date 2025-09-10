@@ -20,13 +20,13 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_compl
 import schedule
 import pickle
 
-# Import our modules
-from database_models import (
+# Import our modules (canonical)
+from core.database_models import (
     Player, Team, Game, PlayerGameStats, BettingLine, 
     PlayerPrediction, GamePrediction, FeatureStore, ModelPerformance
 )
-from data_collector import NFLDataCollector, DataCollectionConfig
-from feature_engineering import AdvancedFeatureEngineer, FeatureConfig
+from core.data.data_collector import NFLDataCollector, DataCollectionConfig
+from core.models.feature_engineering import AdvancedFeatureEngineer, FeatureConfig
 from ml_models import NFLPredictor, ModelConfig
 
 # Configure logging

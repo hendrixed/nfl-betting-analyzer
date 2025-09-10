@@ -14,28 +14,60 @@ After Claude's consolidation commits, current repository state:
 - Unused Definitions: 202 possibly unused definitions (reduced from 214)
 - Files with __main__: 1 remaining (down from 3)
 
-## Data Files Present (33 total)
+## Authoritative Inventory (2025-09-09 20:25 local)
 
-### Snapshots (data/snapshots/2025-09-09/)
-- `reference_teams.csv`
-- `reference_stadiums.csv` 
-- `reference_players.csv`
-- `rosters.csv`
-- `depth_charts.csv`
-- `injuries.csv`
-- `schedules.csv`
-- `snaps.csv`
-- `pbp.csv`
-- `weather.csv`
-- `odds.csv`
+This section reflects the live repository state and supersedes any older inventory below.
 
-### Models Directory
-- Multiple .pkl files in models/ subdirectories
-- Model artifacts for different positions and markets
+### Entrypoints (canonical)
+- `api/app.py` (FastAPI)
+- `nfl_cli.py` (Typer CLI)
 
-### Other Data
-- Database files (.db)
-- Configuration files (.yaml, .env)
+### Core modules (`core/`)
+- `core/database_models.py`
+- `core/prediction_bounds.py`
+- `core/data/`:
+  - `data_collector.py`, `enhanced_data_collector.py`, `data_foundation.py`
+  - `ingestion_adapters.py`, `odds_snapshot.py`, `market_mapping.py`
+  - `data_validator.py`, `data_processing_pipeline.py`, `data_validation_pipeline.py`
+  - `nfl_2025_data_collector.py`, `statistical_computing_engine.py`
+- `core/models/`:
+  - `feature_engineering.py`, `prediction_models.py`, `streamlined_models.py`
+
+### Tests (`tests/`)
+- Present and active:
+  - `test_betting_props.py`, `test_complete_system.py`, `test_data_validation.py`
+  - `test_feature_engineering.py`, `test_feature_engineering_simple.py`
+  - `test_market_mapping.py`, `test_prediction_models.py`
+  - `test_schema_comprehensive.py`, `test_schema_games_usage.py`
+  - `test_schema_reference.py`, `test_schema_rosters_depth_injuries.py`, `test_system.py`
+  - Current status: 86 passed, 11 skipped, 3 warnings (pytest -q)
+
+### Snapshot files (`data/snapshots/2025-09-09/`)
+- `depth_charts.csv`, `injuries.csv`, `odds.csv`, `pbp.csv`, `players.csv`
+- `reference_players.csv`, `reference_stadiums.csv`, `reference_teams.csv`
+- `rosters.csv`, `schedule.csv`, `schedules.csv`
+- `snaps.csv`, `snaps_usage.csv`, `stadiums.csv`, `teams.csv`, `weather.csv`, `weekly_stats.csv`
+- Additional sets present: `data/snapshots/2025-schedule/` (12 CSVs), `data/snapshots/2025-W1-snaps/`
+
+### Models (`models/`)
+- Root basic models: 11 `.pkl`
+- `models/streamlined/`: 22 `.pkl` (canonical for gating)
+- Other subdirs: `advanced/`, `comprehensive/`, `enhanced/`, `final/` (currently empty)
+- `models/performance/`: JSON performance artifacts present
+
+### Reports & coverage
+- `reports/coverage/model_market_matrix.csv`
+- `reports/coverage/stats_feature_matrix.csv`
+- `reports/coverage/coverage_validation.json`
+
+### Duplicate status (post-canonicalization)
+- Root-level duplicates of core modules have been removed (2025-09-09):
+  - Removed: `data_collector.py`, `data_foundation.py`, `database_models.py`, `feature_engineering.py`
+  - All imports updated to canonical `core/*` paths; tests remain green
+
+### Other data
+- Active DBs: `nfl_predictions.db` (root) and test DBs in repo
+- Config: `.env`, `.env.template`, `config/config.yaml`
 
 ## Python Modules Present (89 total)
 
@@ -68,7 +100,7 @@ After Claude's consolidation commits, current repository state:
 - `core/models/prediction_bounds.py` - Prediction validation
 
 ### Testing Framework (25 modules)
-- `tests/` - Comprehensive test suite (87 passing tests)
+- `tests/` - Comprehensive test suite (86 passing, 11 skipped)
 - Schema validation, feature engineering, model training tests
 
 ### Configuration & Utilities (9 modules)

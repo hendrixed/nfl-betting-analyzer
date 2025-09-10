@@ -76,14 +76,14 @@ def setup_project_paths():
     
     # Verify local modules can be imported
     try:
-        from data_foundation import PlayerRole, MasterPlayer
+        from core.data.data_foundation import PlayerRole, MasterPlayer
         print("✅ Local modules: data_foundation imported successfully")
     except ImportError as e:
         print(f"❌ Local modules import failed: {e}")
         return False
     
     try:
-        from database_models import Player, PlayerGameStats
+        from core.database_models import Player, PlayerGameStats
         print("✅ Local modules: database_models imported successfully")
     except ImportError as e:
         print(f"❌ Database models import failed: {e}")

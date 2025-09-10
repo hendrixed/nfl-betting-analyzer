@@ -180,6 +180,11 @@ def sync_roster(
             bp = Path(base_dir)
             if not bp.exists():
                 return None
+            # Prefer date-formatted directories YYYY-MM-DD
+            date_dirs = [d for d in bp.iterdir() if d.is_dir() and d.name.count('-') == 2]
+            if date_dirs:
+                return sorted(date_dirs)[-1]
+            # Fallback: any directory
             dirs = [p for p in bp.iterdir() if p.is_dir()]
             if not dirs:
                 return None
@@ -321,6 +326,11 @@ def players_audit(
             bp = Path(base_dir)
             if not bp.exists():
                 return None
+            # Prefer date-formatted directories YYYY-MM-DD
+            date_dirs = [d for d in bp.iterdir() if d.is_dir() and d.name.count('-') == 2]
+            if date_dirs:
+                return sorted(date_dirs)[-1]
+            # Fallback to any directory (e.g., 2025-schedule) if no date dirs exist
             dirs = [p for p in bp.iterdir() if p.is_dir()]
             if not dirs:
                 return None
@@ -483,6 +493,11 @@ def snapshot_verify(
             bp = Path(base_dir)
             if not bp.exists():
                 return None
+            # Prefer date-formatted directories YYYY-MM-DD
+            date_dirs = [d for d in bp.iterdir() if d.is_dir() and d.name.count('-') == 2]
+            if date_dirs:
+                return sorted(date_dirs)[-1]
+            # Fallback: any directory (e.g., 2025-schedule) if no date dirs exist
             dirs = [p for p in bp.iterdir() if p.is_dir()]
             if not dirs:
                 return None
@@ -515,12 +530,14 @@ def snapshot_verify(
         "rosters.csv": {"player_id", "name", "team", "position"},
         "schedules.csv": {"game_id", "season", "week", "home_team", "away_team"},
         "weekly_stats.csv": {"player_id", "week", "season", "team"},
-        "snaps.csv": {"player_id", "week", "season", "team"},
+        # Align with schema tests minimal shape for snaps
+        "snaps.csv": {"player_id", "game_id", "team", "position"},
         "depth_charts.csv": {"team", "player_id", "position"},
         "injuries.csv": {"player_id", "team", "position"},
         "pbp.csv": {"play_id", "game_id"},
         "odds.csv": {"timestamp", "book", "market", "player_id", "team_id", "line"},
-        "weather.csv": {"game_id", "stadium", "temperature"},
+        # Align with tests: no 'stadium' required, roof_state present
+        "weather.csv": {"game_id", "temperature", "humidity", "wind_speed", "conditions", "roof_state"},
     }
 
     table = Table(title="Snapshot Verification")
@@ -528,6 +545,9 @@ def snapshot_verify(
     table.add_column("Exists", style="green")
     table.add_column("Rows", style="magenta")
     table.add_column("HeaderOK", style="yellow")
+
+    missing_files = []
+    header_issues = []
 
     for fname in expected_files:
         fpath = Path(target_dir) / fname
@@ -542,14 +562,32 @@ def snapshot_verify(
                     if header:
                         header_set = set([h.strip() for h in header])
                         min_cols = expected_min_cols.get(fname, set())
-                        header_ok = "Yes" if min_cols.issubset(header_set) else "Partial" if header_set else "No"
+                        if min_cols.issubset(header_set):
+                            header_ok = "Yes"
+                        elif header_set:
+                            header_ok = "Partial"
+                            header_issues.append((fname, sorted(list(min_cols - header_set))))
+                        else:
+                            header_ok = "No"
+                            header_issues.append((fname, sorted(list(min_cols))))
                     for _ in reader:
                         rows += 1
             except Exception:
                 header_ok = "Error"
+                header_issues.append((fname, ["read_error"]))
+        else:
+            missing_files.append(fname)
         table.add_row(fname, "Yes" if exists else "No", str(rows), header_ok)
 
     console.print(table)
+    if missing_files or header_issues:
+        if missing_files:
+            console.print("[red]Missing required files:[/red] " + ", ".join(missing_files))
+        if header_issues:
+            for fname, missing_cols in header_issues:
+                if missing_cols:
+                    console.print(f"[red]{fname} missing columns:[/red] {', '.join(missing_cols)}")
+        raise typer.Exit(1)
     console.print("[green]Snapshot verification complete.[/green]")
 
 # ODDS SNAPSHOT COMMAND
@@ -805,6 +843,16 @@ def sim(
     """Run Monte Carlo simulations for games"""
     console.print(f"[bold blue]Running {nsims:,} Monte Carlo simulations[/bold blue]")
     
+    # Model gating: require streamlined model artifacts
+    try:
+        models_dir = Path("models/streamlined")
+        has_models = models_dir.exists() and any(models_dir.glob("*.pkl"))
+    except Exception:
+        has_models = False
+    if not has_models:
+        console.print("[yellow]No trained models found in models/streamlined. Run 'nfl_cli.py train' first.[/yellow]")
+        raise typer.Exit(1)
+
     try:
         with Progress(
             TextColumn("[progress.description]{task.description}"),

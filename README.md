@@ -212,8 +212,8 @@ database:
 ### Data Collection
 ```yaml
 data:
-  seasons: [2022, 2023, 2024]
-  current_season: 2024
+  seasons: [2022, 2023, 2024, 2025]
+  current_season: 2025
   enable_live_data: true
   update_frequency: daily
 ```
