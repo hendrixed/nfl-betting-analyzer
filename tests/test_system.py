@@ -13,6 +13,17 @@ import numpy as np
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+
+def test_backtest_smoke_metrics():
+    """Backtest smoke: ensure metrics are computed and non-null."""
+    from nfl_cli import compute_backtest_metrics
+    metrics = compute_backtest_metrics(target="fantasy_points_ppr", sample_limit=10)
+    assert isinstance(metrics, dict)
+    # Presence of keys
+    for key in ("hit_rate", "roi", "brier", "crps"):
+        assert key in metrics
+        assert metrics[key] is not None
+
 class TestSystemImports:
     """Test all critical system imports."""
     

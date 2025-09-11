@@ -7,6 +7,7 @@ Unified adapters for NFL data sources with caching, schema validation, and error
 import asyncio
 import logging
 import json
+import os
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -804,6 +805,171 @@ class WeatherAdapter(BaseAdapter):
             timestamp=pd.to_datetime(row['timestamp'])
         )
 
+class BaseOddsAdapter:
+    """Base class for odds provider adapters.
+    Implementations should return DataFrames matching SNAPSHOT_MIN_COLUMNS['odds.csv'].
+    """
+
+    def fetch_current_odds(
+        self,
+        books: Optional[List[str]] = None,
+        markets: Optional[List[str]] = None,
+        max_offers: int = 100,
+    ) -> pd.DataFrame:
+        raise NotImplementedError
+
+class MockOddsAdapter(BaseOddsAdapter):
+    """Mock odds adapter that generates synthetic but schema-correct odds."""
+
+    def __init__(self, session: Optional[Session] = None):
+        self.session = session
+
+    def fetch_current_odds(
+        self,
+        books: Optional[List[str]] = None,
+        markets: Optional[List[str]] = None,
+        max_offers: int = 100,
+    ) -> pd.DataFrame:
+        try:
+            # Reuse existing mock writer to leverage canonicalization
+            from core.data.odds_snapshot import write_mock_odds_snapshot
+            snap_dir = Path("data/snapshots") / datetime.now().strftime("%Y-%m-%d")
+            snap_dir.mkdir(parents=True, exist_ok=True)
+            # Write to a temp file then read into DataFrame
+            path = write_mock_odds_snapshot(
+                self.session,
+                date_str=datetime.now().strftime("%Y-%m-%d"),
+                books=books,
+                markets=markets,
+                max_offers=max_offers,
+            )
+            try:
+                return pd.read_csv(path)
+            except Exception:
+                # If any read error, return empty with proper headers
+                cols = SNAPSHOT_MIN_COLUMNS.get("odds.csv", [])
+                return pd.DataFrame(columns=cols)
+        except Exception:
+            cols = SNAPSHOT_MIN_COLUMNS.get("odds.csv", [])
+            return pd.DataFrame(columns=cols)
+
+class TheOddsAPIAdapter(BaseOddsAdapter):
+    """Live odds adapter using TheOddsAPI (https://the-odds-api.com/).
+    Requires env var THEODDSAPI_KEY. This adapter focuses on player markets and
+    normalizes to odds.csv schema.
+    """
+
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
+        self.api_key = api_key or os.getenv("THEODDSAPI_KEY")
+        self.base_url = base_url or os.getenv("THEODDSAPI_BASE", "https://api.the-odds-api.com/v4")
+
+    def _normalize(self, records: List[Dict[str, Any]]) -> pd.DataFrame:
+        """Normalize provider-specific records into canonical odds.csv schema."""
+        cols = SNAPSHOT_MIN_COLUMNS.get("odds.csv", [])
+        out: List[Dict[str, Any]] = []
+        for rec in records:
+            try:
+                # This normalization is intentionally conservative; adjust as needed
+                out.append({
+                    "timestamp": rec.get("timestamp") or datetime.utcnow().isoformat(),
+                    "book": str(rec.get("book", "")).lower(),
+                    "market": str(rec.get("market", "")).lower(),
+                    "player_id": rec.get("player_id") or rec.get("selection_id") or "",
+                    "team_id": rec.get("team_id") or rec.get("team") or "",
+                    "line": rec.get("line"),
+                    "over_odds": rec.get("over_odds"),
+                    "under_odds": rec.get("under_odds"),
+                })
+            except Exception:
+                continue
+        df = pd.DataFrame(out)
+        # Ensure all columns present
+        if cols:
+            for c in cols:
+                if c not in df.columns:
+                    df[c] = None
+            df = df[cols]
+        return df
+
+    def fetch_current_odds(
+        self,
+        books: Optional[List[str]] = None,
+        markets: Optional[List[str]] = None,
+        max_offers: int = 100,
+    ) -> pd.DataFrame:
+        if not self.api_key:
+            logger.warning("THEODDSAPI_KEY not set; returning header-only odds DataFrame")
+            return pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("odds.csv", []))
+
+        try:
+            # Example player markets; API docs define exact market identifiers
+            req_markets = markets or [
+                "player_passing_yards",
+                "player_rushing_yards",
+                "player_receptions",
+                "player_receiving_yards",
+                "player_interceptions",
+            ]
+            req_books = books or ["draftkings", "fanduel", "betmgm"]
+
+            all_rows: List[Dict[str, Any]] = []
+            # Fetch per-market to bound response size
+            for mkt in req_markets:
+                url = (
+                    f"{self.base_url}/sports/americanfootball_nfl/odds/"
+                    f"?apiKey={self.api_key}&regions=us&oddsFormat=american&markets={mkt}"
+                )
+                try:
+                    resp = requests.get(url, timeout=15)
+                    if resp.status_code != 200:
+                        logger.debug(f"TheOddsAPI non-200 for {mkt}: {resp.status_code}")
+                        continue
+                    data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else []
+                except Exception as e:
+                    logger.debug(f"TheOddsAPI request failed for {mkt}: {e}")
+                    data = []
+
+                # Parse provider response into simplified rows
+                # The real response structure nests bookmakers -> markets -> outcomes
+                try:
+                    for event in data or []:
+                        for bk in (event.get("bookmakers") or []):
+                            book_key = str(bk.get("key", "")).lower()
+                            if req_books and book_key not in req_books:
+                                continue
+                            for mk in (bk.get("markets") or []):
+                                market_key = str(mk.get("key", "")).lower()
+                                for outc in (mk.get("outcomes") or []):
+                                    row = {
+                                        "timestamp": datetime.utcnow().isoformat(),
+                                        "book": book_key,
+                                        "market": market_key,
+                                        "player_id": outc.get("description") or outc.get("name") or "",
+                                        "team_id": (event.get("home_team") or "")[:3].upper(),
+                                        "line": outc.get("point"),
+                                        # Map one-sided outcome prices into over/under when possible
+                                        "over_odds": outc.get("price") if str(outc.get("name", "")).lower() in ("over", "o") else None,
+                                        "under_odds": outc.get("price") if str(outc.get("name", "")).lower() in ("under", "u") else None,
+                                    }
+                                    all_rows.append(row)
+                                    if len(all_rows) >= max_offers:
+                                        break
+                                if len(all_rows) >= max_offers:
+                                    break
+                            if len(all_rows) >= max_offers:
+                                break
+                        if len(all_rows) >= max_offers:
+                            break
+                    if len(all_rows) >= max_offers:
+                        break
+                except Exception:
+                    continue
+
+            return self._normalize(all_rows)
+        except Exception as e:
+            logger.warning(f"Failed to fetch live odds: {e}")
+            return pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("odds.csv", []))
+
 class UnifiedDataIngestion:
     """Unified data ingestion coordinator"""
     
@@ -847,6 +1013,51 @@ class UnifiedDataIngestion:
         except Exception as e:
             logger.warning(f"Failed to write snapshot {snapshot_path}: {e}")
         return snapshot_path
+
+    def snapshot_odds(
+        self,
+        provider: str = "mock",
+        date_str: Optional[str] = None,
+        books: Optional[List[str]] = None,
+        markets: Optional[List[str]] = None,
+        max_offers: int = 100,
+    ) -> Dict[str, Any]:
+        """Snapshot odds to data/snapshots/YYYY-MM-DD/odds.csv using selected provider.
+        Returns dict with path and rows written.
+        """
+        date_str = date_str or datetime.now().strftime("%Y-%m-%d")
+
+        if provider.lower() == "live":
+            adapter = TheOddsAPIAdapter()
+            df = adapter.fetch_current_odds(books=books, markets=markets, max_offers=max_offers)
+            path = self._write_snapshot_csv(df, "odds.csv", date_str)
+            # Ensure odds_history.csv header exists
+            self._write_snapshot_csv(pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("odds_history.csv", [])), "odds_history.csv", date_str)
+        else:
+            # mock provider path
+            try:
+                mock = MockOddsAdapter(self.session)
+                df = mock.fetch_current_odds(books=books, markets=markets, max_offers=max_offers)
+                path = self._write_snapshot_csv(df, "odds.csv", date_str)
+                self._write_snapshot_csv(pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("odds_history.csv", [])), "odds_history.csv", date_str)
+            except Exception:
+                # Hard fallback: header-only files
+                path = self._write_snapshot_csv(pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("odds.csv", [])), "odds.csv", date_str)
+                self._write_snapshot_csv(pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("odds_history.csv", [])), "odds_history.csv", date_str)
+
+        # Count rows (excluding header)
+        rows = 0
+        try:
+            with open(path, newline="", encoding="utf-8") as f:
+                import csv
+                r = csv.reader(f)
+                next(r, None)
+                for _ in r:
+                    rows += 1
+        except Exception:
+            rows = 0
+
+        return {"snapshot_path": str(path), "rows": rows}
     
     async def ingest_weekly_data(self, season: int, week: int) -> Dict[str, Any]:
         """Ingest all data for a specific week"""

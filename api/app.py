@@ -42,6 +42,7 @@ except Exception:  # pragma: no cover - fallback when slowapi isn't installed
         return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
 try:
     from jose import jwt, JWTError  # type: ignore
+    USING_DUMMY_JWT = False
 except Exception:  # pragma: no cover - optional dependency for tests
     class JWTError(Exception):
         pass
@@ -53,6 +54,7 @@ except Exception:  # pragma: no cover - optional dependency for tests
         def decode(token, key, algorithms=None):
             return {"sub": "anonymous"}
     jwt = _DummyJWT()  # type: ignore
+    USING_DUMMY_JWT = True
 try:
     from passlib.context import CryptContext
 except Exception:  # pragma: no cover - optional dependency for tests
@@ -90,6 +92,18 @@ else:
 # Security setup
 security = HTTPBearer()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Environment-driven security configuration
+IS_PROD = os.getenv("APP_ENV", "").lower() == "production" or os.getenv("ENV", "").lower() == "production"
+JWT_SECRET = os.getenv("JWT_SECRET") or ("dev-secret" if not IS_PROD else None)
+JWT_ALGORITHM = os.getenv("ALGORITHM", "HS256")
+
+if IS_PROD:
+    # Enforce presence of real JWT and secret in production
+    if not JWT_SECRET:
+        raise RuntimeError("JWT_SECRET must be set in production environment")
+    if 'USING_DUMMY_JWT' in globals() and USING_DUMMY_JWT:
+        raise RuntimeError("python-jose must be installed; dummy JWT is not allowed in production")
 
 # Pydantic Models
 class PlayerInfo(BaseModel):
@@ -294,11 +308,11 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, "secret", algorithm="HS256")
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)  # type: ignore[arg-type]
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        payload = jwt.decode(credentials.credentials, "secret", algorithms=["HS256"])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])  # type: ignore[arg-type]
         return payload
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -656,7 +670,7 @@ async def get_player_fantasy_predictions(
 ):
     """Get fantasy (PPR) predictions using streamlined trained models"""
     if not models_available():
-        raise HTTPException(status_code=503, detail="Prediction models not available")
+        raise HTTPException(status_code=403, detail="Prediction models not available")
 
     # Ensure we have a model instance
     local_models = None
@@ -916,8 +930,7 @@ async def get_models():
     except Exception as e:
         logger.warning(f"Failed to build models summary: {e}")
     if not results:
-        # Return empty list if none available
-        return []
+        raise HTTPException(status_code=403, detail="Prediction models not available")
     return results
 
 # WEB INTERFACE ENDPOINTS (from web_app.py)

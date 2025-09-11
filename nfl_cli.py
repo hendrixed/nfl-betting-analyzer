@@ -14,6 +14,8 @@ try:
 except Exception:
     uvicorn = None  # type: ignore
 import numpy as np
+import math
+import json
 from pathlib import Path
 from typing import Optional, List, Annotated
 from datetime import datetime, date, timedelta
@@ -23,7 +25,9 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich import print as rprint
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-import json
+import matplotlib
+matplotlib.use("Agg")  # headless
+import matplotlib.pyplot as plt
 from core.data.odds_snapshot import write_mock_odds_snapshot
 
 # Add project root to path
@@ -616,27 +620,34 @@ def odds_snapshot(
     max_offers: Annotated[int, typer.Option("--max-offers", help="Max number of offers to write")] = 100,
     books: Annotated[Optional[str], typer.Option("--books", help="Comma-separated list of books (e.g., DK,FanDuel)")] = None,
     markets: Annotated[Optional[str], typer.Option("--markets", help="Comma-separated markets (e.g., 'Passing Yards,Receptions')")] = None,
+    provider: Annotated[str, typer.Option("--provider", help="Odds provider: 'mock' (default) or 'live' (requires THEODDSAPI_KEY)")] = "mock",
     date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD), defaults to today")] = None,
 ):
-    """Write a mock odds.csv snapshot under data/snapshots/YYYY-MM-DD/ using canonical mapping."""
-    console.print("[bold blue]Writing mock odds snapshot[/bold blue]")
+    """Write odds snapshot under data/snapshots/YYYY-MM-DD/ using selected provider.
+    Use --provider live with THEODDSAPI_KEY set to fetch real odds. Always writes
+    odds.csv and ensures odds_history.csv header exists per docs/SNAPSHOT_SCHEMAS.md.
+    """
+    provider = (provider or "mock").lower()
+    console.print(f"[bold blue]Writing {provider} odds snapshot[/bold blue]")
     try:
         session = get_db_session(f"sqlite:///{state['database']}")
-        book_list = None
-        market_list = None
-        if books:
-            book_list = [b.strip() for b in books.split(',') if b.strip()]
-        if markets:
-            market_list = [m.strip() for m in markets.split(',') if m.strip()]
+        # Lazy import to avoid heavy deps at CLI startup
+        from core.data.ingestion_adapters import UnifiedDataIngestion
 
-        path = write_mock_odds_snapshot(
-            session,
+        # Parse lists
+        book_list = [b.strip() for b in books.split(',')] if books else None
+        market_list = [m.strip() for m in markets.split(',')] if markets else None
+
+        ingestion = UnifiedDataIngestion(session)
+        result = ingestion.snapshot_odds(
+            provider=provider,
             date_str=date,
             books=book_list,
             markets=market_list,
             max_offers=max_offers,
         )
-        console.print(f"[green]Snapshot written:[/green] {path}")
+        console.print(f"[green]Snapshot written:[/green] {result.get('snapshot_path')}")
+        console.print(f"[green]Rows:[/green] {result.get('rows', 0)}")
     except Exception as e:
         console.print(f"[red]Failed to write odds snapshot: {e}[/red]")
         if state['debug']:
@@ -690,6 +701,172 @@ def features(
             console.print_exception()
         raise typer.Exit(1)
 
+def _phi(z):
+    """Standard normal PDF for scalar or array-like z."""
+    import numpy as _np
+    arr = _np.atleast_1d(z).astype(float)
+    vals = _np.array([math.exp(-0.5 * float(v) * float(v)) / math.sqrt(2 * math.pi) for v in arr])
+    return vals if _np.ndim(z) else float(vals[0])
+
+
+def _Phi(z):
+    """Standard normal CDF for scalar or array-like z (erf-based)."""
+    import numpy as _np
+    arr = _np.atleast_1d(z).astype(float)
+    vals = _np.array([0.5 * (1.0 + math.erf(float(v) / math.sqrt(2.0))) for v in arr])
+    return vals if _np.ndim(z) else float(vals[0])
+
+
+def compute_backtest_metrics(
+    target: str = "fantasy_points_ppr",
+    sample_limit: int = 200,
+) -> dict:
+    """Compute basic backtest metrics for a target using recent PlayerGameStats."""
+    from core.models.streamlined_models import StreamlinedNFLModels
+    from core.database_models import PlayerGameStats
+
+    session = get_db_session(f"sqlite:///{state['database']}")
+    try:
+        mdl = StreamlinedNFLModels(session)
+        q = session.query(PlayerGameStats)
+        if target == "fantasy_points_ppr":
+            q = q.filter(PlayerGameStats.fantasy_points_ppr.isnot(None))
+            get_actual = lambda s: float(getattr(s, "fantasy_points_ppr", 0.0) or 0.0)
+        elif target == "passing_yards":
+            q = q.filter(PlayerGameStats.passing_yards.isnot(None))
+            get_actual = lambda s: float(getattr(s, "passing_yards", 0.0) or 0.0)
+        elif target == "rushing_yards":
+            q = q.filter(PlayerGameStats.rushing_yards.isnot(None))
+            get_actual = lambda s: float(getattr(s, "rushing_yards", 0.0) or 0.0)
+        elif target == "receiving_yards":
+            q = q.filter(PlayerGameStats.receiving_yards.isnot(None))
+            get_actual = lambda s: float(getattr(s, "receiving_yards", 0.0) or 0.0)
+        elif target == "receptions":
+            q = q.filter(PlayerGameStats.receptions.isnot(None))
+            get_actual = lambda s: float(getattr(s, "receptions", 0.0) or 0.0)
+        else:
+            q = q.filter(PlayerGameStats.fantasy_points_ppr.isnot(None))
+            get_actual = lambda s: float(getattr(s, "fantasy_points_ppr", 0.0) or 0.0)
+
+        # Order by recency using created_at (portable across DBs)
+        rows = q.order_by(PlayerGameStats.created_at.desc()).limit(sample_limit).all()
+        if not rows:
+            return {
+                "target": target,
+                "count": 0,
+                "hit_rate": 0.0,
+                "roi": 0.0,
+                "brier": 0.0,
+                "crps": 0.0,
+            }
+
+        actuals = []
+        preds = []
+        for s in rows:
+            actual = get_actual(s)
+            actuals.append(actual)
+            try:
+                pred = mdl.predict_player(s.player_id, target_stat=target)
+                pred_val = float(pred.predicted_value) if pred else None
+            except Exception:
+                pred_val = None
+            # Fallback to mean if model unavailable
+            if pred_val is None:
+                pred_val = float(np.mean(actuals)) if actuals else 0.0
+            preds.append(pred_val)
+
+        a = np.array(actuals, dtype=float)
+        p = np.array(preds, dtype=float)
+        if len(a) == 0:
+            return {"target": target, "count": 0, "hit_rate": 0.0, "roi": 0.0, "brier": 0.0, "crps": 0.0}
+
+        # Metrics
+        rmse = float(np.sqrt(np.mean((p - a) ** 2))) if len(a) else 0.0
+        mae = float(np.mean(np.abs(p - a))) if len(a) else 0.0
+        tol = 5.0 if target == "fantasy_points_ppr" else (15.0 if target.endswith("yards") else 2.0)
+        hit_rate = float(np.mean((np.abs(p - a) <= tol).astype(float)))
+
+        # Threshold for binary event and probability from normal model
+        threshold = float(np.median(a))
+        sigma = float(rmse or (np.std(a - p) if len(a) > 1 else 1.0)) or 1.0
+        outcomes = (a > threshold).astype(float)
+        z = (threshold - p) / sigma
+        probs_over = 1.0 - _Phi(z)
+        brier = float(np.mean((probs_over - outcomes) ** 2))
+
+        # CRPS for normal forecast
+        # CRPS(N(mu,sigma), x) = sigma * [z*(2*Phi(z)-1) + 2*phi(z) - 1/sqrt(pi)] where z=(x-mu)/sigma
+        z_x = (a - p) / sigma
+        crps_vals = sigma * (z_x * (2 * _Phi(z_x) - 1) + 2 * _phi(z_x) - (1 / math.sqrt(math.pi)))
+        crps = float(np.mean(np.abs(crps_vals)))
+
+        # ROI with synthetic -110 odds based on correct side relative to threshold
+        win_mask = ((p > threshold) & (a > threshold)) | ((p <= threshold) & (a <= threshold))
+        roi = float(np.mean(np.where(win_mask, 0.9091, -1.0)))
+
+        # Outputs
+        reports_dir = Path("reports/backtests")
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        json_path = reports_dir / f"backtest_{target}.json"
+        plot_path = reports_dir / f"calibration_{target}.png"
+
+        # Save plot
+        try:
+            plt.figure(figsize=(6, 6))
+            plt.scatter(p, a, alpha=0.5, s=10)
+            min_v = float(min(np.min(p), np.min(a)))
+            max_v = float(max(np.max(p), np.max(a)))
+            plt.plot([min_v, max_v], [min_v, max_v], 'r--', linewidth=1)
+            plt.title(f"Calibration Plot - {target}")
+            plt.xlabel("Predicted")
+            plt.ylabel("Actual")
+            plt.tight_layout()
+            plt.savefig(plot_path)
+            plt.close()
+        except Exception:
+            pass
+
+        # Save JSON
+        metrics = {
+            "target": target,
+            "count": int(len(a)),
+            "rmse": rmse,
+            "mae": mae,
+            "hit_rate": hit_rate,
+            "roi": roi,
+            "brier": brier,
+            "crps": crps,
+            "calibration_plot": str(plot_path),
+        }
+        try:
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(metrics, f, indent=2)
+        except Exception:
+            pass
+
+        return metrics
+    finally:
+        session.close()
+
+
+@app.command()
+def backtest(
+    target: Annotated[str, typer.Option("--target", help="Target to backtest")] = "fantasy_points_ppr",
+    sample_limit: Annotated[int, typer.Option("--limit", help="Number of samples")] = 200,
+):
+    """Run a quick backtest and generate metrics + calibration plot."""
+    console.print(f"[bold blue]Running backtest for {target}[/bold blue]")
+    try:
+        metrics = compute_backtest_metrics(target=target, sample_limit=sample_limit)
+        table = Table(title=f"Backtest Metrics - {target}")
+        for k in ["count", "rmse", "mae", "hit_rate", "roi", "brier", "crps"]:
+            table.add_row(k, str(metrics.get(k)))
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]Backtest failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
 
 # TRAIN COMMAND
 @app.command()
