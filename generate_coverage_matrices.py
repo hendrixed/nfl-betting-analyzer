@@ -55,6 +55,14 @@ def generate_stats_feature_matrix() -> pd.DataFrame:
             'description': 'Situational performance splits',
             'stats': ['red_zone_targets', 'goal_line_carries', 'third_down_conversions']
         },
+        'usage_shares': {
+            'description': 'Target/carry and red-zone usage shares',
+            'stats': ['targets', 'receptions', 'rushing_attempts', 'rushing_touchdowns', 'receiving_touchdowns']
+        },
+        'routes': {
+            'description': 'Routes run and route participation',
+            'stats': ['targets', 'receptions', 'receiving_yards']
+        },
         'red_zone_efficiency': {
             'description': 'Red zone efficiency metrics',
             'stats': ['red_zone_targets']
@@ -102,6 +110,14 @@ def generate_stats_feature_matrix() -> pd.DataFrame:
         'pace_adjustment': {
             'description': 'Game pace adjustments',
             'stats': stats  # All stats adjusted for pace
+        },
+        'proe_adjustment': {
+            'description': 'Pass Rate Over Expected context',
+            'stats': ['targets', 'receptions', 'receiving_yards', 'passing_yards']
+        },
+        'rest_travel_adjustment': {
+            'description': 'Rest days and travel impacts',
+            'stats': stats
         }
     }
     
@@ -123,6 +139,8 @@ def generate_model_market_matrix() -> pd.DataFrame:
         'player_passing_yds', 'player_passing_tds', 'player_interceptions',
         'player_rushing_yds', 'player_rushing_tds', 'player_rec_yds', 
         'player_receptions', 'player_rec_tds', 'player_fantasy_points',
+        'player_longest_reception', 'player_longest_rush',
+        'kicker_field_goals_made', 'kicker_points',
         'team_total_points', 'game_total_points', 'point_spread',
         'first_half_total', 'first_td_scorer', 'anytime_td_scorer'
     ]

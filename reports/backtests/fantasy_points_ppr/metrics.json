@@ -1,0 +1,11 @@
+{
+  "target": "fantasy_points_ppr",
+  "count": 10,
+  "rmse": 3.9064728164566938,
+  "mae": 3.0632929349962184,
+  "hit_rate": 0.8,
+  "roi": -0.04544999999999999,
+  "brier": 0.27394820916470625,
+  "crps": 2.1721215048737363,
+  "calibration_plot": "reports/backtests/fantasy_points_ppr/calibration.png"
+}

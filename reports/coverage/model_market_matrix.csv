@@ -8,6 +8,10 @@ player_rec_yds,1,1,1,1,0,1
 player_receptions,1,1,1,1,0,1
 player_rec_tds,0,0,0,1,0,0
 player_fantasy_points,1,1,1,1,1,1
+player_longest_reception,0,0,0,1,0,0
+player_longest_rush,0,0,0,1,0,0
+kicker_field_goals_made,0,0,0,1,0,0
+kicker_points,0,0,0,1,0,0
 team_total_points,0,0,0,1,1,0
 game_total_points,0,0,0,1,1,0
 point_spread,0,0,0,1,1,0

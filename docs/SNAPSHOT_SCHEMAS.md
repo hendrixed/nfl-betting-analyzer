@@ -52,6 +52,71 @@ Keep this document and the code mapping in sync. Tests assert these exact header
 ["player_id","name","team","position","practice_status","game_status","designation","report_date","return_date"]
 ```
 
+- routes.csv
+```
+["season","week","team_id","player_id","routes_run","route_participation"]
+```
+
+- usage_shares.csv
+```
+["season","week","team_id","player_id","carry_share","target_share","rz_touch_share","gl_carry_share","pass_block_snaps","align_slot","align_wide","align_inline","align_backfield"]
+```
+
+- drives.csv
+```
+["drive_id","game_id","offense","start_q","start_clock","start_yardline","end_q","end_clock","result","plays","yards","time_elapsed","points"]
+```
+
+- transactions.csv
+```
+["date","team_id","player_id","type","detail"]
+```
+
+- inactives.csv
+```
+["season","week","team_id","player_id","pos","reason","declared_time"]
+```
+
+- box_passing.csv
+```
+["game_id","player_id","att","comp","yds","td","int","sacks","sack_yards","ypa","air_yards","aDOT","fumbles"]
+```
+
+- box_rushing.csv
+```
+["game_id","player_id","att","yds","td","long","ypc","fumbles"]
+```
+
+- box_receiving.csv
+```
+["game_id","player_id","targets","rec","yds","td","air_yards","yac","aDOT","drops","long"]
+```
+
+- box_defense.csv
+```
+["game_id","player_id","tackles","assists","sacks","tfl","qb_hits","ints","pbu","td"]
+```
+
+- kicking.csv
+```
+["game_id","player_id","fg_0_39","fg_40_49","fg_50p","fg_att","fg_made","xp_att","xp_made"]
+```
+
+- team_context.csv
+```
+["season","week","team_id","opp_id","rest_days","travel_miles","tz_delta","pace_sn","pace_all","PROE","lead_pct","trail_pct","neutral_pct"]
+```
+
+- team_splits.csv
+```
+["season","week","team_id","pace_sn","pace_all","proe","rz_eff","g2g_eff","third_conv","fourth_att","vs_pos_rb_yds","vs_pos_wr_yds","vs_pos_te_yds"]
+```
+
+- games.csv
+```
+["game_id","roof_state","field_type","attendance","duration","closing_spread","closing_total"]
+```
+
 ## Odds
 
 - odds.csv

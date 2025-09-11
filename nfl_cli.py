@@ -526,19 +526,18 @@ def snapshot_verify(
 
     # Required files for verification (subset of full mapping)
     expected_files = [
-        "rosters.csv",
-        "schedules.csv",
-        "weekly_stats.csv",
-        "snaps.csv",
-        "weather.csv",
-        "depth_charts.csv",
-        "injuries.csv",
-        "pbp.csv",
-        "odds.csv",
+        # Foundation
+        "rosters.csv", "schedules.csv",
+        # Weekly core
+        "weekly_stats.csv", "snaps.csv", "pbp.csv", "weather.csv", "depth_charts.csv", "injuries.csv",
+        # Weekly extended placeholders
+        "routes.csv", "usage_shares.csv", "drives.csv", "transactions.csv", "inactives.csv",
+        "box_passing.csv", "box_rushing.csv", "box_receiving.csv", "box_defense.csv", "kicking.csv",
+        "team_context.csv", "team_splits.csv", "games.csv",
+        # Odds
+        "odds.csv", "odds_history.csv",
         # Reference
-        "players.csv",
-        "teams.csv",
-        "stadiums.csv",
+        "players.csv", "teams.csv", "stadiums.csv",
     ]
 
     table = Table(title="Snapshot Verification (see docs/SNAPSHOT_SCHEMAS.md)")
@@ -720,6 +719,9 @@ def _Phi(z):
 def compute_backtest_metrics(
     target: str = "fantasy_points_ppr",
     sample_limit: int = 200,
+    market: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> dict:
     """Compute basic backtest metrics for a target using recent PlayerGameStats."""
     from core.models.streamlined_models import StreamlinedNFLModels
@@ -749,6 +751,20 @@ def compute_backtest_metrics(
             get_actual = lambda s: float(getattr(s, "fantasy_points_ppr", 0.0) or 0.0)
 
         # Order by recency using created_at (portable across DBs)
+        if start_date:
+            try:
+                from datetime import datetime as _dt
+                sd = _dt.fromisoformat(start_date)
+                q = q.filter(PlayerGameStats.created_at >= sd)
+            except Exception:
+                pass
+        if end_date:
+            try:
+                from datetime import datetime as _dt
+                ed = _dt.fromisoformat(end_date)
+                q = q.filter(PlayerGameStats.created_at <= ed)
+            except Exception:
+                pass
         rows = q.order_by(PlayerGameStats.created_at.desc()).limit(sample_limit).all()
         if not rows:
             return {
@@ -780,17 +796,100 @@ def compute_backtest_metrics(
         if len(a) == 0:
             return {"target": target, "count": 0, "hit_rate": 0.0, "roi": 0.0, "brier": 0.0, "crps": 0.0}
 
+        # Try to load closing lines from latest snapshot for ROI/Brier against line
+        line_map: dict[str, float] = {}
+        odds_market = (market or target or "").lower()
+        # Map target to odds market keys
+        market_alias = {
+            "fantasy_points_ppr": ["player_fantasy_points", "fantasy_points"],
+            "passing_yards": ["player_passing_yds", "player_passing_yards"],
+            "rushing_yards": ["player_rushing_yds", "player_rushing_yards"],
+            "receiving_yards": ["player_rec_yds", "player_receiving_yards"],
+            "receptions": ["player_receptions"],
+        }
+        candidates = [odds_market] + market_alias.get(target, [])
+        try:
+            snap_dir = Path("data/snapshots")
+            dated = [d for d in snap_dir.iterdir() if d.is_dir() and d.name.count('-') == 2]
+            dated.sort(reverse=True)
+            for d in dated:
+                f = d / "odds.csv"
+                if f.exists():
+                    import csv as _csv
+                    with open(f, newline='', encoding='utf-8') as fh:
+                        r = _csv.DictReader(fh)
+                        for rrow in r:
+                            mkt = str(rrow.get("market", "")).lower()
+                            if any(mkt == c for c in candidates):
+                                pid = str(rrow.get("player_id", "")).strip()
+                                try:
+                                    line_map[pid] = float(rrow.get("line")) if rrow.get("line") not in (None, "") else None  # type: ignore
+                                except Exception:
+                                    continue
+                    if line_map:
+                        break
+        except Exception:
+            pass
+
         # Metrics
         rmse = float(np.sqrt(np.mean((p - a) ** 2))) if len(a) else 0.0
         mae = float(np.mean(np.abs(p - a))) if len(a) else 0.0
+        # Hit rate vs line if available; else tolerance-based
         tol = 5.0 if target == "fantasy_points_ppr" else (15.0 if target.endswith("yards") else 2.0)
-        hit_rate = float(np.mean((np.abs(p - a) <= tol).astype(float)))
+        if line_map:
+            # Consider an 'over' signal if predicted > line
+            signals = []
+            outcomes = []
+            for s, mu in zip(rows, p.tolist()):
+                pid = getattr(s, "player_id", "")
+                line = line_map.get(pid)
+                if line is None:
+                    continue
+                signals.append(mu > line)
+                actual = get_actual(s)
+                outcomes.append(actual > line)
+            if signals:
+                hit_rate = float(np.mean((np.array(signals) == np.array(outcomes)).astype(float)))
+            else:
+                # Fallback if no player lines matched
+                hit_rate = float(np.mean((np.abs(p - a) <= tol).astype(float)))
+        else:
+            hit_rate = float(np.mean((np.abs(p - a) <= tol).astype(float)))
 
         # Threshold for binary event and probability from normal model
-        threshold = float(np.median(a))
+        threshold = float(np.median(a)) if len(a) else 0.0
         sigma = float(rmse or (np.std(a - p) if len(a) > 1 else 1.0)) or 1.0
-        outcomes = (a > threshold).astype(float)
-        z = (threshold - p) / sigma
+        # If we have lines, use them as thresholds; else median
+        if line_map:
+            # Build arrays only for matched rows
+            matched_idx = []
+            xs = []
+            mus = []
+            ls = []
+            pids = []
+            for idx, s in enumerate(rows):
+                pid = getattr(s, "player_id", "")
+                line = line_map.get(pid)
+                if line is None:
+                    continue
+                matched_idx.append(idx)
+                xs.append(a[idx])
+                mus.append(p[idx])
+                ls.append(line)
+                pids.append(pid)
+            if xs:
+                a_use = np.array(xs)
+                p_use = np.array(mus)
+                thr = np.array(ls)
+                outcomes = (a_use > thr).astype(float)
+                z = (thr - p_use) / sigma
+            else:
+                outcomes = (a > threshold).astype(float)
+                z = (threshold - p) / sigma if len(p) else np.array([])
+        else:
+            outcomes = (a > threshold).astype(float) if len(a) else np.array([])
+            z = (threshold - p) / sigma if len(p) else np.array([])
+
         probs_over = 1.0 - _Phi(z)
         brier = float(np.mean((probs_over - outcomes) ** 2))
 
@@ -801,14 +900,34 @@ def compute_backtest_metrics(
         crps = float(np.mean(np.abs(crps_vals)))
 
         # ROI with synthetic -110 odds based on correct side relative to threshold
-        win_mask = ((p > threshold) & (a > threshold)) | ((p <= threshold) & (a <= threshold))
-        roi = float(np.mean(np.where(win_mask, 0.9091, -1.0)))
+        if line_map and len(a):
+            # ROI using -110 odds by default if book prices missing
+            signals = []
+            actuals_over = []
+            for s, mu in zip(rows, p.tolist()):
+                pid = getattr(s, "player_id", "")
+                line = line_map.get(pid)
+                if line is None:
+                    continue
+                signals.append(mu > line)
+                actuals_over.append(get_actual(s) > line)
+            if signals:
+                wins = np.array(signals) == np.array(actuals_over)
+                roi = float(np.mean(np.where(wins, 0.9091, -1.0))) if len(wins) else 0.0
+            else:
+                # Fallback to threshold-based ROI if nothing matched
+                win_mask = ((p > threshold) & (a > threshold)) | ((p <= threshold) & (a <= threshold)) if len(a) else np.array([])
+                roi = float(np.mean(np.where(win_mask, 0.9091, -1.0))) if len(a) else 0.0
+        else:
+            win_mask = ((p > threshold) & (a > threshold)) | ((p <= threshold) & (a <= threshold)) if len(a) else np.array([])
+            roi = float(np.mean(np.where(win_mask, 0.9091, -1.0))) if len(a) else 0.0
 
         # Outputs
-        reports_dir = Path("reports/backtests")
+        subdir = (market or target or "misc").replace("/", "_")
+        reports_dir = Path("reports/backtests") / subdir
         reports_dir.mkdir(parents=True, exist_ok=True)
-        json_path = reports_dir / f"backtest_{target}.json"
-        plot_path = reports_dir / f"calibration_{target}.png"
+        json_path = reports_dir / f"metrics.json"
+        plot_path = reports_dir / f"calibration.png"
 
         # Save plot
         try:
@@ -852,12 +971,15 @@ def compute_backtest_metrics(
 @app.command()
 def backtest(
     target: Annotated[str, typer.Option("--target", help="Target to backtest")] = "fantasy_points_ppr",
+    market: Annotated[Optional[str], typer.Option("--market", help="Odds market (e.g., player_receiving_yards)")] = None,
+    start_date: Annotated[Optional[str], typer.Option("--start", help="Start date YYYY-MM-DD")] = None,
+    end_date: Annotated[Optional[str], typer.Option("--end", help="End date YYYY-MM-DD")] = None,
     sample_limit: Annotated[int, typer.Option("--limit", help="Number of samples")] = 200,
 ):
     """Run a quick backtest and generate metrics + calibration plot."""
     console.print(f"[bold blue]Running backtest for {target}[/bold blue]")
     try:
-        metrics = compute_backtest_metrics(target=target, sample_limit=sample_limit)
+        metrics = compute_backtest_metrics(target=target, market=market, start_date=start_date, end_date=end_date, sample_limit=sample_limit)
         table = Table(title=f"Backtest Metrics - {target}")
         for k in ["count", "rmse", "mae", "hit_rate", "roi", "brier", "crps"]:
             table.add_row(k, str(metrics.get(k)))
@@ -1124,16 +1246,16 @@ def sim(
         raise typer.Exit(1)
 
 
-# BACKTEST COMMAND
-@app.command()
-def backtest(
+# LEGACY BACKTEST COMMAND (synthetic placeholder)
+@app.command("backtest-legacy")
+def backtest_legacy(
     market: Annotated[str, typer.Option("--market", help="Market to backtest")] = "player_rec_yds",
     since: Annotated[Optional[str], typer.Option("--since", help="Start date (YYYY-MM-DD)")] = None,
     weeks: Annotated[int, typer.Option("--weeks", help="Number of weeks to backtest")] = 8,
     output_dir: Annotated[str, typer.Option("--output-dir", help="Output directory")] = "reports/backtests"
 ):
-    """Run backtesting framework for model validation"""
-    console.print(f"[bold blue]Running backtest for {market}[/bold blue]")
+    """Run legacy synthetic backtesting framework (for demos). Prefer 'backtest' command for real metrics."""
+    console.print(f"[bold blue]Running legacy backtest for {market}[/bold blue]")
     
     try:
         with Progress(

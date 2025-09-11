@@ -71,6 +71,12 @@ python nfl_cli.py sync-roster --deactivate-missing False
 # Show saved models and performance summary
 python nfl_cli.py models-status
 
+# Run a real backtest (uses odds lines when available)
+python nfl_cli.py backtest --target receiving_yards --market player_receiving_yards --limit 300
+
+# Legacy synthetic backtest (for demos; prefer 'backtest')
+python nfl_cli.py backtest-legacy --market player_rec_yds --weeks 8
+
 # Start the unified FastAPI server
 python nfl_cli.py run-api --host 0.0.0.0 --port 8000
 
@@ -241,6 +247,9 @@ models:
 Run the test suite:
 
 ```bash
+# Full verification (prepares artifacts, runs tests, lint, mypy)
+make verify
+
 # Run all tests
 python run_nfl_system.py test
 
