@@ -891,6 +891,77 @@ async def get_props(
         "note": "Integration with sportsbook APIs required"
     }
 
+@app.get("/betting/edge")
+@limiter.limit("120/minute")
+async def get_edge(
+    request: Request,
+    market: str = Query(..., description="Canonical market (e.g., player_rec_yds) or friendly name"),
+    line: float = Query(..., description="Sportsbook line to compare against"),
+    player_id: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Compute a simple edge (predicted - line) using recent averages.
+
+    - For player markets, use the last 5 games from PlayerGameStats.
+    - For team markets (h2h/spreads/totals), returns no prediction.
+    """
+    try:
+        from core.data.market_mapping import normalize_market
+        cm = normalize_market(market)
+        if not cm:
+            raise HTTPException(status_code=400, detail=f"Unknown market: {market}")
+
+        # Map player markets to PlayerGameStats columns
+        stat_map = {
+            "player_rec_yds": "receiving_yards",
+            "player_rec": "receptions",
+            "player_rush_yds": "rushing_yards",
+            "player_pass_yds": "passing_yards",
+            "player_pass_tds": "passing_touchdowns",
+            "player_rush_tds": "rushing_touchdowns",
+            "player_rec_tds": "receiving_touchdowns",
+            # others can be added as needed
+        }
+
+        predicted: Optional[float] = None
+
+        if player_id and cm in stat_map:
+            # Recent average over last N games
+            N = 5
+            stat_col = getattr(PlayerGameStats, stat_map[cm])
+            q = (
+                db.query(stat_col, Game.game_date)
+                .join(Game, PlayerGameStats.game_id == Game.game_id)
+                .filter(PlayerGameStats.player_id == player_id)
+                .order_by(desc(Game.game_date))
+                .limit(N)
+            )
+            values = [getattr(row, stat_map[cm]) for row in q.all() if getattr(row, stat_map[cm]) is not None]
+            if values:
+                predicted = float(sum(values) / len(values))
+
+        # For team markets, leave predicted as None for now
+
+        edge_val: Optional[float] = None
+        if predicted is not None and line is not None:
+            edge_val = float(predicted - float(line))
+
+        return {
+            "market": cm,
+            "player_id": player_id,
+            "team_id": team_id,
+            "line": line,
+            "predicted": predicted,
+            "edge": edge_val,
+            "timestamp": datetime.now(),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.debug(f"get_edge error: {e}")
+        raise HTTPException(status_code=500, detail="Edge computation failed")
+
 # WEB PAGES
 @app.get("/web/odds", response_class=HTMLResponse)
 async def web_odds(request: Request):
@@ -909,6 +980,152 @@ async def web_backtests(request: Request):
     except Exception as e:
         logger.warning(f"Failed to render backtests page: {e}")
         return HTMLResponse(content="<h3>Backtests page unavailable</h3>", status_code=500)
+
+@app.get("/teams", response_class=HTMLResponse)
+async def web_teams(request: Request, db: Session = Depends(get_db)):
+    """Teams page: renders a grid of team abbreviations based on current DB contents."""
+    try:
+        teams = db.query(Player.current_team).distinct().filter(Player.current_team.isnot(None)).all()
+        team_list = [t[0] for t in teams if t[0]]
+        return templates.TemplateResponse("teams.html", {"request": request, "teams": sorted(team_list)})
+    except Exception as e:
+        logger.warning(f"Failed to render teams page: {e}")
+        return HTMLResponse(content="<h3>Teams page unavailable</h3>", status_code=500)
+
+@app.get("/games", response_class=HTMLResponse)
+async def web_games(request: Request, db: Session = Depends(get_db)):
+    """Games page: shows upcoming and recent games using schedules in the DB."""
+    try:
+        today = date.today()
+        upcoming_games = (
+            db.query(Game)
+            .filter(Game.game_date.isnot(None), Game.game_date >= today)
+            .order_by(Game.game_date.asc())
+            .limit(20)
+            .all()
+        )
+        recent_games = (
+            db.query(Game)
+            .filter(Game.game_date.isnot(None), Game.game_date < today)
+            .order_by(Game.game_date.desc())
+            .limit(20)
+            .all()
+        )
+        return templates.TemplateResponse(
+            "games.html",
+            {"request": request, "upcoming_games": upcoming_games, "recent_games": recent_games},
+        )
+    except Exception as e:
+        logger.warning(f"Failed to render games page: {e}")
+        return HTMLResponse(content="<h3>Games page unavailable</h3>", status_code=500)
+
+@app.get("/predictions", response_class=HTMLResponse)
+async def web_predictions(
+    request: Request,
+    position: Optional[str] = Query(None),
+    team: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Predictions page: shows a simple list of player predictions.
+    If models are not available, uses placeholder stats.
+    """
+    try:
+        # Fetch a small set of players based on filters
+        query = db.query(Player)
+        if position:
+            query = query.filter(Player.position == position.upper())
+        if team:
+            query = query.filter(Player.current_team == team.upper())
+        players = query.limit(24).all()
+
+        items = []
+        for p in players:
+            # Placeholder stats; if model endpoints are available, they can be integrated later
+            stats = {
+                "name": p.name,
+                "position": p.position,
+                "team": p.current_team or "",
+                "fantasy_points_ppr": 0.0,
+                "anytime_touchdown_probability": 0.15,
+                "passing_yards": 0,
+                "passing_touchdowns": 0,
+                "rushing_yards": 0,
+                "rushing_touchdowns": 0,
+                "receptions": 0,
+                "receiving_yards": 0,
+                "receiving_touchdowns": 0,
+                "receiving_catch_percentage": 0.0,
+                "over_under_yards": 0,
+                "prediction_confidence": 0.5,
+            }
+            items.append({"player": {"player_id": p.player_id}, "stats": stats})
+
+        return templates.TemplateResponse(
+            "predictions.html",
+            {
+                "request": request,
+                "predictions": items,
+                "selected_position": (position or "").upper() or None,
+                "selected_team": (team or "").upper() or None,
+            },
+        )
+    except Exception as e:
+        logger.warning(f"Failed to render predictions page: {e}")
+        return HTMLResponse(content="<h3>Predictions page unavailable</h3>", status_code=500)
+
+@app.get("/team/{team_id}", response_class=HTMLResponse)
+async def web_team_detail(team_id: str, request: Request, db: Session = Depends(get_db)):
+    """Team detail page rendering roster grouped by position."""
+    try:
+        players = db.query(Player).filter(Player.current_team == team_id.upper()).all()
+        by_pos: Dict[str, List[Any]] = {}
+        for p in players:
+            by_pos.setdefault(p.position or "UNK", []).append(p)
+        # Sort players by name within each position
+        for k in list(by_pos.keys()):
+            by_pos[k] = sorted(by_pos[k], key=lambda x: (x.position or '', x.name or ''))
+        return templates.TemplateResponse(
+            "team_detail.html",
+            {"request": request, "team_code": team_id.upper(), "players_by_position": by_pos},
+        )
+    except Exception as e:
+        logger.warning(f"Failed to render team page for {team_id}: {e}")
+        return HTMLResponse(content=f"<h3>Team page unavailable for {team_id}</h3>", status_code=500)
+
+@app.get("/game/{game_id}", response_class=HTMLResponse)
+async def web_game_detail(game_id: str, request: Request, db: Session = Depends(get_db)):
+    """Game detail page with a lightweight placeholder prediction."""
+    try:
+        game = db.query(Game).filter(Game.game_id == game_id).first()
+        if not game:
+            raise HTTPException(status_code=404, detail="Game not found")
+        # Minimal placeholder prediction
+        prediction = {
+            "game_info": {
+                "total_points": 44.5,
+                "spread": 1.5,
+                "score_confidence": 0.6,
+                "home_score": 23.0,
+                "away_score": 21.5,
+                "game_script": "balanced",
+            },
+            "total_passing_yards": 520,
+            "total_rushing_yards": 220,
+            "total_touchdowns": 6,
+            "top_fantasy_performers": [("Top Player A", 22.3), ("Top Player B", 19.8)],
+            "top_passing_yards": [("QB1", 280), ("QB2", 240)],
+            "top_rushing_yards": [("RB1", 110), ("RB2", 95)],
+            "top_receiving_yards": [("WR1", 105), ("WR2", 88)],
+        }
+        return templates.TemplateResponse(
+            "game_detail.html",
+            {"request": request, "game": game, "prediction": prediction},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Failed to render game page for {game_id}: {e}")
+        return HTMLResponse(content=f"<h3>Game page unavailable for {game_id}</h3>", status_code=500)
 
 @app.get("/reports/backtests")
 async def list_backtests():

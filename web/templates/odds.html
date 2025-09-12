@@ -39,6 +39,8 @@
         <th class="text-end">Line</th>
         <th class="text-end">Over</th>
         <th class="text-end">Under</th>
+        <th class="text-end">Pred</th>
+        <th class="text-end">Edge</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -64,6 +66,27 @@
 
   function formatOdds(v) { return (v === null || v === undefined || v === '') ? '' : v; }
   function formatLine(v) { return (v === null || v === undefined || v === '') ? '' : Number(v).toFixed(2); }
+  function isPlayerMarket(m) {
+    return [
+      'player_rec_yds','player_rec','player_rush_yds','player_pass_yds','player_pass_tds','player_rush_tds','player_rec_tds'
+    ].includes((m||'').toLowerCase());
+  }
+
+  async function fetchEdgeForOffer(o) {
+    try {
+      if (!o.player_id || !isPlayerMarket(o.market) || o.line === null || o.line === undefined || o.line === '') return {predicted: null, edge: null};
+      const url = new URL(window.location.origin + '/betting/edge');
+      url.searchParams.set('market', o.market);
+      url.searchParams.set('line', o.line);
+      url.searchParams.set('player_id', o.player_id);
+      const resp = await fetch(url);
+      if (!resp.ok) return {predicted: null, edge: null};
+      const data = await resp.json();
+      return {predicted: data.predicted ?? null, edge: data.edge ?? null};
+    } catch (_) {
+      return {predicted: null, edge: null};
+    }
+  }
 
   async function runQuery() {
     resultsBody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
@@ -74,12 +97,18 @@
         team: document.getElementById('team').value,
       };
       const data = await fetchOffers(params);
-      const offers = data.offers || [];
+      const offers = (data.offers || []).slice(0, 100);
+      const edges = await Promise.all(offers.map(fetchEdgeForOffer));
       if (!offers.length) {
         resultsBody.innerHTML = '<tr><td colspan="8" class="text-muted">No offers found</td></tr>';
         return;
       }
-      resultsBody.innerHTML = offers.map(o => `
+      resultsBody.innerHTML = offers.map((o, idx) => {
+        const pred = edges[idx]?.predicted;
+        const edge = edges[idx]?.edge;
+        const predStr = (pred === null || pred === undefined || pred === '') ? '' : Number(pred).toFixed(1);
+        const edgeStr = (edge === null || edge === undefined || edge === '') ? '' : Number(edge).toFixed(1);
+        return `
         <tr>
           <td>${o.timestamp || ''}</td>
           <td>${o.book || ''}</td>
@@ -89,8 +118,10 @@
           <td class="text-end">${formatLine(o.line)}</td>
           <td class="text-end">${formatOdds(o.over_odds)}</td>
           <td class="text-end">${formatOdds(o.under_odds)}</td>
-        </tr>
-      `).join('');
+          <td class="text-end">${predStr}</td>
+          <td class="text-end">${edgeStr}</td>
+        </tr>`;
+      }).join('');
     } catch (err) {
       resultsBody.innerHTML = `<tr><td colspan="8" class="text-danger">${err.message}</td></tr>`;
     }
