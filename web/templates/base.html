@@ -20,16 +20,16 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="/web"><i class="fas fa-football-ball"></i> NFL Predictions</a>
+            <a class="navbar-brand" href="/games"><i class="fas fa-football-ball"></i> NFL Predictions</a>
             <div class="navbar-nav">
-                <a class="nav-link" href="/web/players">Players</a>
-                <a class="nav-link" href="/teams">Teams</a>
-                <a class="nav-link" href="/games">Games</a>
-                <a class="nav-link" href="/predictions">Predictions</a>
-                <a class="nav-link" href="/web/leaderboards">Leaderboards</a>
-                <a class="nav-link" href="/web/odds">Odds</a>
-                <a class="nav-link" href="/web/backtests">Backtests</a>
-                <a class="nav-link" href="/web/insights">Insights</a>
+                <a class="nav-link {% if request and request.url.path.startswith('/web/players') %}active{% endif %}" href="/web/players">Players</a>
+                <a class="nav-link {% if request and (request.url.path.startswith('/teams') or request.url.path.startswith('/team/')) %}active{% endif %}" href="/teams">Teams</a>
+                <a class="nav-link {% if request and request.url.path.startswith('/games') %}active{% endif %}" href="/games">Games</a>
+                <a class="nav-link {% if request and request.url.path.startswith('/predictions') %}active{% endif %}" href="/predictions">Predictions</a>
+                <a class="nav-link {% if request and request.url.path.startswith('/web/leaderboards') %}active{% endif %}" href="/web/leaderboards">Leaderboards</a>
+                <a class="nav-link {% if request and request.url.path.startswith('/web/odds') %}active{% endif %}" href="/web/odds">Odds</a>
+                <a class="nav-link {% if request and request.url.path.startswith('/web/backtests') %}active{% endif %}" href="/web/backtests">Backtests</a>
+                <a class="nav-link {% if request and request.url.path.startswith('/web/insights') %}active{% endif %}" href="/web/insights">Insights</a>
             </div>
         </div>
     </nav>

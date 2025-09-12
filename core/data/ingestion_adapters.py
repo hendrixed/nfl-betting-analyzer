@@ -28,6 +28,7 @@ except Exception:
     nfl = None  # type: ignore
 from sqlalchemy.orm import Session
 from core.data.market_mapping import normalize_team_name
+from core.database_models import DepthChart as DepthChartModel, Player as PlayerModel
 
 logger = logging.getLogger(__name__)
 
@@ -1092,6 +1093,113 @@ class UnifiedDataIngestion:
         path = Path("data/snapshots") / date_str
         path.mkdir(parents=True, exist_ok=True)
         return path
+
+    def _latest_snapshot_dir(self) -> Optional[Path]:
+        try:
+            base = Path("data/snapshots")
+            if not base.exists():
+                return None
+            dirs = [p for p in base.iterdir() if p.is_dir()]
+            return sorted(dirs)[-1] if dirs else None
+        except Exception:
+            return None
+
+    def ingest_depth_chart_snapshot(self, date_str: Optional[str] = None, season: Optional[int] = None, week: Optional[int] = None) -> Dict[str, Any]:
+        """Ingest depth_charts.csv from a snapshot directory into the DepthChart table.
+        If date_str is None, uses the latest snapshot dir.
+        Creates minimal Player rows when missing to satisfy FK linkage.
+        Returns { 'rows': inserted_rows, 'path': str(path) }.
+        """
+        import pandas as pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "depth_charts.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            df = pd.read_csv(path)
+            # Validate minimal headers
+            min_cols = set(SNAPSHOT_MIN_COLUMNS.get("depth_charts.csv", []))
+            if not min_cols.issubset(set(df.columns)):
+                # attempt to harmonize typical alt names
+                pass
+
+            inserted = 0
+            # Optional week/season columns
+            week_col = "week" if "week" in df.columns else None
+            season_col = "season" if "season" in df.columns else None
+
+            # Group by team to clean existing rows
+            teams = sorted(set(df["team"].astype(str).str.upper().tolist()))
+            for t in teams:
+                q = self.session.query(DepthChartModel).filter(DepthChartModel.team == t)
+                if week is not None:
+                    q = q.filter(DepthChartModel.week == week)
+                if season is not None:
+                    q = q.filter(DepthChartModel.season == season)
+                try:
+                    q.delete(synchronize_session=False)
+                    self.session.commit()
+                except Exception:
+                    self.session.rollback()
+
+            for _, row in df.iterrows():
+                team = str(row.get("team", "")).upper()
+                player_id = str(row.get("player_id", "")).strip()
+                position = str(row.get("position", "")).upper()
+                rank_val = row.get("depth_chart_rank", None)
+                try:
+                    rank = int(rank_val) if pd.notna(rank_val) else None
+                except Exception:
+                    rank = None
+                if not team or not player_id or not position or rank is None:
+                    continue
+                w = int(row.get(week_col)) if week_col and pd.notna(row.get(week_col)) else week
+                s = int(row.get(season_col)) if season_col and pd.notna(row.get(season_col)) else season
+
+                # Ensure Player exists (minimal upsert)
+                try:
+                    p = self.session.query(PlayerModel).filter(PlayerModel.player_id == player_id).first()
+                    if not p:
+                        p = PlayerModel(
+                            player_id=player_id,
+                            name=row.get("player_name") or player_id,
+                            position=position or "UNK",
+                            current_team=team,
+                            is_active=True,
+                            is_retired=False,
+                            depth_chart_rank=rank,
+                        )
+                        self.session.add(p)
+                        self.session.commit()
+                except Exception:
+                    self.session.rollback()
+                # Insert DepthChart row
+                try:
+                    dc = DepthChartModel(
+                        team=team,
+                        position=position,
+                        player_id=player_id,
+                        rank=rank,
+                        week=w,
+                        season=s,
+                    )
+                    self.session.add(dc)
+                    inserted += 1
+                except Exception:
+                    self.session.rollback()
+            try:
+                self.session.commit()
+            except Exception:
+                self.session.rollback()
+            results["rows"] = inserted
+            return results
+        except Exception as e:
+            logger.error(f"Depth chart ingest failed: {e}")
+            return results
     
     def _write_snapshot_csv(self, df: pd.DataFrame, filename: str, date_str: str) -> Path:
         """Write a DataFrame to the snapshot CSV file and return its path.

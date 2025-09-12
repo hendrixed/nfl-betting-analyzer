@@ -198,6 +198,88 @@
 </div>
 {% endif %}
 
+{% if leaders %}
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0"><i class="fas fa-paper-plane"></i> Passing Leaders (DB)</h6></div>
+      <div class="card-body">
+        {% for l in leaders.passing_yards %}
+        <div class="d-flex justify-content-between mb-2">
+          <span><a href="/player/{{ l.player_id }}">{{ l.name }}</a> ({{ l.team }})</span>
+          <span class="fw-bold">{{ l.value|round|int }} yds</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0"><i class="fas fa-running"></i> Rushing Leaders (DB)</h6></div>
+      <div class="card-body">
+        {% for l in leaders.rushing_yards %}
+        <div class="d-flex justify-content-between mb-2">
+          <span><a href="/player/{{ l.player_id }}">{{ l.name }}</a> ({{ l.team }})</span>
+          <span class="fw-bold">{{ l.value|round|int }} yds</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0"><i class="fas fa-hands"></i> Receiving Leaders (DB)</h6></div>
+      <div class="card-body">
+        {% for l in leaders.receiving_yards %}
+        <div class="d-flex justify-content-between mb-2">
+          <span><a href="/player/{{ l.player_id }}">{{ l.name }}</a> ({{ l.team }})</span>
+          <span class="fw-bold">{{ l.value|round|int }} yds</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  </div>
+{% endif %}
+
+{% if offers %}
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0"><i class="fas fa-coins"></i> Odds Summary</h6></div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th>Book</th>
+                <th>Market</th>
+                <th>Team</th>
+                <th class="text-end">Line</th>
+                <th class="text-end">Over</th>
+                <th class="text-end">Under</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for o in offers %}
+              <tr>
+                <td>{{ o.book }}</td>
+                <td>{{ o.market }}</td>
+                <td>{{ o.team_id }}</td>
+                <td class="text-end">{{ o.line }}</td>
+                <td class="text-end">{{ o.over_odds }}</td>
+                <td class="text-end">{{ o.under_odds }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% else %}
 <div class="row mb-4">
     <div class="col-12">

@@ -59,6 +59,12 @@
               <input type="number" min="1" max="200" class="form-control" id="page_size" name="page_size" value="{{ page_size or 24 }}">
             </div>
             <div class="col-md-3 d-flex align-items-end">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="true" id="exclude_inactive" name="exclude_inactive" {% if exclude_inactive is not defined or exclude_inactive %}checked{% endif %}>
+                <label class="form-check-label" for="exclude_inactive">Exclude inactive</label>
+              </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
               <button class="btn btn-primary w-100" type="submit">Apply</button>
             </div>
           </div>
@@ -80,7 +86,8 @@
       + ('sort=' ~ sort ~ '&') | safe
       + ('order=' ~ order ~ '&') | safe
       + ('page_size=' ~ page_size ~ '&') | safe
-      + ('page=' ~ page ~ '&') | safe %}
+      + ('page=' ~ page ~ '&') | safe
+      + ('include_inactive=true&' if include_inactive) | safe %}
     <div class="btn-group">
       <a class="btn btn-sm btn-outline-success" href="{{ export_base }}" target="_blank">
         <i class="fas fa-file-csv"></i> Export Current Page
@@ -144,7 +151,8 @@
       + ('team=' ~ selected_team ~ '&' if selected_team) | safe
       + ('sort=' ~ sort ~ '&') | safe
       + ('order=' ~ order ~ '&') | safe
-      + ('page_size=' ~ page_size ~ '&') | safe %}
+      + ('page_size=' ~ page_size ~ '&') | safe
+      + ('exclude_inactive=false&' if include_inactive and (not exclude_inactive)) | safe %}
     <a class="btn btn-sm btn-outline-secondary {% if page<=1 %}disabled{% endif %}" href="{{ base }}page={{ page-1 }}">Prev</a>
     <span class="mx-2 small">Page {{ page }} / {{ last_page if last_page>0 else 1 }}</span>
     <a class="btn btn-sm btn-outline-secondary {% if page>=last_page %}disabled{% endif %}" href="{{ base }}page={{ page+1 }}">Next</a>

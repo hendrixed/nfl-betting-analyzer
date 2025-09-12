@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse, RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 from pydantic import BaseModel, Field, validator
@@ -76,11 +76,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.database_models import get_db_session, Player, PlayerGameStats, Game
 from core.services.browse_service import (
     get_player_profile,
+    get_player,
     get_player_gamelog,
     get_player_career_totals,
     search_players,
     get_team_info,
+    get_team,
     get_team_depth_chart,
+    get_depth_chart,
     get_team_schedule,
     get_leaderboard,
     get_leaderboard_paginated,
@@ -437,19 +440,8 @@ async def real_time_update_task():
 
 @app.get("/")
 async def root():
-    """API root endpoint"""
-    return {
-        "message": "NFL Predictions API",
-        "version": "2.0.0",
-        "status": "active",
-        "endpoints": {
-            "health": "/health",
-            "players": "/players",
-            "predictions": "/predictions",
-            "betting": "/betting",
-            "websocket": "/ws"
-        }
-    }
+    """Redirect hub to /games (Phase 0)."""
+    return RedirectResponse(url="/games", status_code=302)
 
 # ADMIN ENDPOINTS
 
@@ -1142,10 +1134,13 @@ async def web_players(
     page_size: int = Query(24, ge=1, le=200),
     sort: str = Query("name"),
     order: str = Query("asc"),
+    include_inactive: bool = Query(False, description="Include inactive players"),
+    exclude_inactive: bool = Query(True, description="Exclude inactive players (UI toggle)"),
     db: Session = Depends(get_db),
 ):
     """Players browse page with filters, pagination, and sorting."""
     try:
+        include_inactive_final = include_inactive or (not exclude_inactive)
         data = search_players(
             db,
             q=q,
@@ -1155,6 +1150,7 @@ async def web_players(
             page_size=page_size,
             sort=sort,
             order=order,
+            include_inactive=include_inactive_final,
         )
         return templates.TemplateResponse(
             request,
@@ -1169,6 +1165,8 @@ async def web_players(
                 "selected_position": (position or "").upper() or None,
                 "selected_team": (team or "").upper() or None,
                 "query": q or "",
+                "include_inactive": include_inactive_final,
+                "exclude_inactive": exclude_inactive,
             },
         )
     except Exception as e:
@@ -1271,28 +1269,56 @@ async def web_game_detail(game_id: str, request: Request, db: Session = Depends(
         game = db.query(Game).filter(Game.game_id == game_id).first()
         if not game:
             raise HTTPException(status_code=404, detail="Game not found")
-        # Minimal placeholder prediction
+        # Minimal placeholder totals and score info
         prediction = {
             "game_info": {
                 "total_points": 44.5,
                 "spread": 1.5,
                 "score_confidence": 0.6,
-                "home_score": 23.0,
-                "away_score": 21.5,
-                "game_script": "balanced",
             },
             "total_passing_yards": 520,
             "total_rushing_yards": 220,
             "total_touchdowns": 6,
-            "top_fantasy_performers": [("Top Player A", 22.3), ("Top Player B", 19.8)],
-            "top_passing_yards": [("QB1", 280), ("QB2", 240)],
-            "top_rushing_yards": [("RB1", 110), ("RB2", 95)],
-            "top_receiving_yards": [("WR1", 105), ("WR2", 88)],
         }
+        # Real leaders from DB
+        from core.database_models import PlayerGameStats as PGS
+        def _leaders(stat_col, top=3):
+            q = (
+                db.query(Player.player_id, Player.name, Player.position, Player.current_team, stat_col.label("value"))
+                .join(PGS, Player.player_id == PGS.player_id)
+                .filter(PGS.game_id == game_id)
+                .order_by(desc(stat_col))
+                .limit(top)
+            )
+            res = []
+            for pid, name, pos, team, val in q:
+                res.append({"player_id": pid, "name": name, "position": pos, "team": team, "value": float(val or 0.0)})
+            return res
+        leaders = {
+            "passing_yards": _leaders(PGS.passing_yards),
+            "rushing_yards": _leaders(PGS.rushing_yards),
+            "receiving_yards": _leaders(PGS.receiving_yards),
+        }
+        # Odds summary (if snapshot exists)
+        offers = []
+        try:
+            snap_dir = latest_snapshot_dir()
+            if snap_dir is not None:
+                odds_path = snap_dir / "odds.csv"
+                if odds_path.exists():
+                    import csv
+                    with open(odds_path, newline="", encoding="utf-8") as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            team_id = (row.get("team_id") or "").upper()
+                            if team_id in {game.home_team, game.away_team}:
+                                offers.append(row)
+        except Exception:
+            pass
         return templates.TemplateResponse(
             request,
             "game_detail.html",
-            {"game": game, "prediction": prediction},
+            {"game": game, "prediction": prediction, "leaders": leaders, "offers": offers[:10]},
         )
     except HTTPException:
         raise
@@ -1325,6 +1351,9 @@ async def web_player_detail(
         # Browse service details
         career = get_player_career_totals(db, player_id)
         gamelog = get_player_gamelog(db, player_id, season=season)
+        profile = get_player_profile(db, player_id)
+        season_summary = profile.get("current_season", {}) if isinstance(profile, dict) else {}
+        pred_available = models_available()
 
         return templates.TemplateResponse(
             request,
@@ -1335,6 +1364,8 @@ async def web_player_detail(
                 "career": career,
                 "gamelog": gamelog,
                 "season": season,
+                "season_summary": season_summary,
+                "prediction_available": pred_available,
             },
         )
     except HTTPException:
@@ -1449,17 +1480,8 @@ async def get_models():
 
 @app.get("/web", response_class=HTMLResponse)
 async def home(request: Request, db: Session = Depends(get_db)):
-    """Web interface home page"""
-    try:
-        # Get recent games for display
-        recent_games = db.query(Game).order_by(desc(Game.game_date)).limit(5).all()
-        
-        return templates.TemplateResponse(request, "index.html", {
-            "title": "NFL Predictions Dashboard",
-            "recent_games": recent_games
-        })
-    except Exception as e:
-        return HTMLResponse(f"<h1>NFL Predictions Dashboard</h1><p>Template error: {e}</p>")
+    """Redirect legacy web root to /games (Phase 0)."""
+    return RedirectResponse(url="/games", status_code=302)
 
 # API ENDPOINTS FOR WEB INTERFACE
 
@@ -1625,14 +1647,15 @@ async def api_browse_players(
     page_size: int = Query(50, ge=1, le=200),
     sort: str = Query("name"),
     order: str = Query("asc"),
+    include_inactive: bool = Query(False),
     db: Session = Depends(get_db),
 ):
     try:
-        key = f"q={q}|team={team}|pos={position}|page={page}|size={page_size}|sort={sort}|order={order}"
+        key = f"q={q}|team={team}|pos={position}|page={page}|size={page_size}|sort={sort}|order={order}|inactive={include_inactive}"
         cached = _cache_get(PLAYERS_BROWSE_CACHE, PLAYERS_BROWSE_TS, key, ttl=60)
         if cached is not None:
             return cached
-        data = search_players(db, q=q, team_id=team, position=position, page=page, page_size=page_size, sort=sort, order=order)
+        data = search_players(db, q=q, team_id=team, position=position, page=page, page_size=page_size, sort=sort, order=order, include_inactive=include_inactive)
         _cache_set(PLAYERS_BROWSE_CACHE, PLAYERS_BROWSE_TS, key, data)
         return data
     except Exception as e:
@@ -1649,16 +1672,17 @@ async def export_players_csv(
     sort: str = Query("name"),
     order: str = Query("asc"),
     all: bool = Query(False, description="Export all matching rows, ignoring pagination"),
+    include_inactive: bool = Query(False, description="Include inactive players"),
     db: Session = Depends(get_db),
 ):
     """Export players browse results to CSV."""
     try:
-        data = search_players(db, q=q, team_id=team, position=position, page=page, page_size=page_size, sort=sort, order=order)
+        data = search_players(db, q=q, team_id=team, position=position, page=page, page_size=page_size, sort=sort, order=order, include_inactive=include_inactive)
         rows = data.get("rows", [])
         total = int(data.get("total", 0))
         if all and total > len(rows):
             # re-query with full size (cap at 100000)
-            full = search_players(db, q=q, team_id=team, position=position, page=1, page_size=min(total, 100000), sort=sort, order=order)
+            full = search_players(db, q=q, team_id=team, position=position, page=1, page_size=min(total, 100000), sort=sort, order=order, include_inactive=include_inactive)
             rows = full.get("rows", [])
 
         import csv
@@ -1681,6 +1705,8 @@ async def export_players_csv(
         logger.error(f"export players csv error: {e}")
         raise HTTPException(status_code=500, detail="Failed to export players CSV")
 
+## Duplicate web_players route removed; see earlier definition around /web/players
+
 @app.get("/api/browse/team/{team_id}")
 async def api_team_info(team_id: str, db: Session = Depends(get_db)):
     try:
@@ -1698,24 +1724,107 @@ async def api_team_depth_chart(team_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Failed to load depth chart")
 
 @app.get("/api/browse/team/{team_id}/schedule")
-async def api_team_schedule(
-    team_id: str,
-    season: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-):
+async def api_team_schedule(team_id: str, season: Optional[int] = Query(None), db: Session = Depends(get_db)):
     try:
         return {"team_id": team_id.upper(), "schedule": get_team_schedule(db, team_id, season=season)}
     except Exception as e:
         logger.error(f"schedule error for {team_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to load schedule")
 
+@app.get("/api/browse/players/{player_id}")
+async def api_browse_player(player_id: str, db: Session = Depends(get_db)):
+    try:
+        return get_player(db, player_id)
+    except Exception as e:
+        logger.error(f"player browse error for {player_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load player")
+
+@app.get("/api/browse/players/{player_id}/gamelog")
+async def api_browse_player_gamelog(player_id: str, season: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    try:
+        return {"player_id": player_id, "season": season, "gamelog": get_player_gamelog(db, player_id, season=season)}
+    except Exception as e:
+        logger.error(f"player gamelog error for {player_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load player gamelog")
+
+# RESTful teams endpoints (aliases of existing /api/browse/team/*)
+@app.get("/api/browse/teams/{team_id}")
+async def api_browse_team(team_id: str, db: Session = Depends(get_db)):
+    try:
+        return get_team_info(db, team_id)
+    except Exception as e:
+        logger.error(f"team browse error for {team_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load team")
+
+@app.get("/api/browse/teams/{team_id}/roster")
+async def api_browse_team_roster(team_id: str, db: Session = Depends(get_db)):
+    try:
+        info = get_team_info(db, team_id)
+        return {"team_id": team_id.upper(), "roster": info.get("roster", [])}
+    except Exception as e:
+        logger.error(f"team roster error for {team_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load roster")
+
+@app.get("/api/browse/teams/{team_id}/depth-chart")
+async def api_browse_team_depth_chart(team_id: str, week: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    try:
+        return {"team_id": team_id.upper(), "depth_chart": get_depth_chart(db, team_id, week=week)}
+    except Exception as e:
+        logger.error(f"team depth chart error for {team_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load depth chart")
+
+@app.get("/api/browse/teams/{team_id}/schedule")
+async def api_browse_team_schedule(team_id: str, season: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    try:
+        return {"team_id": team_id.upper(), "schedule": get_team_schedule(db, team_id, season=season)}
+    except Exception as e:
+        logger.error(f"team schedule error for {team_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load schedule")
+
+@app.get("/api/browse/games/{game_id}")
+async def api_browse_game(game_id: str, db: Session = Depends(get_db)):
+    try:
+        g = db.query(Game).filter(Game.game_id == game_id).first()
+        if not g:
+            return {"game_id": game_id, "error": "not_found"}
+        from core.database_models import PlayerGameStats as PGS
+        def _leaders(stat_col, top=3):
+            q = (
+                db.query(Player.player_id, Player.name, Player.position, Player.current_team, stat_col.label("value"))
+                .join(PGS, Player.player_id == PGS.player_id)
+                .filter(PGS.game_id == game_id)
+                .order_by(desc(stat_col))
+                .limit(top)
+            )
+            res = []
+            for pid, name, pos, team, val in q:
+                res.append({"player_id": pid, "name": name, "position": pos, "team": team, "value": float(val or 0.0)})
+            return res
+        leaders = {
+            "passing_yards": _leaders(PGS.passing_yards),
+            "rushing_yards": _leaders(PGS.rushing_yards),
+            "receiving_yards": _leaders(PGS.receiving_yards),
+        }
+        return {
+            "game_id": g.game_id,
+            "season": g.season,
+            "week": g.week,
+            "date": g.game_date.isoformat() if g.game_date else None,
+            "home_team": g.home_team,
+            "away_team": g.away_team,
+            "leaders": leaders,
+        }
+    except Exception as e:
+        logger.error(f"game browse error for {game_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load game")
+
 @app.get("/api/browse/leaderboard")
 async def api_leaderboard(
     stat: str = Query("fantasy_points_ppr"),
     season: Optional[int] = Query(None),
     position: Optional[str] = Query(None),
-    page: Optional[int] = Query(1, ge=1),
-    page_size: Optional[int] = Query(25, ge=1, le=200),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=200),
     sort: str = Query("value"),
     order: str = Query("desc"),
     db: Session = Depends(get_db),
@@ -1731,18 +1840,66 @@ async def api_leaderboard(
                 stat=stat,
                 season=season,
                 position=position,
-                page=page or 1,
-                page_size=page_size or 25,
+                page=page,
+                page_size=page_size,
                 sort=sort,
                 order=order,
             )
             _cache_set(LEADERBOARD_CACHE, LEADERBOARD_TS, key, data)
-        # For backward compatibility, include stat/season/position keys
         data.update({"stat": stat, "season": season, "position": position})
         return data
     except Exception as e:
         logger.error(f"leaderboard error: {e}")
         raise HTTPException(status_code=500, detail="Failed to load leaderboard")
+
+@app.get("/api/browse/odds/player/{player_id}")
+async def api_browse_odds_player(player_id: str, market: Optional[str] = Query(None)):
+    try:
+        offers: List[Dict[str, Any]] = []
+        snap_dir = latest_snapshot_dir()
+        if snap_dir is not None:
+            odds_path = snap_dir / "odds.csv"
+            if odds_path.exists():
+                import csv
+                with open(odds_path, newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if (row.get("player_id") or "").strip() != player_id:
+                            continue
+                        if market and (row.get("market") or "").lower() != market.lower():
+                            continue
+                        offers.append(row)
+        return {"player_id": player_id, "market": market, "offers": offers}
+    except Exception as e:
+        logger.error(f"odds player error for {player_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load player odds")
+
+@app.get("/api/browse/odds/game/{game_id}")
+async def api_browse_odds_game(game_id: str):
+    try:
+        offers: List[Dict[str, Any]] = []
+        teams = None
+        try:
+            g = get_db_session().query(Game).filter(Game.game_id == game_id).first()
+            if g:
+                teams = {g.home_team, g.away_team}
+        except Exception:
+            pass
+        snap_dir = latest_snapshot_dir()
+        if snap_dir is not None:
+            odds_path = snap_dir / "odds.csv"
+            if odds_path.exists():
+                import csv
+                with open(odds_path, newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if teams and (row.get("team_id") or "") not in teams:
+                            continue
+                        offers.append(row)
+        return {"game_id": game_id, "offers": offers}
+    except Exception as e:
+        logger.error(f"odds game error for {game_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load game odds")
 
 @app.get("/api/browse/leaderboard/export.csv")
 async def export_leaderboard_csv(

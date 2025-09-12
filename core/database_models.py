@@ -374,6 +374,24 @@ class GamePrediction(Base):
 
 # --- Additional models required by historical standardizer/tests ---
 
+class DepthChart(Base):
+    """Team depth chart entries with ranks for each position."""
+    __tablename__ = 'depth_chart'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    team: Mapped[str] = mapped_column(String(10), index=True, nullable=False)
+    position: Mapped[str] = mapped_column(String(10), index=True, nullable=False)
+    player_id: Mapped[str] = mapped_column(String(50), ForeignKey('players.player_id'), nullable=False)
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    week: Mapped[Optional[int]] = mapped_column(Integer)
+    season: Mapped[Optional[int]] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    __table_args__ = (
+        Index('idx_depth_team_pos', 'team', 'position'),
+        Index('idx_depth_team_week', 'team', 'season', 'week'),
+    )
+
 class PlayerIdentityMapping(Base):
     """Mapping from original player IDs to master standardized IDs."""
     __tablename__ = 'player_identity_mappings'

@@ -11,6 +11,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, desc, asc
 
 from core.database_models import get_db_session, Player, PlayerGameStats, Game, Team
+try:
+    from core.database_models import DepthChart  # type: ignore
+except Exception:  # pragma: no cover
+    DepthChart = None  # type: ignore
 
 
 def _resolve_opponent_and_venue(team: str, game: Game) -> Tuple[str, str]:
@@ -85,6 +89,33 @@ def get_player_profile(session: Session, player_id: str) -> Dict[str, Any]:
         "current_season": season_summary,
     }
 
+
+def get_team(session: Session, team_id: str) -> Dict[str, Any]:
+    """Return team header and roster grouped by position.
+    Includes a flat roster list for convenience.
+    """
+    t = session.query(Team).filter(Team.team_id == team_id.upper()).first()
+    roster = session.query(Player).filter(Player.current_team == team_id.upper()).order_by(Player.position.asc(), Player.name.asc()).all()
+    by_pos: Dict[str, List[Dict[str, Any]]] = {}
+    flat: List[Dict[str, Any]] = []
+    for p in roster:
+        row = {
+            "player_id": p.player_id,
+            "name": p.name,
+            "position": p.position,
+            "depth_chart_rank": getattr(p, "depth_chart_rank", None),
+            "status": "active" if getattr(p, "is_active", False) else "inactive",
+        }
+        flat.append(row)
+        by_pos.setdefault(p.position or "UNK", []).append(row)
+    return {
+        "team_id": team_id.upper(),
+        "team_name": getattr(t, "team_name", team_id.upper()),
+        "conference": getattr(t, "conference", None),
+        "division": getattr(t, "division", None),
+        "roster_by_position": by_pos,
+        "roster": flat,
+    }
 
 def get_player_gamelog(session: Session, player_id: str, season: Optional[int] = None) -> List[Dict[str, Any]]:
     """Return game-by-game stats with date, opponent, and home/away for given season (or latest)."""
@@ -174,6 +205,7 @@ def search_players(
     page_size: int = 50,
     sort: str = "name",
     order: str = "asc",
+    include_inactive: bool = False,
 ) -> Dict[str, Any]:
     """Search/browse players with pagination and sorting.
     Returns dict with rows, total, page, page_size, sort, order.
@@ -181,6 +213,11 @@ def search_players(
     page = max(1, int(page or 1))
     page_size = max(1, min(200, int(page_size or 50)))
     base = session.query(Player)
+    if not include_inactive:
+        try:
+            base = base.filter(Player.is_active == True)  # noqa: E712
+        except Exception:
+            pass
     if q:
         qq = f"%{q.strip()}%"
         base = base.filter(or_(Player.name.ilike(qq), Player.player_id.ilike(qq)))
@@ -227,6 +264,11 @@ def search_players(
     }
 
 
+def get_player(session: Session, player_id: str) -> Dict[str, Any]:
+    """Alias for get_player_profile to satisfy external callers."""
+    return get_player_profile(session, player_id)
+
+
 def get_team_info(session: Session, team_id: str) -> Dict[str, Any]:
     t = session.query(Team).filter(Team.team_id == team_id.upper()).first()
     roster = session.query(Player).filter(Player.current_team == team_id.upper()).order_by(Player.position.asc(), Player.name.asc()).all()
@@ -251,9 +293,51 @@ def get_team_info(session: Session, team_id: str) -> Dict[str, Any]:
 
 
 def get_team_depth_chart(session: Session, team_id: str, week: Optional[int] = None) -> Dict[str, List[Dict[str, Any]]]:
-    """Approximate depth chart from Player.depth_chart_rank per position."""
-    players = session.query(Player).filter(Player.current_team == team_id.upper()).all()
+    """Return depth chart for team. Prefer DepthChart table if present; otherwise approximate from Player.depth_chart_rank."""
+    team_code = team_id.upper()
     by_pos: Dict[str, List[Dict[str, Any]]] = {}
+
+    try:
+        if DepthChart is not None:
+            q = session.query(DepthChart).filter(DepthChart.team == team_code)
+            if week is not None:
+                q = q.filter(DepthChart.week == week)
+            # If no week specified or no rows found, fallback to latest available by week/season
+            rows = q.all()
+            if not rows:
+                try:
+                    latest_week = session.query(func.max(DepthChart.week)).filter(DepthChart.team == team_code).scalar()
+                    if latest_week is not None:
+                        rows = session.query(DepthChart).filter(DepthChart.team == team_code, DepthChart.week == latest_week).all()
+                except Exception:
+                    pass
+            if rows:
+                # Build map from player_id to Player for names/status
+                pids = [r.player_id for r in rows]
+                players_map = {p.player_id: p for p in session.query(Player).filter(Player.player_id.in_(pids)).all()}
+                tmp: Dict[str, List[Dict[str, Any]]] = {}
+                for r in rows:
+                    pl = players_map.get(r.player_id)
+                    tmp.setdefault(r.position or "UNK", []).append({
+                        "player_id": r.player_id,
+                        "name": getattr(pl, 'name', r.player_id),
+                        "rank": r.rank,
+                        "status": "active" if getattr(pl, 'is_active', False) else "inactive",
+                    })
+                # sort and clip
+                for k in list(tmp.keys()):
+                    sorted_list = sorted(tmp[k], key=lambda x: (x.get("rank") if x.get("rank") is not None else 9999, x.get("name") or ""))
+                    top = [e for e in sorted_list if e.get("rank") is not None and int(e.get("rank")) <= 4]
+                    if not top:
+                        top = sorted_list[:4]
+                    by_pos[k] = top
+                return by_pos
+    except Exception:
+        # fall through to approximate
+        pass
+
+    # Approximate from Player table
+    players = session.query(Player).filter(Player.current_team == team_code).all()
     for p in players:
         by_pos.setdefault(p.position or "UNK", []).append({
             "player_id": p.player_id,
@@ -261,16 +345,43 @@ def get_team_depth_chart(session: Session, team_id: str, week: Optional[int] = N
             "rank": getattr(p, "depth_chart_rank", None),
             "status": "active" if getattr(p, "is_active", False) else "inactive",
         })
-    # sort by rank then name
     for k in list(by_pos.keys()):
-        by_pos[k] = sorted(by_pos[k], key=lambda x: (x.get("rank") if x.get("rank") is not None else 9999, x.get("name") or ""))
+        sorted_list = sorted(by_pos[k], key=lambda x: (x.get("rank") if x.get("rank") is not None else 9999, x.get("name") or ""))
+        top = [e for e in sorted_list if e.get("rank") is not None and int(e.get("rank")) <= 4]
+        if not top:
+            top = sorted_list[:4]
+        by_pos[k] = top
     return by_pos
 
 
-def get_team_schedule(session: Session, team_id: str, season: Optional[int] = None) -> List[Dict[str, Any]]:
+def get_depth_chart(session: Session, team_id: str, week: Optional[int] = None) -> Dict[str, List[Dict[str, Any]]]:
+    """Compatibility alias; attempts to use DB model if present, else falls back to team-based approximation.
+    For now, this reuses get_team_depth_chart; ingestion may populate deeper structures later.
+    """
+    try:
+        return get_team_depth_chart(session, team_id, week)
+    except Exception:
+        return {}
+
+
+def get_team_schedule(
+    session: Session,
+    team_id: str,
+    season: Optional[int] = None,
+    since_date: Optional[datetime] = None,
+) -> List[Dict[str, Any]]:
     q = session.query(Game).filter(or_(Game.home_team == team_id.upper(), Game.away_team == team_id.upper()))
     if season is not None:
         q = q.filter(Game.season == season)
+    # Only include scheduled/completed games with a date, and if since_date is provided default to today
+    try:
+        if since_date is None:
+            from datetime import date as _date
+            since_date = _date.today()
+        q = q.filter(Game.game_date.isnot(None), Game.game_date >= since_date)
+    except Exception:
+        # Fallback: still enforce non-null dates
+        q = q.filter(Game.game_date.isnot(None))
     games = q.order_by(Game.game_date.asc()).all()
     out: List[Dict[str, Any]] = []
     for g in games:
@@ -310,6 +421,12 @@ def get_leaderboard(
     position: Optional[str] = None,
     limit: int = 25,
 ) -> List[Dict[str, Any]]:
+    # Resolve default season to current if not provided
+    if season is None:
+        try:
+            season = session.query(func.max(Game.season)).scalar()
+        except Exception:
+            season = None
     col = _ALLOWED_STATS.get(stat)
     if col is None:
         # default to fantasy points
@@ -362,6 +479,12 @@ def get_leaderboard_paginated(
         "position": Player.position,
     }
 
+    # Resolve default season to current if not provided
+    if season is None:
+        try:
+            season = session.query(func.max(Game.season)).scalar()
+        except Exception:
+            season = None
     stat_col = _ALLOWED_STATS.get(stat) or PlayerGameStats.fantasy_points_ppr
 
     base = session.query(
