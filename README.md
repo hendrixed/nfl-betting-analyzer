@@ -62,6 +62,16 @@ python nfl_cli.py foundation --season 2025
 # Ingest schedules.csv from a snapshot directory into the DB
 python nfl_cli.py schedule-ingest --date 2024-01-01
 
+# Ingest depth_charts.csv from a snapshot directory into the DB
+python nfl_cli.py depthchart-ingest --date 2024-01-01 --season 2024 --week 1
+
+# Snapshot writers
+python nfl_cli.py snapshot-schedules --season 2024 --date 2024-01-01
+python nfl_cli.py snapshot-depthcharts --season 2024 --week 1 --date 2024-01-01
+
+# Ingest both schedules and depth charts for a snapshot date
+python nfl_cli.py ingest-snapshot --date 2024-01-01 --season 2024 --week 1
+
 # Generate mock odds snapshot (for /betting/props)
 python nfl_cli.py odds-snapshot --max-offers 200
 
@@ -168,7 +178,12 @@ Team-centric JSON endpoints:
 
 - Team info + roster: `/api/browse/team/{team_id}`
 - Depth chart: `/api/browse/team/{team_id}/depth-chart`
-- Schedule: `/api/browse/team/{team_id}/schedule?season=YYYY`
+- Schedule: `/api/browse/team/{team_id}/schedule?season=YYYY&include_past=false&timezone=America/Chicago`
+
+Schedule params:
+
+- `include_past`: Include past games as well as future (default: false)
+- `timezone`: IANA timezone name to compute the "today" cutoff (default: `America/Chicago`)
 
 Pagination and sorting:
 

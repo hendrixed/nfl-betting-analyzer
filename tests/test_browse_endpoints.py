@@ -26,6 +26,14 @@ def test_api_leaderboard_json_contract():
     assert isinstance(data["rows"], list)
 
 
+def test_api_leaderboard_accepts_blank_filters():
+    # Blank season and position should be treated as optional and return 200
+    resp = client.get("/api/browse/leaderboard", params={"season": "", "position": ""})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data.get("rows", []), list)
+
+
 def test_api_player_profile_not_found_is_safe():
     resp = client.get("/api/browse/player/unknown-id/profile")
     assert resp.status_code == 200
@@ -65,6 +73,28 @@ def test_api_team_schedule_contract():
     data = resp.json()
     assert data.get("team_id") == "NE"
     assert "schedule" in data
+
+
+def test_api_team_schedule_accepts_params():
+    # include_past and timezone should be accepted and not error
+    resp = client.get(
+        "/api/browse/team/NE/schedule",
+        params={"include_past": "true", "timezone": "America/New_York"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data.get("team_id") == "NE"
+    assert isinstance(data.get("schedule"), list)
+
+    # Plural teams route variant
+    resp2 = client.get(
+        "/api/browse/teams/NE/schedule",
+        params={"include_past": "false", "timezone": "America/Chicago"},
+    )
+    assert resp2.status_code == 200
+    data2 = resp2.json()
+    assert data2.get("team_id") == "NE"
+    assert isinstance(data2.get("schedule"), list)
 
 
 def test_export_players_csv_endpoint():

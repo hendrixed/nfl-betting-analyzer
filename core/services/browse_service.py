@@ -6,7 +6,8 @@ Provides player/team browsing helpers for API and web routes.
 from __future__ import annotations
 
 from typing import Optional, Dict, Any, List, Tuple
-from datetime import datetime
+from datetime import datetime, date as _date, time as _time
+from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, desc, asc
 
@@ -213,6 +214,18 @@ def search_players(
     page = max(1, int(page or 1))
     page_size = max(1, min(200, int(page_size or 50)))
     base = session.query(Player)
+    # Exclude invalid player records by default: drop placeholder/OL aggregate ids and nameless entries
+    try:
+        base = base.filter(
+            # drop ids containing the pattern "_ol" (e.g., team-level OL placeholders)
+            ~Player.player_id.ilike("%_ol%"),
+            # ensure name exists and is non-empty after trim
+            Player.name.isnot(None),
+            func.length(func.trim(Player.name)) > 0,
+        )
+    except Exception:
+        # If ilike/trim unsupported on current backend, fall back to simple non-null name check
+        base = base.filter(Player.name.isnot(None))
     if not include_inactive:
         try:
             base = base.filter(Player.is_active == True)  # noqa: E712
@@ -369,19 +382,29 @@ def get_team_schedule(
     team_id: str,
     season: Optional[int] = None,
     since_date: Optional[datetime] = None,
+    timezone_name: str = "America/Chicago",
+    include_past: bool = False,
 ) -> List[Dict[str, Any]]:
     q = session.query(Game).filter(or_(Game.home_team == team_id.upper(), Game.away_team == team_id.upper()))
     if season is not None:
         q = q.filter(Game.season == season)
-    # Only include scheduled/completed games with a date, and if since_date is provided default to today
-    try:
-        if since_date is None:
-            from datetime import date as _date
-            since_date = _date.today()
-        q = q.filter(Game.game_date.isnot(None), Game.game_date >= since_date)
-    except Exception:
-        # Fallback: still enforce non-null dates
-        q = q.filter(Game.game_date.isnot(None))
+    # Only include scheduled/completed games with a date
+    q = q.filter(Game.game_date.isnot(None))
+
+    # Default behavior: upcoming games only, with timezone support; allow toggle to include past
+    if not include_past:
+        try:
+            # Compute midnight of 'today' in the requested timezone, then treat as naive cutoff
+            tz = ZoneInfo(timezone_name)
+            if since_date is None:
+                now_local = datetime.now(tz)
+                cutoff = datetime.combine(_date(year=now_local.year, month=now_local.month, day=now_local.day), _time.min)
+            else:
+                cutoff = since_date
+            q = q.filter(Game.game_date >= cutoff)
+        except Exception:
+            # If anything goes wrong, keep only non-null dates
+            pass
     games = q.order_by(Game.game_date.asc()).all()
     out: List[Dict[str, Any]] = []
     for g in games:

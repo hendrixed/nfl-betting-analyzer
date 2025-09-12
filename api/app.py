@@ -1740,9 +1740,16 @@ async def api_team_depth_chart(team_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Failed to load depth chart")
 
 @app.get("/api/browse/team/{team_id}/schedule")
-async def api_team_schedule(team_id: str, season: Optional[int] = Query(None), db: Session = Depends(get_db)):
+async def api_team_schedule(
+    team_id: str,
+    season: Optional[int] = Query(None),
+    include_past: bool = Query(False, description="Include past games as well as future"),
+    timezone: str = Query("America/Chicago", description="Timezone for 'now' cutoff"),
+    db: Session = Depends(get_db),
+):
     try:
-        return {"team_id": team_id.upper(), "schedule": get_team_schedule(db, team_id, season=season)}
+        sched = get_team_schedule(db, team_id, season=season, since_date=None, timezone_name=timezone, include_past=include_past)
+        return {"team_id": team_id.upper(), "schedule": sched}
     except Exception as e:
         logger.error(f"schedule error for {team_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to load schedule")
@@ -1790,9 +1797,16 @@ async def api_browse_team_depth_chart(team_id: str, week: Optional[int] = Query(
         raise HTTPException(status_code=500, detail="Failed to load depth chart")
 
 @app.get("/api/browse/teams/{team_id}/schedule")
-async def api_browse_team_schedule(team_id: str, season: Optional[int] = Query(None), db: Session = Depends(get_db)):
+async def api_browse_team_schedule(
+    team_id: str,
+    season: Optional[int] = Query(None),
+    include_past: bool = Query(False, description="Include past games as well as future"),
+    timezone: str = Query("America/Chicago", description="Timezone for 'now' cutoff"),
+    db: Session = Depends(get_db),
+):
     try:
-        return {"team_id": team_id.upper(), "schedule": get_team_schedule(db, team_id, season=season)}
+        sched = get_team_schedule(db, team_id, season=season, since_date=None, timezone_name=timezone, include_past=include_past)
+        return {"team_id": team_id.upper(), "schedule": sched}
     except Exception as e:
         logger.error(f"team schedule error for {team_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to load schedule")
@@ -1837,7 +1851,7 @@ async def api_browse_game(game_id: str, db: Session = Depends(get_db)):
 @app.get("/api/browse/leaderboard")
 async def api_leaderboard(
     stat: str = Query("fantasy_points_ppr"),
-    season: Optional[int] = Query(None),
+    season: Optional[str] = Query(None),
     position: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=200),
@@ -1846,23 +1860,33 @@ async def api_leaderboard(
     db: Session = Depends(get_db),
 ):
     try:
-        key = f"stat={stat}|season={season}|pos={position}|page={page}|size={page_size}|sort={sort}|order={order}"
+        # Normalize optional filters; accept blank strings
+        season_norm: Optional[int]
+        if season is None or (isinstance(season, str) and season.strip() == ""):
+            season_norm = None
+        else:
+            try:
+                season_norm = int(season)  # type: ignore[arg-type]
+            except Exception:
+                season_norm = None
+        position_norm = (position or "").strip().upper() or None
+
+        key = f"stat={stat}|season={season_norm}|pos={position_norm}|page={page}|size={page_size}|sort={sort}|order={order}"
         cached = _cache_get(LEADERBOARD_CACHE, LEADERBOARD_TS, key, ttl=120)
         if cached is not None:
-            data = cached
-        else:
-            data = get_leaderboard_paginated(
-                db,
-                stat=stat,
-                season=season,
-                position=position,
-                page=page,
-                page_size=page_size,
-                sort=sort,
-                order=order,
-            )
-            _cache_set(LEADERBOARD_CACHE, LEADERBOARD_TS, key, data)
-        data.update({"stat": stat, "season": season, "position": position})
+            return cached
+        data = get_leaderboard_paginated(
+            db,
+            stat=stat,
+            season=season_norm,
+            position=position_norm,
+            page=page,
+            page_size=page_size,
+            sort=sort,
+            order=order,
+        )
+        _cache_set(LEADERBOARD_CACHE, LEADERBOARD_TS, key, data)
+        data.update({"stat": stat, "season": season_norm, "position": position_norm})
         return data
     except Exception as e:
         logger.error(f"leaderboard error: {e}")
@@ -1920,7 +1944,7 @@ async def api_browse_odds_game(game_id: str):
 @app.get("/api/browse/leaderboard/export.csv")
 async def export_leaderboard_csv(
     stat: str = Query("fantasy_points_ppr"),
-    season: Optional[int] = Query(None),
+    season: Optional[str] = Query(None),
     position: Optional[str] = Query(None),
     page: Optional[int] = Query(1, ge=1),
     page_size: Optional[int] = Query(25, ge=1, le=200),
@@ -1931,11 +1955,21 @@ async def export_leaderboard_csv(
 ):
     """Export leaderboard results to CSV."""
     try:
+        # Normalize params
+        season_norm: Optional[int]
+        if season is None or (isinstance(season, str) and season.strip() == ""):
+            season_norm = None
+        else:
+            try:
+                season_norm = int(season)  # type: ignore[arg-type]
+            except Exception:
+                season_norm = None
+        position_norm = (position or "").strip().upper() or None
         data = get_leaderboard_paginated(
             db,
             stat=stat,
-            season=season,
-            position=position,
+            season=season_norm,
+            position=position_norm,
             page=page or 1,
             page_size=page_size or 25,
             sort=sort,

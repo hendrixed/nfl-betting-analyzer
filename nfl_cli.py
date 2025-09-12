@@ -129,6 +129,89 @@ def fetch(
             console.print_exception()
         raise typer.Exit(1)
 
+
+@app.command(name="snapshot-depthcharts")
+def snapshot_depthcharts(
+    season: Annotated[int, typer.Option("--season", help="Season year")] = 2024,
+    week: Annotated[Optional[int], typer.Option("--week", help="Week number (optional)")] = None,
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD), defaults to today")] = None,
+):
+    """Fetch depth charts and write data/snapshots/YYYY-MM-DD/depth_charts.csv."""
+    import pandas as pd  # local import to avoid heavy deps on --help
+    try:
+        from datetime import datetime as _dt
+        date_str = date or _dt.now().strftime("%Y-%m-%d")
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        console.print(f"[bold blue]Fetching depth charts for {season}{' W'+str(week) if week else ''}[/bold blue]")
+        df = asyncio.run(ingestion.nfl_adapter.fetch_depth_charts(season, week=week))
+        # Ensure DataFrame exists even if empty
+        if df is None or not hasattr(df, 'columns'):
+            df = pd.DataFrame()
+        path = ingestion._write_snapshot_csv(df, "depth_charts.csv", date_str)
+        session.close()
+        console.print(f"[green]Depth charts snapshot written:[/green] {path}")
+    except Exception as e:
+        console.print(f"[red]Depth charts snapshot failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
+@app.command(name="snapshot-schedules")
+def snapshot_schedules(
+    season: Annotated[int, typer.Option("--season", help="Season year")] = 2024,
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD), defaults to today")] = None,
+):
+    """Fetch schedules and write data/snapshots/YYYY-MM-DD/schedules.csv."""
+    import pandas as pd  # local import to avoid heavy deps on --help
+    try:
+        from datetime import datetime as _dt
+        date_str = date or _dt.now().strftime("%Y-%m-%d")
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        console.print(f"[bold blue]Fetching schedules for {season}[/bold blue]")
+        df = asyncio.run(ingestion.nfl_adapter.fetch_schedules(season))
+        if df is None or not hasattr(df, 'columns'):
+            df = pd.DataFrame()
+        path = ingestion._write_snapshot_csv(df, "schedules.csv", date_str)
+        session.close()
+        console.print(f"[green]Schedules snapshot written:[/green] {path}")
+    except Exception as e:
+        console.print(f"[red]Schedules snapshot failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
+@app.command(name="ingest-snapshot")
+def ingest_snapshot(
+    date: Annotated[str, typer.Option("--date", help="Snapshot date (YYYY-MM-DD)")] ,
+    season: Annotated[Optional[int], typer.Option("--season", help="Season year (for depth charts only, optional)")] = None,
+    week: Annotated[Optional[int], typer.Option("--week", help="Week (for depth charts only, optional)")] = None,
+):
+    """Ingest both schedules.csv and depth_charts.csv for the given snapshot date."""
+    console.print(f"[bold blue]Ingesting snapshot for {date}[/bold blue]")
+    try:
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        sch = ingestion.ingest_schedule_snapshot(date_str=date)
+        dc = ingestion.ingest_depth_chart_snapshot(date_str=date, season=season, week=week)
+        session.close()
+        console.print(f"[green]Schedule upserts:[/green] {sch.get('rows', 0)}  [green]Depth chart inserts:[/green] {dc.get('rows', 0)}")
+        if sch.get('path'):
+            console.print(f"[green]Schedules:[/green] {sch['path']}")
+        if dc.get('path'):
+            console.print(f"[green]Depth charts:[/green] {dc['path']}")
+    except Exception as e:
+        console.print(f"[red]Ingest snapshot failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
 @app.command(name="schedule-ingest")
 def schedule_ingest(
     date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD); defaults to latest if omitted")] = None,
@@ -150,6 +233,31 @@ def schedule_ingest(
             console.print_exception()
         raise typer.Exit(1)
 
+
+@app.command(name="depthchart-ingest")
+def depthchart_ingest(
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD); defaults to latest if omitted")] = None,
+    season: Annotated[Optional[int], typer.Option("--season", help="Season year for rows (optional)")] = None,
+    week: Annotated[Optional[int], typer.Option("--week", help="Week number for rows (optional)")] = None,
+):
+    """Ingest depth_charts.csv from a snapshot folder into the DepthChart table.
+    Joins player names when possible and stores ranks 1–4 by position.
+    """
+    console.print("[bold blue]Ingesting Depth Chart snapshot[/bold blue]")
+    try:
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        result = ingestion.ingest_depth_chart_snapshot(date_str=date, season=season, week=week)
+        console.print(f"[green]Depth chart rows inserted:[/green] {result.get('rows', 0)}")
+        if result.get("path"):
+            console.print(f"[green]Source:[/green] {result['path']}")
+        session.close()
+    except Exception as e:
+        console.print(f"[red]Depth chart ingestion failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
 
 # MODELS STATUS COMMAND
 @app.command(name="models-status")
