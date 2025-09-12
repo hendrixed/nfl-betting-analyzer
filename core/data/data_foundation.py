@@ -63,8 +63,6 @@ class MasterPlayer:
     inconsistency_flags: List[str] = field(default_factory=list)
     
     def __post_init__(self):
-        if self.inconsistency_flags is None:
-            self.inconsistency_flags = []
         # Maintain team/current_team compatibility
         if self.team and not self.current_team:
             self.current_team = self.team
@@ -110,8 +108,6 @@ class ValidationReport:
     issues_found: List[str] = field(default_factory=list)
     
     def __post_init__(self):
-        if self.issues_found is None:
-            self.issues_found = []
         self.overall_score = (
             self.depth_chart_accuracy + 
             self.stats_snap_consistency + 

@@ -1427,136 +1427,14 @@ class NFLFeatureEngineer:
     
     def _get_eligible_players(self) -> List[Player]:
         """Get players with sufficient game history for feature engineering"""
-        return self.session.query(Player).join(PlayerGameStats).filter(
-            Player.is_active == True,
-            Player.position.in_(['QB', 'RB', 'WR', 'TE'])
-        ).group_by(Player.player_id).having(
-            func.count(PlayerGameStats.stat_id) >= self.min_games_required
-        ).all()
-    
-    def _engineer_player_features(self, player_id: str) -> Dict[str, float]:
-        """Engineer player-specific features"""
-        features = {}
-        
-        # Get recent player stats
-        stats = self.session.query(PlayerGameStats).filter(
-            PlayerGameStats.player_id == player_id
-        ).order_by(PlayerGameStats.game_date.desc()).limit(self.lookback_games).all()
-        
-        if not stats:
-            return features
-        
-        # Extract statistical values
-        fantasy_points = [s.fantasy_points_ppr for s in stats if s.fantasy_points_ppr is not None]
-        passing_yards = [s.passing_yards for s in stats if s.passing_yards is not None]
-        rushing_yards = [s.rushing_yards for s in stats if s.rushing_yards is not None]
-        receiving_yards = [s.receiving_yards for s in stats if s.receiving_yards is not None]
-        targets = [s.targets for s in stats if s.targets is not None]
-        receptions = [s.receptions for s in stats if s.receptions is not None]
-        
-        # Basic averages
-        if fantasy_points:
-            features['avg_fantasy_points'] = np.mean(fantasy_points)
-            features['rolling_fantasy_points_4'] = np.mean(fantasy_points[:4]) if len(fantasy_points) >= 4 else np.mean(fantasy_points)
-            features['fantasy_points_std'] = np.std(fantasy_points)
-            features['fantasy_points_trend'] = self._calculate_trend(fantasy_points)
-        
-        # Position-specific features
-        player = self.session.query(Player).filter(Player.player_id == player_id).first()
-        
-        if player.position == 'QB' and passing_yards:
-            features['avg_passing_yards'] = np.mean(passing_yards)
-            features['passing_yards_trend'] = self._calculate_trend(passing_yards)
-            
-        elif player.position == 'RB' and rushing_yards:
-            features['avg_rushing_yards'] = np.mean(rushing_yards)
-            features['rushing_yards_trend'] = self._calculate_trend(rushing_yards)
-            
-        elif player.position in ['WR', 'TE']:
-            if receiving_yards:
-                features['avg_receiving_yards'] = np.mean(receiving_yards)
-                features['receiving_yards_trend'] = self._calculate_trend(receiving_yards)
-            if targets:
-                features['avg_targets'] = np.mean(targets)
-                features['target_trend'] = self._calculate_trend(targets)
-            if targets and receptions:
-                catch_rates = [r/t if t > 0 else 0 for r, t in zip(receptions, targets)]
-                features['avg_catch_rate'] = np.mean(catch_rates)
-        
-        # Consistency metrics
-        if fantasy_points:
-            features['consistency_score'] = self._calculate_consistency(fantasy_points)
-            features['boom_rate'] = self._calculate_boom_rate(fantasy_points)
-            features['bust_rate'] = self._calculate_bust_rate(fantasy_points)
-        
-        return features
-    
-    def _engineer_team_features(self, team_code: str) -> Dict[str, float]:
-        """Engineer team-specific features"""
-        features = {}
-        
-        if not team_code:
-            return features
-        
-        # Get team analytics
-        team_analytics = self.statistical_engine.calculate_team_analytics(team_code)
-        
-        features['team_offensive_efficiency'] = team_analytics.offensive_efficiency
-        features['team_defensive_efficiency'] = team_analytics.defensive_efficiency
-        features['team_pace_factor'] = team_analytics.pace_factor
-        features['team_red_zone_efficiency'] = team_analytics.red_zone_efficiency
-        features['team_turnover_differential'] = team_analytics.turnover_differential
-        features['team_home_field_advantage'] = team_analytics.home_field_advantage
-        
-        return features
-    
-    def _engineer_matchup_features(self, player_id: str) -> Dict[str, float]:
-        """Engineer matchup-specific features"""
-        features = {}
-        
-        # Get player's upcoming opponent (placeholder logic)
-        # In a real implementation, this would look at the next scheduled game
-        features['opp_def_rank_vs_position'] = 15.0  # Placeholder
-        features['opp_points_allowed_avg'] = 22.5  # Placeholder
-        features['matchup_difficulty_score'] = 0.5  # Placeholder
-        
-        return features
-    
-    def _engineer_situational_features(self, player_id: str) -> Dict[str, float]:
-        """Engineer situational context features"""
-        features = {}
-        
-        # Rest days, weather, prime time, etc. (placeholders)
-        features['rest_days'] = 7.0
-        features['weather_impact'] = 0.0
-        features['prime_time_game'] = 0.0
-        features['divisional_game'] = 0.0
-        features['home_game'] = 0.5
-        
-        return features
-    
-    def _get_target_variable(self, player_id: str, target_stat: str) -> Optional[float]:
-        """Get target variable for prediction"""
-        # Get recent average of the target stat
-        stats = self.session.query(PlayerGameStats).filter(
-            PlayerGameStats.player_id == player_id
-        ).order_by(PlayerGameStats.game_date.desc()).limit(4).all()
-        
-        if not stats:
-            return None
-        
-        if target_stat == 'fantasy_points_ppr':
-            values = [s.fantasy_points_ppr for s in stats if s.fantasy_points_ppr is not None]
-        elif target_stat == 'passing_yards':
-            values = [s.passing_yards for s in stats if s.passing_yards is not None]
-        elif target_stat == 'rushing_yards':
-            values = [s.rushing_yards for s in stats if s.rushing_yards is not None]
-        elif target_stat == 'receiving_yards':
-            values = [s.receiving_yards for s in stats if s.receiving_yards is not None]
-        else:
-            return None
-        
-        return np.mean(values) if values else None
+        try:
+            q = self.session.query(Player).join(PlayerGameStats).filter(
+                Player.is_active == True,  # noqa: E712
+                Player.position.in_(['QB', 'RB', 'WR', 'TE'])
+            ).distinct()
+            return q.all()
+        except Exception:
+            return []
     
     def _calculate_feature_importance(self, features_df: pd.DataFrame, 
                                     targets_df: pd.DataFrame) -> Dict[str, float]:

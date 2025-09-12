@@ -24,7 +24,7 @@ class PlayerInfo:
     player_id: str
     name: str
     position: str
-    team: str
+    team: Optional[str]
     jersey_number: Optional[int]
     is_active: bool
     is_rookie: bool
@@ -123,6 +123,11 @@ class NFL2025DataCollector:
         except Exception as e:
             logger.error(f"❌ Data collection failed: {e}")
             raise
+
+    # Backward-compatible alias used by some callers/tests
+    async def collect_all_2025_data(self) -> Dict[str, int]:
+        """Alias for collect_2025_data to maintain compatibility with older entry points."""
+        return await self.collect_2025_data()
     
     async def _collect_current_teams(self) -> int:
         """Collect current NFL team information"""

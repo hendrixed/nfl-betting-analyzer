@@ -11,7 +11,7 @@ from enum import Enum
 from dataclasses import dataclass
 import pandas as pd
 import numpy as np
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any, Set
 from datetime import datetime
 from core.data.data_foundation import (
     WeeklyRosterSnapshot, ValidationReport, PlayerRole, MasterPlayer,
@@ -42,7 +42,7 @@ class DataQualityValidator:
     def __init__(self, session=None):
         self.session = session
         # Expose rules per tests' expectations
-        self.validation_rules = {
+        self.validation_rules: Dict[str, Any] = {
             'min_starters_per_position': {'QB': 1, 'RB': 1, 'WR': 2, 'TE': 1},
             'max_starters_per_position': {'QB': 2, 'RB': 3, 'WR': 4, 'TE': 2},
             'min_snap_rate_starter': 0.5,
@@ -50,7 +50,7 @@ class DataQualityValidator:
             'min_data_quality_score': 0.6
         }
         # Keep original thresholds name for internal use
-        self.validation_thresholds = self.validation_rules
+        self.validation_thresholds: Dict[str, Any] = self.validation_rules
 
     def validate_player_completeness(self, player: MasterPlayer) -> ValidationResult:
         """Basic completeness check for a MasterPlayer. Returns ValidationResult.
@@ -91,7 +91,7 @@ class DataQualityValidator:
                 all_issues.append(f"Team {team} has low validation score: {team_validation:.2f}")
         
         # Calculate overall scores
-        report.roster_completeness = np.mean(team_scores) if team_scores else 0.0
+        report.roster_completeness = float(np.mean(team_scores)) if team_scores else 0.0
         report.depth_chart_accuracy = self._validate_depth_chart_consistency(snapshots)
         report.stats_snap_consistency = self._validate_stats_snap_alignment(snapshots)
         report.player_id_consistency = self._validate_player_id_consistency(snapshots)
@@ -179,10 +179,10 @@ class DataQualityValidator:
                 position_scores.append(max(rank_correlation, 0.0))
             
             if position_scores:
-                team_score = np.mean(position_scores)
+                team_score = float(np.mean(position_scores))
                 consistency_scores.append(team_score)
         
-        return np.mean(consistency_scores) if consistency_scores else 0.0
+        return float(np.mean(consistency_scores)) if consistency_scores else 0.0
     
     def _calculate_rank_correlation(self, ranks: List[int], values: List[float]) -> float:
         """Calculate correlation between ranks and values (negative correlation expected)"""
@@ -201,7 +201,7 @@ class DataQualityValidator:
         # This would require access to actual stats data
         # For now, return based on role classifications being reasonable
         
-        alignment_scores = []
+        alignment_scores: List[float] = []
         
         for team, snapshot in snapshots.items():
             # Check if role classifications are reasonable
@@ -214,12 +214,12 @@ class DataQualityValidator:
             else:
                 alignment_scores.append(0.5)
         
-        return np.mean(alignment_scores) if alignment_scores else 0.0
+        return float(np.mean(alignment_scores)) if alignment_scores else 0.0
     
     def _validate_player_id_consistency(self, snapshots: Dict[str, WeeklyRosterSnapshot]) -> float:
         """Check for player ID consistency across teams"""
         
-        all_player_ids = set()
+        all_player_ids: Set[str] = set()
         duplicate_count = 0
         
         for team, snapshot in snapshots.items():
@@ -475,7 +475,7 @@ class ComprehensiveValidator:
         
         # Analyze validation results
         if player_validations:
-            avg_validation_score = np.mean([v.validation_score for v in player_validations])
+            avg_validation_score = float(np.mean([v.validation_score for v in player_validations]))
             report.validation_report.stats_snap_consistency = avg_validation_score
         
         # Generate recommendations

@@ -90,9 +90,14 @@ class NFLStatisticalComputingEngine:
             games_back = self.trend_window
         
         # Get recent player stats
-        stats = self.session.query(PlayerGameStats).filter(
-            PlayerGameStats.player_id == player_id
-        ).order_by(PlayerGameStats.game_date.desc()).limit(games_back).all()
+        stats = (
+            self.session.query(PlayerGameStats)
+            .join(Game, PlayerGameStats.game_id == Game.game_id)
+            .filter(PlayerGameStats.player_id == player_id)
+            .order_by(Game.game_date.desc())
+            .limit(games_back)
+            .all()
+        )
         
         if len(stats) < self.min_games_for_analysis:
             return self._default_player_trends(player_id)
@@ -322,10 +327,16 @@ class NFLStatisticalComputingEngine:
         if not player:
             return {}
         
-        stats = self.session.query(PlayerGameStats).filter(
-            PlayerGameStats.player_id == player_id,
-            PlayerGameStats.season == self.current_season
-        ).order_by(PlayerGameStats.game_date.desc()).all()
+        stats = (
+            self.session.query(PlayerGameStats)
+            .join(Game, PlayerGameStats.game_id == Game.game_id)
+            .filter(
+                PlayerGameStats.player_id == player_id,
+                Game.season == self.current_season,
+            )
+            .order_by(Game.game_date.desc())
+            .all()
+        )
         
         if not stats:
             return {}

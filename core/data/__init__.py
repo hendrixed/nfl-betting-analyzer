@@ -3,9 +3,10 @@ NFL Betting Analyzer - Core Data Module
 Data collection, validation, and processing components.
 """
 
-# Import only modules that don't have external dependencies
+# Import only modules that don't have heavy external dependencies
 try:
-    from .data_validator import DataValidator
+    # Backward-compatible alias: expose DataQualityValidator as DataValidator
+    from .data_validator import DataQualityValidator as DataValidator, StatsValidator
 except ImportError:
     pass
 

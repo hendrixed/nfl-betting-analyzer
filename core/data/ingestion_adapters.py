@@ -15,17 +15,17 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
-import requests
+import requests  # type: ignore[import-untyped]
 try:
     # Make aiohttp optional to avoid import errors in constrained environments/tests
-    import aiohttp  # type: ignore
-except Exception:
-    aiohttp = None  # type: ignore
+    import aiohttp  # type: ignore[import-not-found]
+except Exception:  # pragma: no cover
+    aiohttp = None  # type: ignore[assignment, unused-ignore]
 try:
     # Optional import: this module must be importable even if nfl_data_py is missing
-    import nfl_data_py as nfl  # type: ignore
+    import nfl_data_py as nfl
 except Exception:
-    nfl = None  # type: ignore
+    nfl = None
 from sqlalchemy.orm import Session
 from core.data.market_mapping import normalize_team_name
 from core.database_models import DepthChart as DepthChartModel, Player as PlayerModel, Game as GameModel
@@ -729,7 +729,7 @@ class WeatherAdapter(BaseAdapter):
         team = self._stadium_to_team(stadium)
         
         if team in domed_stadiums:
-            weather_data = WeatherData(
+            weather_data: Optional[WeatherData] = WeatherData(
                 game_id=game_id,
                 stadium=stadium,
                 temperature=72.0,  # Controlled environment
@@ -1008,18 +1008,19 @@ class TheOddsAPIAdapter(BaseOddsAdapter):
 
                                 if market_key in ("totals",):
                                     # Combine Over/Under into a single row per book
-                                    over_row = next((o for o in outcomes if str(o.get("name", "")).lower() in ("over", "o")), None)
-                                    under_row = next((o for o in outcomes if str(o.get("name", "")).lower() in ("under", "u")), None)
-                                    if over_row or under_row:
+                                    over_row: Optional[Dict[str, Any]] = next((o for o in outcomes if str(o.get("name", "")).lower() in ("over", "o")), None)
+                                    under_row: Optional[Dict[str, Any]] = next((o for o in outcomes if str(o.get("name", "")).lower() in ("under", "u")), None)
+                                    ou = over_row if over_row is not None else under_row
+                                    if ou is not None:
                                         row = {
                                             "timestamp": datetime.utcnow().isoformat(),
                                             "book": book_key,
                                             "market": market_key,
                                             "player_id": "",
                                             "team_id": "",
-                                            "line": (over_row or under_row).get("point") if (over_row or under_row) else None,
-                                            "over_odds": over_row.get("price") if over_row else None,
-                                            "under_odds": under_row.get("price") if under_row else None,
+                                            "line": ou.get("point") if isinstance(ou, dict) else None,
+                                            "over_odds": over_row.get("price") if isinstance(over_row, dict) else None,
+                                            "under_odds": under_row.get("price") if isinstance(under_row, dict) else None,
                                         }
                                         all_rows.append(row)
                                 elif market_key in ("h2h", "spreads"):
@@ -1353,7 +1354,7 @@ class UnifiedDataIngestion:
         """Ingest all data for a specific week"""
         logger.info(f"Starting weekly data ingestion for {season} Week {week}")
         
-        results = {
+        results: Dict[str, Any] = {
             'season': season,
             'week': week,
             'timestamp': datetime.now(),
@@ -1405,7 +1406,7 @@ class UnifiedDataIngestion:
                     weather_df = pd.DataFrame([asdict(w) for w in weather_data])
                 else:
                     # Ensure header even if no weather data
-                    weather_df = pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS["weather.csv"])  # type: ignore[index]
+                    weather_df = pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS["weather.csv"])
                 self._write_snapshot_csv(weather_df, "weather.csv", snapshot_date)
             except Exception as e:
                 logger.warning(f"Failed to snapshot weather data: {e}")
@@ -1483,7 +1484,7 @@ class UnifiedDataIngestion:
                 odds_hist_cols = ['ts_utc', 'book', 'market', 'selection_id', 'line', 'price', 'event_id', 'is_closing']
                 self._write_snapshot_csv(pd.DataFrame(columns=odds_hist_cols), "odds_history.csv", snapshot_date)
                 # Current odds snapshot placeholder
-                self._write_snapshot_csv(pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS["odds.csv"]), "odds.csv", snapshot_date)  # type: ignore[index]
+                self._write_snapshot_csv(pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS["odds.csv"]), "odds.csv", snapshot_date)
             except Exception as e:
                 logger.warning(f"Failed to write one or more placeholder CSVs: {e}")
 
@@ -1500,7 +1501,7 @@ class UnifiedDataIngestion:
         """Ingest foundational season data (schedules, rosters)"""
         logger.info(f"Starting season foundation ingestion for {season}")
         
-        results = {
+        results: Dict[str, Any] = {
             'season': season,
             'timestamp': datetime.now(),
             'data_sources': {},

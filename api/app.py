@@ -625,14 +625,19 @@ async def get_player_details(
     }
     
     if include_stats:
-        # Get recent stats
-        recent_stats = db.query(PlayerGameStats).filter(
-            PlayerGameStats.player_id == player_id
-        ).order_by(desc(PlayerGameStats.game_date)).limit(5).all()
-        
+        # Get recent stats joined to Game for authoritative game_date
+        rows = (
+            db.query(PlayerGameStats, Game.game_date)
+            .join(Game, PlayerGameStats.game_id == Game.game_id)
+            .filter(PlayerGameStats.player_id == player_id)
+            .order_by(desc(Game.game_date))
+            .limit(5)
+            .all()
+        )
+
         result["recent_stats"] = [
             {
-                "game_date": stat.game_date,
+                "game_date": gd,
                 "opponent": stat.opponent,
                 "stats": {
                     "passing_yards": stat.passing_yards,
@@ -645,7 +650,7 @@ async def get_player_details(
                     )
                 }
             }
-            for stat in recent_stats
+            for stat, gd in rows
         ]
     
     return result
@@ -1357,13 +1362,26 @@ async def web_player_detail(
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
 
-        recent = (
-            db.query(PlayerGameStats)
+        rows = (
+            db.query(PlayerGameStats, Game.game_date)
+            .join(Game, PlayerGameStats.game_id == Game.game_id)
             .filter(PlayerGameStats.player_id == player_id)
-            .order_by(desc(PlayerGameStats.game_date))
+            .order_by(desc(Game.game_date))
             .limit(10)
             .all()
         )
+        # Adapt to template expectations: expose fields plus game_date
+        recent = [
+            {
+                "game_date": gd,
+                "passing_yards": s.passing_yards,
+                "rushing_yards": s.rushing_yards,
+                "receptions": s.receptions,
+                "receiving_yards": s.receiving_yards,
+                "fantasy_points_ppr": s.fantasy_points_ppr,
+            }
+            for s, gd in rows
+        ]
         # Browse service details
         career = get_player_career_totals(db, player_id)
         gamelog = get_player_gamelog(db, player_id, season=season)

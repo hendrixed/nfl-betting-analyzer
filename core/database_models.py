@@ -9,14 +9,15 @@ from sqlalchemy import (
     ForeignKey, Index, UniqueConstraint, CheckConstraint,
     JSON, DECIMAL, Date, Time, create_engine
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker
+from sqlalchemy.orm import relationship, Mapped, mapped_column, sessionmaker, DeclarativeBase
 from sqlalchemy.sql import func
 from datetime import datetime, date, time
 from typing import Optional, Dict, Any, List
 import json
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """Typed declarative base for SQLAlchemy 2.0 style models (mypy-friendly)."""
+    pass
 
 
 class Player(Base):
@@ -72,6 +73,7 @@ class Player(Base):
     
     # Metadata
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
     game_stats = relationship("PlayerGameStats", back_populates="player", cascade="all, delete-orphan")
@@ -559,6 +561,4 @@ def validate_player_status():
 
 
 # Backward compatibility aliases
-PlayerGameStats.__table__.name = 'player_game_stats'
-Game.__table__.name = 'games'
-Player.__table__.name = 'players'
+# Model __tablename__ values already match expected table names, so no renaming is required.
