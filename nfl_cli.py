@@ -9,6 +9,7 @@ import asyncio
 import typer
 import sys
 import logging
+from dotenv import load_dotenv
 try:
     import uvicorn  # type: ignore
 except Exception:
@@ -44,6 +45,12 @@ from core.database_models import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 console = Console()
+
+# Load environment variables from .env if present
+try:
+    load_dotenv()
+except Exception:
+    pass
 
 # Create Typer app
 app = typer.Typer(
@@ -619,7 +626,7 @@ def odds_snapshot(
     max_offers: Annotated[int, typer.Option("--max-offers", help="Max number of offers to write")] = 100,
     books: Annotated[Optional[str], typer.Option("--books", help="Comma-separated list of books (e.g., DK,FanDuel)")] = None,
     markets: Annotated[Optional[str], typer.Option("--markets", help="Comma-separated markets (e.g., 'Passing Yards,Receptions')")] = None,
-    provider: Annotated[str, typer.Option("--provider", help="Odds provider: 'mock' (default) or 'live' (requires THEODDSAPI_KEY)")] = "mock",
+    provider: Annotated[str, typer.Option("--provider", help="Odds provider: 'mock' (default) or 'live' (requires THEODDSAPI_KEY or ODDS_API_KEY)")] = "mock",
     date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD), defaults to today")] = None,
 ):
     """Write odds snapshot under data/snapshots/YYYY-MM-DD/ using selected provider.

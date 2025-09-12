@@ -1,11 +1,11 @@
 {
   "target": "receiving_yards",
-  "count": 300,
-  "rmse": 34.348197362586404,
-  "mae": 25.880919953464407,
-  "hit_rate": 0.2866666666666667,
-  "roi": 0.011823000000000031,
-  "brier": 0.26472549650620414,
-  "crps": 18.382032676205036,
+  "count": 50,
+  "rmse": 25.665440560649404,
+  "mae": 17.795391552593372,
+  "hit_rate": 0.46,
+  "roi": 0.030914,
+  "brier": 0.2988091105664192,
+  "crps": 13.405900707188328,
   "calibration_plot": "reports/backtests/player_receiving_yards/calibration.png"
 }

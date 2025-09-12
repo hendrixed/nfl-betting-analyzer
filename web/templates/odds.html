@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Odds Explorer{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col">
+    <h2>Odds Explorer</h2>
+    <p class="text-muted">Filter and view latest odds snapshot across team and player markets.</p>
+  </div>
+</div>
+
+<form id="filter-form" class="row g-2 align-items-end mb-3">
+  <div class="col-md-3">
+    <label for="book" class="form-label">Book</label>
+    <input type="text" id="book" class="form-control" placeholder="DraftKings, FanDuel, ...">
+  </div>
+  <div class="col-md-3">
+    <label for="market" class="form-label">Market</label>
+    <input type="text" id="market" class="form-control" placeholder="h2h, spreads, totals, player_receiving_yards ...">
+  </div>
+  <div class="col-md-3">
+    <label for="team" class="form-label">Team</label>
+    <input type="text" id="team" class="form-control" placeholder="KC, Chiefs, Kansas City ...">
+  </div>
+  <div class="col-md-3">
+    <button type="submit" class="btn btn-primary w-100"><i class="fa fa-search"></i> Search</button>
+  </div>
+</form>
+
+<div id="results" class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Book</th>
+        <th>Market</th>
+        <th>Team</th>
+        <th>Player</th>
+        <th class="text-end">Line</th>
+        <th class="text-end">Over</th>
+        <th class="text-end">Under</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function() {
+  const form = document.getElementById('filter-form');
+  const resultsBody = document.querySelector('#results tbody');
+
+  async function fetchOffers(params) {
+    const url = new URL(window.location.origin + '/betting/props');
+    Object.entries(params).forEach(([k, v]) => {
+      if (v && String(v).trim().length) url.searchParams.set(k, v);
+    });
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return await resp.json();
+  }
+
+  function formatOdds(v) { return (v === null || v === undefined || v === '') ? '' : v; }
+  function formatLine(v) { return (v === null || v === undefined || v === '') ? '' : Number(v).toFixed(2); }
+
+  async function runQuery() {
+    resultsBody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
+    try {
+      const params = {
+        book: document.getElementById('book').value,
+        market: document.getElementById('market').value,
+        team: document.getElementById('team').value,
+      };
+      const data = await fetchOffers(params);
+      const offers = data.offers || [];
+      if (!offers.length) {
+        resultsBody.innerHTML = '<tr><td colspan="8" class="text-muted">No offers found</td></tr>';
+        return;
+      }
+      resultsBody.innerHTML = offers.map(o => `
+        <tr>
+          <td>${o.timestamp || ''}</td>
+          <td>${o.book || ''}</td>
+          <td>${o.market || ''}</td>
+          <td>${o.team_id || ''}</td>
+          <td>${o.player_id || ''}</td>
+          <td class="text-end">${formatLine(o.line)}</td>
+          <td class="text-end">${formatOdds(o.over_odds)}</td>
+          <td class="text-end">${formatOdds(o.under_odds)}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      resultsBody.innerHTML = `<tr><td colspan="8" class="text-danger">${err.message}</td></tr>`;
+    }
+  }
+
+  form.addEventListener('submit', (e) => { e.preventDefault(); runQuery(); });
+  // Initial load with no filters
+  runQuery();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Backtests{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col">
+    <h2>Backtest Results</h2>
+    <p class="text-muted">Browse saved metrics and calibration plots under <code>reports/backtests/</code>.</p>
+  </div>
+</div>
+
+<div id="bt-list" class="row g-3"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function() {
+  const container = document.getElementById('bt-list');
+  container.innerHTML = '<div class="text-muted">Loading backtests...</div>';
+
+  function fmt(x) {
+    if (x === null || x === undefined) return '';
+    if (typeof x === 'number') return x.toFixed(3);
+    return String(x);
+  }
+
+  try {
+    const resp = await fetch('/reports/backtests');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    const items = data.backtests || [];
+    if (!items.length) {
+      container.innerHTML = '<div class="text-muted">No backtests found.</div>';
+      return;
+    }
+
+    container.innerHTML = items.map(item => {
+      const m = item.metrics || {};
+      const plot = item.calibration_plot ? `<img src="${item.calibration_plot}" alt="calibration" class="img-fluid rounded border"/>` : '';
+      return `
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-body">
+              <h5 class="card-title">${item.market || ''} <small class="text-muted">${item.target || ''}</small></h5>
+              <div class="row">
+                <div class="col-sm-6">
+                  <ul class="list-unstyled mb-2">
+                    <li><strong>Count:</strong> ${m.count ?? ''}</li>
+                    <li><strong>RMSE:</strong> ${fmt(m.rmse)}</li>
+                    <li><strong>MAE:</strong> ${fmt(m.mae)}</li>
+                    <li><strong>Hit Rate:</strong> ${fmt(m.hit_rate)}</li>
+                    <li><strong>ROI:</strong> ${fmt(m.roi)}</li>
+                  </ul>
+                  <a class="btn btn-sm btn-outline-primary" href="${item.metrics_path}" target="_blank">View metrics.json</a>
+                </div>
+                <div class="col-sm-6">
+                  ${plot}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = `<div class="text-danger">Failed to load backtests: ${err.message}</div>`;
+  }
+})();
+</script>
+{% endblock %}

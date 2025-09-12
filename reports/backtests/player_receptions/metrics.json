@@ -1,0 +1,11 @@
+{
+  "target": "receptions",
+  "count": 300,
+  "rmse": 2.233158889536506,
+  "mae": 1.7526011206588414,
+  "hit_rate": 0.66,
+  "roi": -0.05817733333333332,
+  "brier": 0.2752179803983276,
+  "crps": 1.237576535626232,
+  "calibration_plot": "reports/backtests/player_receptions/calibration.png"
+}

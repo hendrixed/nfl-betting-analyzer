@@ -1,0 +1,11 @@
+{
+  "target": "rushing_yards",
+  "count": 300,
+  "rmse": 20.17555073117329,
+  "mae": 14.874332566308182,
+  "hit_rate": 0.7233333333333334,
+  "roi": -0.16635966666666666,
+  "brier": 0.3326954614984318,
+  "crps": 10.47186801117804,
+  "calibration_plot": "reports/backtests/player_rushing_yards/calibration.png"
+}

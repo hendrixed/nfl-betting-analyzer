@@ -1,0 +1,11 @@
+{
+  "target": "passing_yards",
+  "count": 300,
+  "rmse": 85.77754652644478,
+  "mae": 63.80436985613387,
+  "hit_rate": 0.11666666666666667,
+  "roi": -0.4336336666666667,
+  "brier": 0.40687405427972567,
+  "crps": 46.18490528260005,
+  "calibration_plot": "reports/backtests/player_passing_yards/calibration.png"
+}

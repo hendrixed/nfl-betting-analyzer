@@ -19,9 +19,10 @@ Keep this doc in sync with:
   - Adapter: `TheOddsAPIAdapter`
   - API: https://the-odds-api.com/
   - Purpose: fetch real odds for supported player markets
-  - Requires environment variables:
-    - `THEODDSAPI_KEY` (required in order to fetch)
-    - `THEODDSAPI_BASE` (optional, default: `https://api.the-odds-api.com/v4`)
+  - Supports environment variable names:
+    - Primary: `THEODDSAPI_KEY` (API key), `THEODDSAPI_BASE` (base URL)
+    - Also accepted: `ODDS_API_KEY` (API key), `ODDS_API_URL` (base URL)
+  - If no key is found under either name, the CLI will still write header-only files.
 
 ## Output Files and Schemas
 
@@ -48,10 +49,14 @@ Mock provider (default):
 python nfl_cli.py odds-snapshot --provider mock --max-offers 100
 ```
 
-Live provider (requires key):
+Live provider (requires key, either name is accepted):
 
 ```bash
+# Either of these works
 export THEODDSAPI_KEY=your_api_key
+# or
+export ODDS_API_KEY=your_api_key
+
 python nfl_cli.py odds-snapshot --provider live --books DK,FanDuel --markets "Passing Yards,Receptions" --max-offers 250
 ```
 

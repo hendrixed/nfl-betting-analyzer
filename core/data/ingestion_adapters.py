@@ -27,6 +27,7 @@ try:
 except Exception:
     nfl = None  # type: ignore
 from sqlalchemy.orm import Session
+from core.data.market_mapping import normalize_team_name
 
 logger = logging.getLogger(__name__)
 
@@ -902,8 +903,20 @@ class TheOddsAPIAdapter(BaseOddsAdapter):
     """
 
     def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
-        self.api_key = api_key or os.getenv("THEODDSAPI_KEY")
-        self.base_url = base_url or os.getenv("THEODDSAPI_BASE", "https://api.the-odds-api.com/v4")
+        # Accept both naming conventions for convenience
+        # Primary: THEODDSAPI_KEY / THEODDSAPI_BASE
+        # Fallbacks: ODDS_API_KEY / ODDS_API_URL
+        self.api_key = (
+            api_key
+            or os.getenv("THEODDSAPI_KEY")
+            or os.getenv("ODDS_API_KEY")
+        )
+        self.base_url = (
+            base_url
+            or os.getenv("THEODDSAPI_BASE")
+            or os.getenv("ODDS_API_URL")
+            or "https://api.the-odds-api.com/v4"
+        )
 
     def _normalize(self, records: List[Dict[str, Any]]) -> pd.DataFrame:
         """Normalize provider-specific records into canonical odds.csv schema."""
@@ -940,12 +953,19 @@ class TheOddsAPIAdapter(BaseOddsAdapter):
         max_offers: int = 100,
     ) -> pd.DataFrame:
         if not self.api_key:
-            logger.warning("THEODDSAPI_KEY not set; returning header-only odds DataFrame")
+            logger.warning("No odds API key set (THEODDSAPI_KEY or ODDS_API_KEY); returning header-only odds DataFrame")
             return pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("odds.csv", []))
 
         try:
-            # Example player markets; API docs define exact market identifiers
+            # Include both player and team markets (free plan friendly)
+            # The provider accepts comma-separated 'markets' keys such as:
+            #   team: h2h, spreads, totals
+            #   player: player_receiving_yards, player_receptions, player_rushing_yards,
+            #           player_passing_yards, player_interceptions
             req_markets = markets or [
+                # Team markets
+                "h2h", "spreads", "totals",
+                # Player markets
                 "player_passing_yards",
                 "player_rushing_yards",
                 "player_receptions",
@@ -975,27 +995,69 @@ class TheOddsAPIAdapter(BaseOddsAdapter):
                 # The real response structure nests bookmakers -> markets -> outcomes
                 try:
                     for event in data or []:
+                        ev_home = str(event.get("home_team") or "").strip()
+                        ev_away = str(event.get("away_team") or "").strip()
                         for bk in (event.get("bookmakers") or []):
                             book_key = str(bk.get("key", "")).lower()
                             if req_books and book_key not in req_books:
                                 continue
                             for mk in (bk.get("markets") or []):
                                 market_key = str(mk.get("key", "")).lower()
-                                for outc in (mk.get("outcomes") or []):
-                                    row = {
-                                        "timestamp": datetime.utcnow().isoformat(),
-                                        "book": book_key,
-                                        "market": market_key,
-                                        "player_id": outc.get("description") or outc.get("name") or "",
-                                        "team_id": (event.get("home_team") or "")[:3].upper(),
-                                        "line": outc.get("point"),
-                                        # Map one-sided outcome prices into over/under when possible
-                                        "over_odds": outc.get("price") if str(outc.get("name", "")).lower() in ("over", "o") else None,
-                                        "under_odds": outc.get("price") if str(outc.get("name", "")).lower() in ("under", "u") else None,
-                                    }
-                                    all_rows.append(row)
-                                    if len(all_rows) >= max_offers:
-                                        break
+                                outcomes = (mk.get("outcomes") or [])
+
+                                if market_key in ("totals",):
+                                    # Combine Over/Under into a single row per book
+                                    over_row = next((o for o in outcomes if str(o.get("name", "")).lower() in ("over", "o")), None)
+                                    under_row = next((o for o in outcomes if str(o.get("name", "")).lower() in ("under", "u")), None)
+                                    if over_row or under_row:
+                                        row = {
+                                            "timestamp": datetime.utcnow().isoformat(),
+                                            "book": book_key,
+                                            "market": market_key,
+                                            "player_id": "",
+                                            "team_id": "",
+                                            "line": (over_row or under_row).get("point") if (over_row or under_row) else None,
+                                            "over_odds": over_row.get("price") if over_row else None,
+                                            "under_odds": under_row.get("price") if under_row else None,
+                                        }
+                                        all_rows.append(row)
+                                elif market_key in ("h2h", "spreads"):
+                                    # One row per team outcome
+                                    for outc in outcomes:
+                                        name = str(outc.get("name") or "").strip()
+                                        row = {
+                                            "timestamp": datetime.utcnow().isoformat(),
+                                            "book": book_key,
+                                            "market": market_key,
+                                            "player_id": "",
+                                            # Normalize team to standard NFL abbreviation
+                                            "team_id": normalize_team_name(name),
+                                            # Use spread point when present; for h2h default to 0
+                                            "line": outc.get("point") if outc.get("point") is not None else 0,
+                                            # Store price under over_odds for consistency
+                                            "over_odds": outc.get("price"),
+                                            "under_odds": None,
+                                        }
+                                        all_rows.append(row)
+                                        if len(all_rows) >= max_offers:
+                                            break
+                                else:
+                                    # Player markets
+                                    for outc in outcomes:
+                                        row = {
+                                            "timestamp": datetime.utcnow().isoformat(),
+                                            "book": book_key,
+                                            "market": market_key,
+                                            "player_id": outc.get("description") or outc.get("name") or "",
+                                            # Do not attempt to map team; keep empty for player rows unless provided
+                                            "team_id": "",
+                                            "line": outc.get("point"),
+                                            "over_odds": outc.get("price") if str(outc.get("name", "")).lower() in ("over", "o") else None,
+                                            "under_odds": outc.get("price") if str(outc.get("name", "")).lower() in ("under", "u") else None,
+                                        }
+                                        all_rows.append(row)
+                                        if len(all_rows) >= max_offers:
+                                            break
                                 if len(all_rows) >= max_offers:
                                     break
                             if len(all_rows) >= max_offers:

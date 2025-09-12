@@ -26,6 +26,7 @@ import time
 import random
 from contextlib import asynccontextmanager
 from functools import wraps
+from dotenv import load_dotenv
 try:
     # Optional rate limiting; tests should not require slowapi
     from slowapi import Limiter, _rate_limit_exceeded_handler  # type: ignore
@@ -77,6 +78,12 @@ from core.database_models import get_db_session, Player, PlayerGameStats, Game
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Load environment variables from .env if present
+try:
+    load_dotenv()
+except Exception:
+    pass
 
 # Rate limiting setup (no-op if slowapi unavailable)
 if Limiter is not None:
@@ -375,6 +382,8 @@ except Exception:
 try:
     templates = Jinja2Templates(directory="web/templates")
     app.mount("/static", StaticFiles(directory="web/static"), name="static")
+    # Expose reports so calibration plots and artifacts can be viewed in the browser
+    app.mount("/reports", StaticFiles(directory="reports"), name="reports")
 except Exception as e:
     logger.warning(f"Could not setup templates/static files: {e}")
 
@@ -837,10 +846,24 @@ async def get_props(
                             continue
                         if canonical_market and row_market != canonical_market:
                             continue
-                        if team and (row.get("team_id") or "").upper() != team.upper():
-                            continue
-                        if player and (row.get("player_id") or "") != player:
-                            continue
+                        if team:
+                            from core.data.market_mapping import normalize_team_name
+                            # Prefer canonical abbreviation equality; then fallback to substring
+                            team_abbr = normalize_team_name(team)
+                            row_team_abbr = normalize_team_name(row.get("team_id") or "")
+                            if team_abbr and row_team_abbr:
+                                if team_abbr != row_team_abbr:
+                                    continue
+                            else:
+                                team_q = (team or "").strip().lower()
+                                row_team = (row.get("team_id") or "").strip().lower()
+                                if team_q and team_q not in row_team:
+                                    continue
+                        if player:
+                            player_q = (player or "").strip().lower()
+                            row_player = (row.get("player_id") or "").strip().lower()
+                            if player_q and player_q not in row_player:
+                                continue
                         # Basic typing
                         try:
                             offer = {
@@ -867,6 +890,62 @@ async def get_props(
         "timestamp": datetime.now(),
         "note": "Integration with sportsbook APIs required"
     }
+
+# WEB PAGES
+@app.get("/web/odds", response_class=HTMLResponse)
+async def web_odds(request: Request):
+    """Render a simple odds explorer page (team + player markets)."""
+    try:
+        return templates.TemplateResponse("odds.html", {"request": request})
+    except Exception as e:
+        logger.warning(f"Failed to render odds page: {e}")
+        return HTMLResponse(content="<h3>Odds page unavailable</h3>", status_code=500)
+
+@app.get("/web/backtests", response_class=HTMLResponse)
+async def web_backtests(request: Request):
+    """Render a page that lists backtest results from reports/backtests."""
+    try:
+        return templates.TemplateResponse("backtests.html", {"request": request})
+    except Exception as e:
+        logger.warning(f"Failed to render backtests page: {e}")
+        return HTMLResponse(content="<h3>Backtests page unavailable</h3>", status_code=500)
+
+@app.get("/reports/backtests")
+async def list_backtests():
+    """Return a list of backtest metrics discovered under reports/backtests/**/metrics.json"""
+    items: List[Dict[str, Any]] = []
+    try:
+        base = Path("reports/backtests")
+        if not base.exists():
+            return {"backtests": []}
+        for metrics_file in base.rglob("metrics.json"):
+            try:
+                with open(metrics_file, "r", encoding="utf-8") as f:
+                    m = json.load(f)
+                rel_plot = m.get("calibration_plot")
+                if rel_plot and not str(rel_plot).startswith("/"):
+                    rel_plot = f"/{rel_plot}"
+                items.append({
+                    "market": m.get("market") or metrics_file.parent.name,
+                    "target": m.get("target"),
+                    "metrics": {
+                        "count": m.get("count"),
+                        "rmse": m.get("rmse"),
+                        "mae": m.get("mae"),
+                        "hit_rate": m.get("hit_rate"),
+                        "roi": m.get("roi"),
+                        "brier": m.get("brier"),
+                        "crps": m.get("crps"),
+                    },
+                    "metrics_path": f"/reports/{metrics_file.relative_to('reports')}",
+                    "calibration_plot": rel_plot,
+                })
+            except Exception:
+                continue
+    except Exception as e:
+        logger.debug(f"list_backtests error: {e}")
+        items = []
+    return {"backtests": items}
 
 # SIMULATION ENDPOINTS
 
