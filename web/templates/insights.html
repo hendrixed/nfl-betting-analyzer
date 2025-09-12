@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Value Insights{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col">
+    <h2>Value Betting Insights</h2>
+    <p class="text-muted">Top opportunities over the next few days based on simple model heuristics.</p>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h6 class="mb-0">Filters</h6>
+      </div>
+      <div class="card-body">
+        <form id="insights-form">
+          <div class="mb-2">
+            <label class="form-label">Days Ahead</label>
+            <input type="number" class="form-control" id="daysAhead" value="3" min="1" max="14" />
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Minimum Edge (%)</label>
+            <input type="number" class="form-control" id="minEdge" value="5" min="0" max="100" />
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Apply</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div id="insights" class="row g-3"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async function() {
+  const form = document.getElementById('insights-form');
+  const list = document.getElementById('insights');
+
+  async function fetchInsights(params) {
+    const url = new URL(window.location.origin + '/betting/insights');
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v); })
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    return await resp.json();
+  }
+
+  function fmtPct(p) { if (p === null || p === undefined) return ''; return (p * 100).toFixed(1) + '%'; }
+  function fmtNum(n) { if (n === null || n === undefined) return ''; return Number(n).toFixed(1); }
+
+  async function refresh() {
+    list.innerHTML = '<div class="text-muted">Loading insights...</div>';
+    try {
+      const days = Number(document.getElementById('daysAhead').value);
+      const minEdge = Number(document.getElementById('minEdge').value) / 100.0;
+      const data = await fetchInsights({ days_ahead: days, min_edge: minEdge });
+      if (!Array.isArray(data) || !data.length) {
+        list.innerHTML = '<div class="text-muted">No insights found.</div>';
+        return;
+      }
+      list.innerHTML = data.map(item => `
+        <div class="col-12">
+          <div class="card h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <div class="fw-bold">${item.player_name || item.market}</div>
+                  <div class="text-muted small">${item.game_info || ''}</div>
+                </div>
+                <div class="text-end">
+                  <div><small class="text-muted">Pred</small> ${fmtNum(item.prediction)}</div>
+                  <div><small class="text-muted">Line</small> ${fmtNum(item.line)}</div>
+                  <div><small class="text-muted">Edge</small> ${fmtNum(item.edge)}</div>
+                </div>
+              </div>
+              <div class="mt-2">
+                <span class="badge ${item.recommendation === 'OVER' ? 'bg-success' : 'bg-danger'}">${item.recommendation}</span>
+                <span class="ms-2 small text-muted">Conf: ${fmtPct(item.confidence)}</span>
+              </div>
+            </div>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      list.innerHTML = `<div class="text-danger">${err.message}</div>`;
+    }
+  }
+
+  form.addEventListener('submit', (e) => { e.preventDefault(); refresh(); });
+  refresh();
+})();
+</script>
+{% endblock %}

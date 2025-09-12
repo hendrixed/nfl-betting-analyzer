@@ -114,6 +114,73 @@ curl "http://localhost:8000/players?team=KC&position=QB"
 curl "http://localhost:8000/predictions/players/fantasy?team=KC&position=QB"
 ```
 
+### Browsing API and Web
+
+The app includes a browsing layer to explore players, teams, games, and leaderboards. These endpoints return JSON suitable for programmatic use, and there are matching web pages for interactive browsing.
+
+Web pages:
+
+- Players: http://localhost:8000/web/players
+- Leaderboards: http://localhost:8000/web/leaderboards
+- Teams: http://localhost:8000/teams
+- Team detail: http://localhost:8000/team/{TEAM_ID}
+- Games: http://localhost:8000/games
+
+Players JSON API:
+
+```bash
+# Paginated players with search/filters/sorting
+curl "http://localhost:8000/api/browse/players?q=mahomes&team=KC&position=QB&page=1&page_size=25&sort=name&order=asc"
+
+# CSV export (current page)
+curl -L -o players.csv "http://localhost:8000/api/browse/players/export.csv?q=mahomes&team=KC&position=QB&page=1&page_size=25&sort=name&order=asc"
+
+# CSV export (all matches)
+curl -L -o players_all.csv "http://localhost:8000/api/browse/players/export.csv?q=mahomes&team=KC&position=QB&all=true"
+```
+
+Leaderboards JSON API:
+
+```bash
+# Paginated leaderboards with filtering and sorting
+curl "http://localhost:8000/api/browse/leaderboard?stat=fantasy_points_ppr&season=2024&position=WR&page=1&page_size=25&sort=value&order=desc"
+
+# CSV export (current page)
+curl -L -o leaderboard.csv "http://localhost:8000/api/browse/leaderboard/export.csv?stat=receiving_yards&season=2024&position=WR&page=1&page_size=25&sort=value&order=desc"
+
+# CSV export (all matches)
+curl -L -o leaderboard_all.csv "http://localhost:8000/api/browse/leaderboard/export.csv?stat=receiving_yards&season=2024&position=WR&all=true"
+```
+
+Player-centric JSON endpoints:
+
+- Profile: `/api/browse/player/{player_id}/profile`
+- Gamelog: `/api/browse/player/{player_id}/gamelog?season=YYYY`
+- Career totals: `/api/browse/player/{player_id}/career`
+
+Team-centric JSON endpoints:
+
+- Team info + roster: `/api/browse/team/{team_id}`
+- Depth chart: `/api/browse/team/{team_id}/depth-chart`
+- Schedule: `/api/browse/team/{team_id}/schedule?season=YYYY`
+
+Pagination and sorting:
+
+- Players: `page`, `page_size` (1–200), `sort` in `name|position|team|rank`, `order` in `asc|desc`
+- Leaderboards: `page`, `page_size` (1–200), `sort` in `value|name|team|position`, `order` in `asc|desc`
+
+CSV export notes:
+
+- Use the `/export.csv` variants to download current page by default.
+- Append `&all=true` to export all matching rows (capped internally for safety).
+
+Caching:
+
+- Simple in-memory TTL caches are used for frequently requested browse endpoints:
+  - Players: 60s TTL keyed by filters/pagination/sort params.
+  - Leaderboards: 120s TTL keyed by filters/pagination/sort params.
+- For production, consider replacing with Redis-backed cache.
+
 ### Python Integration
 
 ```python

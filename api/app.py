@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 from pydantic import BaseModel, Field, validator
@@ -74,6 +74,17 @@ from pathlib import Path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.database_models import get_db_session, Player, PlayerGameStats, Game
+from core.services.browse_service import (
+    get_player_profile,
+    get_player_gamelog,
+    get_player_career_totals,
+    search_players,
+    get_team_info,
+    get_team_depth_chart,
+    get_team_schedule,
+    get_leaderboard,
+    get_leaderboard_paginated,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -257,11 +268,27 @@ def cache_response(ttl: int = 300):
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            # Simple in-memory cache for now
-            # In production, use Redis
+            # Placeholder; using endpoint-specific caches below
             return await func(*args, **kwargs)
         return wrapper
     return decorator
+
+# Simple TTL caches for browse endpoints (consider Redis for production)
+PLAYERS_BROWSE_CACHE: Dict[str, Any] = {}
+PLAYERS_BROWSE_TS: Dict[str, float] = {}
+LEADERBOARD_CACHE: Dict[str, Any] = {}
+LEADERBOARD_TS: Dict[str, float] = {}
+
+def _cache_get(store: Dict[str, Any], ts_store: Dict[str, float], key: str, ttl: int) -> Optional[Any]:
+    now = time.time()
+    ts = ts_store.get(key, 0)
+    if ts and (now - ts) < ttl:
+        return store.get(key)
+    return None
+
+def _cache_set(store: Dict[str, Any], ts_store: Dict[str, float], key: str, value: Any) -> None:
+    store[key] = value
+    ts_store[key] = time.time()
 
 # Random helpers (avoid numpy dependency)
 def poisson(lam: float) -> int:
@@ -927,19 +954,36 @@ async def get_edge(
         predicted: Optional[float] = None
 
         if player_id and cm in stat_map:
-            # Recent average over last N games
-            N = 5
-            stat_col = getattr(PlayerGameStats, stat_map[cm])
-            q = (
-                db.query(stat_col, Game.game_date)
-                .join(Game, PlayerGameStats.game_id == Game.game_id)
-                .filter(PlayerGameStats.player_id == player_id)
-                .order_by(desc(Game.game_date))
-                .limit(N)
-            )
-            values = [getattr(row, stat_map[cm]) for row in q.all() if getattr(row, stat_map[cm]) is not None]
-            if values:
-                predicted = float(sum(values) / len(values))
+            # First try model-based prediction for yards markets
+            model_target_map = {
+                "player_pass_yds": "passing_yards",
+                "player_rush_yds": "rushing_yards",
+                "player_rec_yds": "receiving_yards",
+            }
+            try:
+                if models_available() and cm in model_target_map:
+                    from core.models.streamlined_models import StreamlinedNFLModels
+                    local_models = models or StreamlinedNFLModels(db)
+                    result = local_models.predict_player(player_id, target_stat=model_target_map[cm])
+                    if result and result.predicted_value is not None:
+                        predicted = float(result.predicted_value)
+            except Exception:
+                predicted = None
+
+            # Fallback to recent average over last N games
+            if predicted is None:
+                N = 5
+                stat_col = getattr(PlayerGameStats, stat_map[cm])
+                q = (
+                    db.query(stat_col, Game.game_date)
+                    .join(Game, PlayerGameStats.game_id == Game.game_id)
+                    .filter(PlayerGameStats.player_id == player_id)
+                    .order_by(desc(Game.game_date))
+                    .limit(N)
+                )
+                values = [getattr(row, stat_map[cm]) for row in q.all() if getattr(row, stat_map[cm]) is not None]
+                if values:
+                    predicted = float(sum(values) / len(values))
 
         # For team markets, leave predicted as None for now
 
@@ -967,7 +1011,7 @@ async def get_edge(
 async def web_odds(request: Request):
     """Render a simple odds explorer page (team + player markets)."""
     try:
-        return templates.TemplateResponse("odds.html", {"request": request})
+        return templates.TemplateResponse(request, "odds.html", {})
     except Exception as e:
         logger.warning(f"Failed to render odds page: {e}")
         return HTMLResponse(content="<h3>Odds page unavailable</h3>", status_code=500)
@@ -976,7 +1020,7 @@ async def web_odds(request: Request):
 async def web_backtests(request: Request):
     """Render a page that lists backtest results from reports/backtests."""
     try:
-        return templates.TemplateResponse("backtests.html", {"request": request})
+        return templates.TemplateResponse(request, "backtests.html", {})
     except Exception as e:
         logger.warning(f"Failed to render backtests page: {e}")
         return HTMLResponse(content="<h3>Backtests page unavailable</h3>", status_code=500)
@@ -987,33 +1031,32 @@ async def web_teams(request: Request, db: Session = Depends(get_db)):
     try:
         teams = db.query(Player.current_team).distinct().filter(Player.current_team.isnot(None)).all()
         team_list = [t[0] for t in teams if t[0]]
-        return templates.TemplateResponse("teams.html", {"request": request, "teams": sorted(team_list)})
+        return templates.TemplateResponse(request, "teams.html", {"teams": sorted(team_list)})
     except Exception as e:
         logger.warning(f"Failed to render teams page: {e}")
         return HTMLResponse(content="<h3>Teams page unavailable</h3>", status_code=500)
 
 @app.get("/games", response_class=HTMLResponse)
-async def web_games(request: Request, db: Session = Depends(get_db)):
+async def web_games(
+    request: Request,
+    team: Optional[str] = Query(None, description="Filter by team"),
+    db: Session = Depends(get_db)
+):
     """Games page: shows upcoming and recent games using schedules in the DB."""
     try:
         today = date.today()
-        upcoming_games = (
-            db.query(Game)
-            .filter(Game.game_date.isnot(None), Game.game_date >= today)
-            .order_by(Game.game_date.asc())
-            .limit(20)
-            .all()
-        )
-        recent_games = (
-            db.query(Game)
-            .filter(Game.game_date.isnot(None), Game.game_date < today)
-            .order_by(Game.game_date.desc())
-            .limit(20)
-            .all()
-        )
+        base_upcoming = db.query(Game).filter(Game.game_date.isnot(None), Game.game_date >= today)
+        base_recent = db.query(Game).filter(Game.game_date.isnot(None), Game.game_date < today)
+        if team:
+            t = team.upper()
+            base_upcoming = base_upcoming.filter(or_(Game.home_team == t, Game.away_team == t))
+            base_recent = base_recent.filter(or_(Game.home_team == t, Game.away_team == t))
+        upcoming_games = base_upcoming.order_by(Game.game_date.asc()).limit(20).all()
+        recent_games = base_recent.order_by(Game.game_date.desc()).limit(20).all()
         return templates.TemplateResponse(
+            request,
             "games.html",
-            {"request": request, "upcoming_games": upcoming_games, "recent_games": recent_games},
+            {"upcoming_games": upcoming_games, "recent_games": recent_games, "selected_team": (team or "").upper() or None},
         )
     except Exception as e:
         logger.warning(f"Failed to render games page: {e}")
@@ -1039,6 +1082,13 @@ async def web_predictions(
         players = query.limit(24).all()
 
         items = []
+        local_models = None
+        try:
+            if models_available():
+                from core.models.streamlined_models import StreamlinedNFLModels
+                local_models = models or StreamlinedNFLModels(db)
+        except Exception:
+            local_models = None
         for p in players:
             # Placeholder stats; if model endpoints are available, they can be integrated later
             stats = {
@@ -1058,12 +1108,21 @@ async def web_predictions(
                 "over_under_yards": 0,
                 "prediction_confidence": 0.5,
             }
+            # Try to fill from streamlined models
+            if local_models is not None:
+                try:
+                    pred = local_models.predict_player(p.player_id, target_stat='fantasy_points_ppr')
+                    if pred:
+                        stats["fantasy_points_ppr"] = float(pred.predicted_value)
+                        stats["prediction_confidence"] = float(pred.confidence)
+                except Exception:
+                    pass
             items.append({"player": {"player_id": p.player_id}, "stats": stats})
 
         return templates.TemplateResponse(
+            request,
             "predictions.html",
             {
-                "request": request,
                 "predictions": items,
                 "selected_position": (position or "").upper() or None,
                 "selected_team": (team or "").upper() or None,
@@ -1072,6 +1131,108 @@ async def web_predictions(
     except Exception as e:
         logger.warning(f"Failed to render predictions page: {e}")
         return HTMLResponse(content="<h3>Predictions page unavailable</h3>", status_code=500)
+
+@app.get("/web/players", response_class=HTMLResponse)
+async def web_players(
+    request: Request,
+    q: Optional[str] = Query(None, description="Search query"),
+    position: Optional[str] = Query(None, description="Filter by position"),
+    team: Optional[str] = Query(None, description="Filter by team"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(24, ge=1, le=200),
+    sort: str = Query("name"),
+    order: str = Query("asc"),
+    db: Session = Depends(get_db),
+):
+    """Players browse page with filters, pagination, and sorting."""
+    try:
+        data = search_players(
+            db,
+            q=q,
+            team_id=team,
+            position=position,
+            page=page,
+            page_size=page_size,
+            sort=sort,
+            order=order,
+        )
+        return templates.TemplateResponse(
+            request,
+            "players.html",
+            {
+                "players": data.get("rows", []),
+                "total": data.get("total", 0),
+                "page": data.get("page", page),
+                "page_size": data.get("page_size", page_size),
+                "sort": data.get("sort", sort),
+                "order": data.get("order", order),
+                "selected_position": (position or "").upper() or None,
+                "selected_team": (team or "").upper() or None,
+                "query": q or "",
+            },
+        )
+    except Exception as e:
+        logger.warning(f"Failed to render players page: {e}")
+        return HTMLResponse(content="<h3>Players page unavailable</h3>", status_code=500)
+
+@app.get("/web/insights", response_class=HTMLResponse)
+async def web_insights(request: Request):
+    """Render a page that lists value betting insights."""
+    try:
+        return templates.TemplateResponse(request, "insights.html", {})
+    except Exception as e:
+        logger.warning(f"Failed to render insights page: {e}")
+        return HTMLResponse(content="<h3>Insights page unavailable</h3>", status_code=500)
+
+@app.get("/web/leaderboards", response_class=HTMLResponse)
+async def web_leaderboards(
+    request: Request,
+    stat: str = Query("fantasy_points_ppr", description="Aggregate stat"),
+    season: Optional[int] = Query(None, description="Season year"),
+    position: Optional[str] = Query(None, description="Position filter"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=200),
+    sort: str = Query("value"),
+    order: str = Query("desc"),
+    db: Session = Depends(get_db),
+):
+    """Leaderboards page with pagination and sorting."""
+    try:
+        data = get_leaderboard_paginated(
+            db,
+            stat=stat,
+            season=season,
+            position=position,
+            page=page,
+            page_size=page_size,
+            sort=sort,
+            order=order,
+        )
+        return templates.TemplateResponse(
+            request,
+            "leaderboards.html",
+            {
+                "rows": data.get("rows", []),
+                "total": data.get("total", 0),
+                "page": data.get("page", page),
+                "page_size": data.get("page_size", page_size),
+                "sort": data.get("sort", sort),
+                "order": data.get("order", order),
+                "stat": stat,
+                "season": season,
+                "position": (position or "").upper() or None,
+            },
+        )
+    except Exception as e:
+        logger.warning(f"Failed to render leaderboards page: {e}")
+        return HTMLResponse(content="<h3>Leaderboards page unavailable</h3>", status_code=500)
+
+@app.get("/favicon.ico")
+async def favicon():
+    svg_path = Path("web/static/favicon.svg")
+    if svg_path.exists():
+        return FileResponse(str(svg_path), media_type="image/svg+xml")
+    return HTMLResponse(status_code=204)
 
 @app.get("/team/{team_id}", response_class=HTMLResponse)
 async def web_team_detail(team_id: str, request: Request, db: Session = Depends(get_db)):
@@ -1084,10 +1245,21 @@ async def web_team_detail(team_id: str, request: Request, db: Session = Depends(
         # Sort players by name within each position
         for k in list(by_pos.keys()):
             by_pos[k] = sorted(by_pos[k], key=lambda x: (x.position or '', x.name or ''))
+        # Depth chart and schedule
+        depth = get_team_depth_chart(db, team_id)
+        sched = get_team_schedule(db, team_id)
         return templates.TemplateResponse(
+            request,
             "team_detail.html",
-            {"request": request, "team_code": team_id.upper(), "players_by_position": by_pos},
+            {
+                "team_code": team_id.upper(),
+                "players_by_position": by_pos,
+                "depth_chart": depth,
+                "schedule": sched,
+            },
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning(f"Failed to render team page for {team_id}: {e}")
         return HTMLResponse(content=f"<h3>Team page unavailable for {team_id}</h3>", status_code=500)
@@ -1118,14 +1290,58 @@ async def web_game_detail(game_id: str, request: Request, db: Session = Depends(
             "top_receiving_yards": [("WR1", 105), ("WR2", 88)],
         }
         return templates.TemplateResponse(
+            request,
             "game_detail.html",
-            {"request": request, "game": game, "prediction": prediction},
+            {"game": game, "prediction": prediction},
         )
     except HTTPException:
         raise
     except Exception as e:
         logger.warning(f"Failed to render game page for {game_id}: {e}")
         return HTMLResponse(content=f"<h3>Game page unavailable for {game_id}</h3>", status_code=500)
+
+@app.get("/player/{player_id}", response_class=HTMLResponse)
+async def web_player_detail(
+    player_id: str,
+    request: Request,
+    season: Optional[int] = Query(None, description="Season filter for gamelog"),
+    db: Session = Depends(get_db),
+):
+    """Player detail page with basic recent stats.
+    This is a lightweight read directly from the database.
+    """
+    try:
+        player = db.query(Player).filter(Player.player_id == player_id).first()
+        if not player:
+            raise HTTPException(status_code=404, detail="Player not found")
+
+        recent = (
+            db.query(PlayerGameStats)
+            .filter(PlayerGameStats.player_id == player_id)
+            .order_by(desc(PlayerGameStats.game_date))
+            .limit(10)
+            .all()
+        )
+        # Browse service details
+        career = get_player_career_totals(db, player_id)
+        gamelog = get_player_gamelog(db, player_id, season=season)
+
+        return templates.TemplateResponse(
+            request,
+            "player_detail.html",
+            {
+                "player": player,
+                "recent_stats": recent,
+                "career": career,
+                "gamelog": gamelog,
+                "season": season,
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Failed to render player page for {player_id}: {e}")
+        return HTMLResponse(content=f"<h3>Player page unavailable for {player_id}</h3>", status_code=500)
 
 @app.get("/reports/backtests")
 async def list_backtests():
@@ -1238,8 +1454,7 @@ async def home(request: Request, db: Session = Depends(get_db)):
         # Get recent games for display
         recent_games = db.query(Game).order_by(desc(Game.game_date)).limit(5).all()
         
-        return templates.TemplateResponse("index.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "index.html", {
             "title": "NFL Predictions Dashboard",
             "recent_games": recent_games
         })
@@ -1370,6 +1585,222 @@ async def get_stats(
     except Exception as e:
         logger.error(f"Failed to get stats: {e}")
         return {"stats": []}
+
+# BROWSE JSON ENDPOINTS
+
+@app.get("/api/browse/player/{player_id}/profile")
+async def api_player_profile(player_id: str, db: Session = Depends(get_db)):
+    try:
+        return get_player_profile(db, player_id)
+    except Exception as e:
+        logger.error(f"profile error for {player_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load profile")
+
+@app.get("/api/browse/player/{player_id}/gamelog")
+async def api_player_gamelog(
+    player_id: str,
+    season: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    try:
+        return {"player_id": player_id, "gamelog": get_player_gamelog(db, player_id, season=season)}
+    except Exception as e:
+        logger.error(f"gamelog error for {player_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load gamelog")
+
+@app.get("/api/browse/player/{player_id}/career")
+async def api_player_career(player_id: str, db: Session = Depends(get_db)):
+    try:
+        return {"player_id": player_id, "career": get_player_career_totals(db, player_id)}
+    except Exception as e:
+        logger.error(f"career error for {player_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load career totals")
+
+@app.get("/api/browse/players")
+async def api_browse_players(
+    q: Optional[str] = Query(None),
+    team: Optional[str] = Query(None),
+    position: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    sort: str = Query("name"),
+    order: str = Query("asc"),
+    db: Session = Depends(get_db),
+):
+    try:
+        key = f"q={q}|team={team}|pos={position}|page={page}|size={page_size}|sort={sort}|order={order}"
+        cached = _cache_get(PLAYERS_BROWSE_CACHE, PLAYERS_BROWSE_TS, key, ttl=60)
+        if cached is not None:
+            return cached
+        data = search_players(db, q=q, team_id=team, position=position, page=page, page_size=page_size, sort=sort, order=order)
+        _cache_set(PLAYERS_BROWSE_CACHE, PLAYERS_BROWSE_TS, key, data)
+        return data
+    except Exception as e:
+        logger.error(f"browse players error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to browse players")
+
+@app.get("/api/browse/players/export.csv")
+async def export_players_csv(
+    q: Optional[str] = Query(None),
+    team: Optional[str] = Query(None),
+    position: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    sort: str = Query("name"),
+    order: str = Query("asc"),
+    all: bool = Query(False, description="Export all matching rows, ignoring pagination"),
+    db: Session = Depends(get_db),
+):
+    """Export players browse results to CSV."""
+    try:
+        data = search_players(db, q=q, team_id=team, position=position, page=page, page_size=page_size, sort=sort, order=order)
+        rows = data.get("rows", [])
+        total = int(data.get("total", 0))
+        if all and total > len(rows):
+            # re-query with full size (cap at 100000)
+            full = search_players(db, q=q, team_id=team, position=position, page=1, page_size=min(total, 100000), sort=sort, order=order)
+            rows = full.get("rows", [])
+
+        import csv
+        from io import StringIO
+        buf = StringIO()
+        writer = csv.DictWriter(buf, fieldnames=["player_id", "name", "position", "team", "status", "depth_chart_rank"])
+        writer.writeheader()
+        for r in rows:
+            writer.writerow(r)
+        contents = buf.getvalue()
+        buf.close()
+
+        filename = f"players_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        return StreamingResponse(
+            iter([contents]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"export players csv error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export players CSV")
+
+@app.get("/api/browse/team/{team_id}")
+async def api_team_info(team_id: str, db: Session = Depends(get_db)):
+    try:
+        return get_team_info(db, team_id)
+    except Exception as e:
+        logger.error(f"team info error for {team_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load team info")
+
+@app.get("/api/browse/team/{team_id}/depth-chart")
+async def api_team_depth_chart(team_id: str, db: Session = Depends(get_db)):
+    try:
+        return {"team_id": team_id.upper(), "depth_chart": get_team_depth_chart(db, team_id)}
+    except Exception as e:
+        logger.error(f"depth chart error for {team_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load depth chart")
+
+@app.get("/api/browse/team/{team_id}/schedule")
+async def api_team_schedule(
+    team_id: str,
+    season: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    try:
+        return {"team_id": team_id.upper(), "schedule": get_team_schedule(db, team_id, season=season)}
+    except Exception as e:
+        logger.error(f"schedule error for {team_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load schedule")
+
+@app.get("/api/browse/leaderboard")
+async def api_leaderboard(
+    stat: str = Query("fantasy_points_ppr"),
+    season: Optional[int] = Query(None),
+    position: Optional[str] = Query(None),
+    page: Optional[int] = Query(1, ge=1),
+    page_size: Optional[int] = Query(25, ge=1, le=200),
+    sort: str = Query("value"),
+    order: str = Query("desc"),
+    db: Session = Depends(get_db),
+):
+    try:
+        key = f"stat={stat}|season={season}|pos={position}|page={page}|size={page_size}|sort={sort}|order={order}"
+        cached = _cache_get(LEADERBOARD_CACHE, LEADERBOARD_TS, key, ttl=120)
+        if cached is not None:
+            data = cached
+        else:
+            data = get_leaderboard_paginated(
+                db,
+                stat=stat,
+                season=season,
+                position=position,
+                page=page or 1,
+                page_size=page_size or 25,
+                sort=sort,
+                order=order,
+            )
+            _cache_set(LEADERBOARD_CACHE, LEADERBOARD_TS, key, data)
+        # For backward compatibility, include stat/season/position keys
+        data.update({"stat": stat, "season": season, "position": position})
+        return data
+    except Exception as e:
+        logger.error(f"leaderboard error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load leaderboard")
+
+@app.get("/api/browse/leaderboard/export.csv")
+async def export_leaderboard_csv(
+    stat: str = Query("fantasy_points_ppr"),
+    season: Optional[int] = Query(None),
+    position: Optional[str] = Query(None),
+    page: Optional[int] = Query(1, ge=1),
+    page_size: Optional[int] = Query(25, ge=1, le=200),
+    sort: str = Query("value"),
+    order: str = Query("desc"),
+    all: bool = Query(False, description="Export all matching rows, ignoring pagination"),
+    db: Session = Depends(get_db),
+):
+    """Export leaderboard results to CSV."""
+    try:
+        data = get_leaderboard_paginated(
+            db,
+            stat=stat,
+            season=season,
+            position=position,
+            page=page or 1,
+            page_size=page_size or 25,
+            sort=sort,
+            order=order,
+        )
+        rows = data.get("rows", [])
+        total = int(data.get("total", 0))
+        if all and total > len(rows):
+            full = get_leaderboard_paginated(
+                db,
+                stat=stat,
+                season=season,
+                position=position,
+                page=1,
+                page_size=min(total, 100000),
+                sort=sort,
+                order=order,
+            )
+            rows = full.get("rows", [])
+
+        import csv
+        from io import StringIO
+        buf = StringIO()
+        writer = csv.DictWriter(buf, fieldnames=["player_id", "name", "position", "team", "value"])
+        writer.writeheader()
+        for r in rows:
+            writer.writerow(r)
+        contents = buf.getvalue()
+        buf.close()
+        filename = f"leaderboard_{stat}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        return StreamingResponse(
+            iter([contents]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"export leaderboard csv error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export leaderboard CSV")
 
 @app.get("/api/teams/{team_id}/roster")
 async def get_team_roster(team_id: str, db: Session = Depends(get_db)):

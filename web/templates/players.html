@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Players{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1 class="mb-4"><i class="fas fa-user"></i> Players</h1>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-filter"></i> Filters</h5>
+      </div>
+      <div class="card-body">
+        <form method="get" action="/web/players">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label" for="q">Search</label>
+              <input type="text" class="form-control" id="q" name="q" value="{{ query }}" placeholder="Name or ID">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="position">Position</label>
+              <select class="form-select" id="position" name="position">
+                <option value="">All</option>
+                <option value="QB" {% if selected_position == 'QB' %}selected{% endif %}>QB</option>
+                <option value="RB" {% if selected_position == 'RB' %}selected{% endif %}>RB</option>
+                <option value="WR" {% if selected_position == 'WR' %}selected{% endif %}>WR</option>
+                <option value="TE" {% if selected_position == 'TE' %}selected{% endif %}>TE</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="team">Team</label>
+              <input type="text" class="form-control" id="team" name="team" value="{{ selected_team or '' }}" placeholder="e.g., KC, BUF">
+            </div>
+          </div>
+          <div class="row g-2 mt-2">
+            <div class="col-md-3">
+              <label class="form-label" for="sort">Sort By</label>
+              <select class="form-select" id="sort" name="sort">
+                <option value="name" {% if sort=='name' %}selected{% endif %}>Name</option>
+                <option value="position" {% if sort=='position' %}selected{% endif %}>Position</option>
+                <option value="team" {% if sort=='team' %}selected{% endif %}>Team</option>
+                <option value="rank" {% if sort=='rank' %}selected{% endif %}>Depth Rank</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="order">Order</label>
+              <select class="form-select" id="order" name="order">
+                <option value="asc" {% if order=='asc' %}selected{% endif %}>Ascending</option>
+                <option value="desc" {% if order=='desc' %}selected{% endif %}>Descending</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="page_size">Page Size</label>
+              <input type="number" min="1" max="200" class="form-control" id="page_size" name="page_size" value="{{ page_size or 24 }}">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button class="btn btn-primary w-100" type="submit">Apply</button>
+            </div>
+          </div>
+          <div class="mt-3">
+            <a class="btn btn-outline-secondary" href="/web/players">Reset</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 d-flex justify-content-end mb-2">
+    {% set export_base = '/api/browse/players/export.csv?'
+      + ('q=' ~ (query|urlencode) ~ '&' if query) | safe
+      + ('position=' ~ selected_position ~ '&' if selected_position) | safe
+      + ('team=' ~ selected_team ~ '&' if selected_team) | safe
+      + ('sort=' ~ sort ~ '&') | safe
+      + ('order=' ~ order ~ '&') | safe
+      + ('page_size=' ~ page_size ~ '&') | safe
+      + ('page=' ~ page ~ '&') | safe %}
+    <div class="btn-group">
+      <a class="btn btn-sm btn-outline-success" href="{{ export_base }}" target="_blank">
+        <i class="fas fa-file-csv"></i> Export Current Page
+      </a>
+      <a class="btn btn-sm btn-success" href="{{ export_base }}all=true" target="_blank">
+        <i class="fas fa-download"></i> Export All
+      </a>
+    </div>
+  </div>
+  {% for p in players %}
+  <div class="col-md-4 col-lg-3 mb-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <h6 class="card-title mb-1">
+          <a href="/player/{{ p.player_id }}" class="text-decoration-none">
+            {{ p.name }}
+          </a>
+        </h6>
+        <div class="mb-2">
+          <span class="badge bg-secondary">{{ p.position }}</span>
+          {% if p.status == 'active' %}
+            <span class="badge bg-success">Active</span>
+          {% else %}
+            <span class="badge bg-danger">Inactive</span>
+          {% endif %}
+        </div>
+        <div class="small text-muted">
+          Team: <strong>{{ p.team or '—' }}</strong>
+          {% if p.depth_chart_rank is not none %}
+            <span class="ms-2">Rank: <strong>{{ p.depth_chart_rank }}</strong></span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-footer d-flex justify-content-between">
+        <a class="btn btn-sm btn-outline-primary" href="/player/{{ p.player_id }}">
+          <i class="fas fa-chart-line"></i> Details
+        </a>
+        <a class="btn btn-sm btn-outline-secondary" href="/team/{{ p.team }}">
+          <i class="fas fa-users"></i> Team
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if not players %}
+<div class="alert alert-info">No players found. Try changing filters.</div>
+{% endif %}
+
+{% if total and page and page_size %}
+{% set last_page = (total // page_size) + (1 if (total % page_size) else 0) %}
+<div class="d-flex justify-content-between align-items-center mt-3">
+  <div class="text-muted small">
+    Showing {{ ((page-1)*page_size + 1) if total>0 else 0 }}–{{ ((page-1)*page_size + players|length) }} of {{ total }}
+  </div>
+  <div>
+    {% set base = '/web/players?'
+      + ('q=' ~ (query|urlencode) ~ '&' if query) | safe
+      + ('position=' ~ selected_position ~ '&' if selected_position) | safe
+      + ('team=' ~ selected_team ~ '&' if selected_team) | safe
+      + ('sort=' ~ sort ~ '&') | safe
+      + ('order=' ~ order ~ '&') | safe
+      + ('page_size=' ~ page_size ~ '&') | safe %}
+    <a class="btn btn-sm btn-outline-secondary {% if page<=1 %}disabled{% endif %}" href="{{ base }}page={{ page-1 }}">Prev</a>
+    <span class="mx-2 small">Page {{ page }} / {{ last_page if last_page>0 else 1 }}</span>
+    <a class="btn btn-sm btn-outline-secondary {% if page>=last_page %}disabled{% endif %}" href="{{ base }}page={{ page+1 }}">Next</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

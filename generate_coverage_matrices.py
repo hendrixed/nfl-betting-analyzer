@@ -25,12 +25,20 @@ def generate_stats_feature_matrix() -> pd.DataFrame:
     
     # Define all NFL statistics we track
     stats = [
+        # Passing
         'passing_attempts', 'passing_completions', 'passing_yards', 'passing_touchdowns', 'interceptions',
-        'rushing_attempts', 'rushing_yards', 'rushing_touchdowns', 'fumbles',
-        'targets', 'receptions', 'receiving_yards', 'receiving_touchdowns', 'drops',
+        'longest_pass',
+        # Rushing
+        'rushing_attempts', 'rushing_yards', 'rushing_touchdowns', 'fumbles', 'longest_rush',
+        # Receiving
+        'targets', 'receptions', 'receiving_yards', 'receiving_touchdowns', 'drops', 'longest_reception',
+        # Participation / usage
         'offensive_snaps', 'snap_percentage', 'routes_run', 'air_yards', 'yac',
         'red_zone_targets', 'goal_line_carries', 'third_down_conversions',
-        'field_goals_attempted', 'field_goals_made', 'extra_points_attempted', 'extra_points_made'
+        # Defense
+        'tackles', 'sacks',
+        # Kicking
+        'field_goals_attempted', 'field_goals_made', 'extra_points_attempted', 'extra_points_made', 'longest_field_goal'
     ]
     
     # Define feature categories and their availability
@@ -81,7 +89,7 @@ def generate_stats_feature_matrix() -> pd.DataFrame:
         },
         'pressure_splits': {
             'description': 'Performance under pressure',
-            'stats': ['passing_yards', 'passing_touchdowns', 'interceptions']
+            'stats': ['passing_yards', 'passing_touchdowns', 'interceptions', 'sacks', 'longest_pass']
         },
         'coverage_splits': {
             'description': 'Performance vs coverage types',
@@ -136,28 +144,57 @@ def generate_model_market_matrix() -> pd.DataFrame:
     
     # Define betting markets
     markets = [
-        'player_passing_yds', 'player_passing_tds', 'player_interceptions',
-        'player_rushing_yds', 'player_rushing_tds', 'player_rec_yds', 
-        'player_receptions', 'player_rec_tds', 'player_fantasy_points',
-        'player_longest_reception', 'player_longest_rush',
-        'kicker_field_goals_made', 'kicker_points',
+        # Passing
+        'player_passing_yds', 'player_passing_tds', 'player_interceptions', 'player_completions', 'player_longest_pass',
+        # Rushing
+        'player_rushing_attempts', 'player_rushing_yds', 'player_rushing_tds', 'player_longest_rush',
+        # Receiving
+        'player_rec_yds', 'player_receptions', 'player_rec_tds', 'player_longest_reception',
+        # Defense
+        'player_tackles', 'player_sacks',
+        # Kicking
+        'kicker_field_goals_made', 'kicker_field_goals_attempted', 'kicker_longest_field_goal', 'kicker_points',
+        # Team/Game
         'team_total_points', 'game_total_points', 'point_spread',
-        'first_half_total', 'first_td_scorer', 'anytime_td_scorer'
+        'first_half_total', 'first_td_scorer', 'anytime_td_scorer',
+        # Fantasy
+        'player_fantasy_points'
     ]
     
     # Define model types and their market support
     models = {
         'XGBoost': {
             'description': 'Gradient boosting model',
-            'markets': ['player_passing_yds', 'player_rushing_yds', 'player_rec_yds', 'player_receptions', 'player_fantasy_points']
+            'markets': [
+                'player_passing_yds', 'player_passing_tds', 'player_interceptions', 'player_completions', 'player_longest_pass',
+                'player_rushing_attempts', 'player_rushing_yds', 'player_rushing_tds', 'player_longest_rush',
+                'player_rec_yds', 'player_receptions', 'player_rec_tds', 'player_longest_reception',
+                'player_tackles', 'player_sacks',
+                'kicker_field_goals_made', 'kicker_field_goals_attempted', 'kicker_longest_field_goal', 'kicker_points',
+                'team_total_points', 'game_total_points', 'point_spread', 'player_fantasy_points'
+            ]
         },
         'LightGBM': {
-            'description': 'Light gradient boosting',
-            'markets': ['player_passing_yds', 'player_rushing_yds', 'player_rec_yds', 'player_receptions', 'player_fantasy_points']
+            'description': 'Light gradient boosting', 
+            'markets': [
+                'player_passing_yds', 'player_passing_tds', 'player_interceptions', 'player_completions', 'player_longest_pass',
+                'player_rushing_attempts', 'player_rushing_yds', 'player_rushing_tds', 'player_longest_rush',
+                'player_rec_yds', 'player_receptions', 'player_rec_tds', 'player_longest_reception',
+                'player_tackles', 'player_sacks',
+                'kicker_field_goals_made', 'kicker_field_goals_attempted', 'kicker_longest_field_goal', 'kicker_points',
+                'team_total_points', 'game_total_points', 'point_spread', 'player_fantasy_points'
+            ]
         },
         'RandomForest': {
             'description': 'Random forest ensemble',
-            'markets': ['player_passing_yds', 'player_rushing_yds', 'player_rec_yds', 'player_receptions', 'player_fantasy_points']
+            'markets': [
+                'player_passing_yds', 'player_passing_tds', 'player_interceptions', 'player_completions', 'player_longest_pass',
+                'player_rushing_attempts', 'player_rushing_yds', 'player_rushing_tds', 'player_longest_rush',
+                'player_rec_yds', 'player_receptions', 'player_rec_tds', 'player_longest_reception',
+                'player_tackles', 'player_sacks',
+                'kicker_field_goals_made', 'kicker_field_goals_attempted', 'kicker_longest_field_goal', 'kicker_points',
+                'team_total_points', 'game_total_points', 'point_spread', 'player_fantasy_points'
+            ]
         },
         'LinearRegression': {
             'description': 'Linear regression baseline',
@@ -169,7 +206,12 @@ def generate_model_market_matrix() -> pd.DataFrame:
         },
         'EnsembleModel': {
             'description': 'Ensemble of multiple models',
-            'markets': ['player_passing_yds', 'player_rushing_yds', 'player_rec_yds', 'player_receptions', 'player_fantasy_points']
+            'markets': [
+                'player_passing_yds', 'player_passing_tds', 'player_interceptions', 'player_completions',
+                'player_rushing_attempts', 'player_rushing_yds', 'player_rushing_tds',
+                'player_rec_yds', 'player_receptions', 'player_rec_tds',
+                'player_fantasy_points'
+            ]
         }
     }
     

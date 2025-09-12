@@ -80,6 +80,98 @@
 </div>
 {% endif %}
 
+{% if depth_chart %}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0"><i class="fas fa-layer-group"></i> Depth Chart</h5></div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead>
+              <tr>
+                <th>Position</th>
+                <th>Player</th>
+                <th>Rank</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pos, entries in depth_chart.items() %}
+                {% for e in entries %}
+                <tr>
+                  <td>{{ pos }}</td>
+                  <td><a href="/player/{{ e.player_id }}">{{ e.name }}</a></td>
+                  <td>{{ e.rank if e.rank is not none else '—' }}</td>
+                  <td>
+                    {% if e.status == 'active' %}
+                      <span class="badge bg-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+{% endif %}
+
+{% if schedule %}
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0"><i class="fas fa-calendar"></i> Schedule</h5></div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Season</th>
+                <th>Week</th>
+                <th>Matchup</th>
+                <th class="text-end">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for g in schedule %}
+              <tr>
+                <td>{{ g.date[:10] if g.date else '' }}</td>
+                <td>{{ g.season }}</td>
+                <td>{{ g.week }}</td>
+                <td>
+                  {% if g.home_team == team_code %}
+                    vs {{ g.away_team }}
+                  {% elif g.away_team == team_code %}
+                    @ {{ g.home_team }}
+                  {% else %}
+                    {{ g.away_team }} @ {{ g.home_team }}
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  {% if g.home_score is not none and g.away_score is not none %}
+                    {{ g.away_score }} - {{ g.home_score }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Player - {{ player.name }}{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/web">Home</a></li>
+        <li class="breadcrumb-item"><a href="/teams">Teams</a></li>
+        <li class="breadcrumb-item active">{{ player.name }}</li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Profile</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-6">
+            <div class="text-muted small">Name</div>
+            <div class="fw-bold">{{ player.name }}</div>
+          </div>
+          <div class="col-3">
+            <div class="text-muted small">Pos</div>
+            <div class="fw-bold">{{ player.position }}</div>
+          </div>
+          <div class="col-3">
+            <div class="text-muted small">Team</div>
+            <div class="fw-bold">{{ player.current_team }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0">Career Summary</h6></div>
+      <div class="card-body">
+        {% if career %}
+        <div class="row text-center">
+          <div class="col-4 mb-2">
+            <div class="text-muted small">Pass Yds</div>
+            <div class="fw-bold">{{ career.passing_yards or 0 }}</div>
+          </div>
+          <div class="col-4 mb-2">
+            <div class="text-muted small">Rush Yds</div>
+            <div class="fw-bold">{{ career.rushing_yards or 0 }}</div>
+          </div>
+          <div class="col-4 mb-2">
+            <div class="text-muted small">Rec Yds</div>
+            <div class="fw-bold">{{ career.receiving_yards or 0 }}</div>
+          </div>
+          <div class="col-4 mb-2">
+            <div class="text-muted small">Pass TD</div>
+            <div class="fw-bold">{{ career.passing_tds or 0 }}</div>
+          </div>
+          <div class="col-4 mb-2">
+            <div class="text-muted small">Rush TD</div>
+            <div class="fw-bold">{{ career.rushing_tds or 0 }}</div>
+          </div>
+          <div class="col-4 mb-2">
+            <div class="text-muted small">Rec TD</div>
+            <div class="fw-bold">{{ career.receiving_tds or 0 }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="text-muted">No career totals available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Gamelog{% if season %} ({{ season }}){% endif %}</h6>
+        <form method="get" class="d-flex align-items-center">
+          <label for="season" class="me-2 small text-muted">Season</label>
+          <input type="number" class="form-control form-control-sm" style="width: 110px;" id="season" name="season" value="{{ season or '' }}" placeholder="e.g., 2024">
+          <button class="btn btn-sm btn-outline-primary ms-2" type="submit">Apply</button>
+        </form>
+      </div>
+      <div class="card-body">
+        {% if gamelog %}
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Opp</th>
+                <th class="text-end">Pass</th>
+                <th class="text-end">Rush</th>
+                <th class="text-end">Rec</th>
+                <th class="text-end">Rec Yds</th>
+                <th class="text-end">PPR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for g in gamelog %}
+              <tr>
+                <td>{{ g.date[:10] if g.date else '' }}</td>
+                <td>{% if g.venue == 'AWAY' %}@{% else %}vs{% endif %} {{ g.opponent }}</td>
+                <td class="text-end">{{ g.stats.passing_yards or 0 }}</td>
+                <td class="text-end">{{ g.stats.rushing_yards or 0 }}</td>
+                <td class="text-end">{{ g.stats.receptions or 0 }}</td>
+                <td class="text-end">{{ g.stats.receiving_yards or 0 }}</td>
+                <td class="text-end">{{ '%.1f'|format(g.stats.fantasy_ppr or 0) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-muted">No gamelog entries available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0">Recent Games</h6></div>
+      <div class="card-body">
+        {% if recent_stats %}
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th class="text-end">Pass Yds</th>
+                <th class="text-end">Pass TDs</th>
+                <th class="text-end">Rush Yds</th>
+                <th class="text-end">Rush TDs</th>
+                <th class="text-end">Rec</th>
+                <th class="text-end">Rec Yds</th>
+                <th class="text-end">Rec TDs</th>
+                <th class="text-end">Fantasy PPR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in recent_stats %}
+              <tr>
+                <td>{{ s.game_date.strftime('%Y-%m-%d') if s.game_date else '' }}</td>
+                <td class="text-end">{{ s.passing_yards or 0 }}</td>
+                <td class="text-end">{{ s.passing_touchdowns or 0 }}</td>
+                <td class="text-end">{{ s.rushing_yards or 0 }}</td>
+                <td class="text-end">{{ s.rushing_touchdowns or 0 }}</td>
+                <td class="text-end">{{ s.receptions or 0 }}</td>
+                <td class="text-end">{{ s.receiving_yards or 0 }}</td>
+                <td class="text-end">{{ s.receiving_touchdowns or 0 }}</td>
+                <td class="text-end">{{ '%.1f'|format(s.fantasy_points_ppr or 0) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-muted">No recent stats available.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
