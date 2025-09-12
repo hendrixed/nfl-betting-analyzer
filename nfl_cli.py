@@ -129,6 +129,27 @@ def fetch(
             console.print_exception()
         raise typer.Exit(1)
 
+@app.command(name="schedule-ingest")
+def schedule_ingest(
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD); defaults to latest if omitted")] = None,
+):
+    """Ingest schedules.csv from a snapshot folder into the Game table."""
+    console.print("[bold blue]Ingesting Schedule snapshot[/bold blue]")
+    try:
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        result = ingestion.ingest_schedule_snapshot(date_str=date)
+        console.print(f"[green]Schedule rows upserted:[/green] {result.get('rows', 0)}")
+        if result.get("path"):
+            console.print(f"[green]Source:[/green] {result['path']}")
+        session.close()
+    except Exception as e:
+        console.print(f"[red]Schedule ingestion failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
 
 # MODELS STATUS COMMAND
 @app.command(name="models-status")

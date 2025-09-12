@@ -1,0 +1,2 @@
+game_id,season,week,season_type,home_team,away_team,kickoff_dt_utc,kickoff_dt_local,network,spread_close,total_close,officials_crew,stadium,roof_state
+TEST-NE-BUF-2024-W1,2024,1,REG,NE,BUF,2024-09-08T17:00:00,2024-09-08 13:00:00,,,,,Gillette Stadium,outdoors

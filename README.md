@@ -59,6 +59,9 @@ python nfl_cli.py fetch --season 2025 --week 1
 # Ingest foundational season data (schedules, rosters)
 python nfl_cli.py foundation --season 2025
 
+# Ingest schedules.csv from a snapshot directory into the DB
+python nfl_cli.py schedule-ingest --date 2024-01-01
+
 # Generate mock odds snapshot (for /betting/props)
 python nfl_cli.py odds-snapshot --max-offers 200
 
@@ -125,6 +128,9 @@ Web pages:
 - Teams: http://localhost:8000/teams
 - Team detail: http://localhost:8000/team/{TEAM_ID}
 - Games: http://localhost:8000/games
+- Odds: http://localhost:8000/web/odds
+- Insights: http://localhost:8000/web/insights
+- Backtests: http://localhost:8000/web/backtests
 
 Players JSON API:
 

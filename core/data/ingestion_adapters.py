@@ -28,7 +28,7 @@ except Exception:
     nfl = None  # type: ignore
 from sqlalchemy.orm import Session
 from core.data.market_mapping import normalize_team_name
-from core.database_models import DepthChart as DepthChartModel, Player as PlayerModel
+from core.database_models import DepthChart as DepthChartModel, Player as PlayerModel, Game as GameModel
 
 logger = logging.getLogger(__name__)
 
@@ -1199,6 +1199,84 @@ class UnifiedDataIngestion:
             return results
         except Exception as e:
             logger.error(f"Depth chart ingest failed: {e}")
+            return results
+
+    def ingest_schedule_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest schedules.csv from a snapshot directory into the Game table.
+        Returns {'rows': upserts, 'path': str(path)}
+        """
+        import pandas as pd
+        from datetime import datetime as _dt
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "schedules.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            df = pd.read_csv(path)
+            upserts = 0
+            for _, row in df.iterrows():
+                try:
+                    gid = str(row.get("game_id", "")).strip()
+                    if not gid:
+                        continue
+                    season = int(row.get("season")) if pd.notna(row.get("season")) else None
+                    week = int(row.get("week")) if pd.notna(row.get("week")) else None
+                    game_type = str(row.get("season_type") or "REG")
+                    home = str(row.get("home_team") or "").upper()
+                    away = str(row.get("away_team") or "").upper()
+                    date_utc = row.get("kickoff_dt_utc")
+                    game_date = None
+                    if pd.notna(date_utc) and str(date_utc).strip():
+                        try:
+                            game_date = _dt.fromisoformat(str(date_utc).replace("Z", ""))
+                        except Exception:
+                            try:
+                                game_date = _dt.strptime(str(date_utc), "%Y-%m-%d %H:%M:%S")
+                            except Exception:
+                                game_date = None
+                    stadium = str(row.get("stadium") or "")
+
+                    g = self.session.query(GameModel).filter(GameModel.game_id == gid).first()
+                    if not g:
+                        g = GameModel(
+                            game_id=gid,
+                            season=season or 0,
+                            week=week or 0,
+                            game_type=game_type,
+                            home_team=home,
+                            away_team=away,
+                            game_date=game_date,
+                            stadium=stadium or None,
+                            game_status='scheduled',
+                        )
+                        self.session.add(g)
+                    else:
+                        if season is not None:
+                            g.season = season
+                        if week is not None:
+                            g.week = week
+                        g.game_type = game_type
+                        g.home_team = home or g.home_team
+                        g.away_team = away or g.away_team
+                        if game_date is not None:
+                            g.game_date = game_date
+                        if stadium:
+                            g.stadium = stadium
+                    upserts += 1
+                except Exception:
+                    self.session.rollback()
+            try:
+                self.session.commit()
+            except Exception:
+                self.session.rollback()
+            results["rows"] = upserts
+            return results
+        except Exception as e:
+            logger.error(f"Schedule ingest failed: {e}")
             return results
     
     def _write_snapshot_csv(self, df: pd.DataFrame, filename: str, date_str: str) -> Path:

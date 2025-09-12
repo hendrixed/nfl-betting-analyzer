@@ -329,6 +329,18 @@ def models_available() -> bool:
     except Exception:
         return False
 
+def _clamp(val: Any, lo: Optional[float] = None, hi: Optional[float] = None) -> Any:
+    """Clamp numeric value to [lo, hi]. If conversion fails, return original."""
+    try:
+        v = float(val)
+        if lo is not None:
+            v = max(lo, v)
+        if hi is not None:
+            v = min(hi, v)
+        return v
+    except Exception:
+        return val
+
 # Database dependency
 def get_db():
     db = get_db_session()
@@ -722,13 +734,17 @@ async def get_player_fantasy_predictions(
             pred = local_models.predict_player(p.player_id, target_stat='fantasy_points_ppr')
             if not pred:
                 continue
+            # Sanity bounds for display
+            pred_val = _clamp(getattr(pred, 'predicted_value', None), 0.0, 80.0)
+            conf_val = float(getattr(pred, 'confidence', 0.0) or 0.0)
+            conf_val = float(max(0.0, min(0.99, conf_val)))
             out.append(FantasyPredictionResponse(
                 player_id=p.player_id,
                 name=p.name,
                 position=p.position,
                 team=p.current_team or "",
-                fantasy_points_ppr=float(pred.predicted_value),
-                confidence=float(pred.confidence),
+                fantasy_points_ppr=float(pred_val),
+                confidence=conf_val,
                 model=pred.model_used,
                 last_updated=datetime.now()
             ))
