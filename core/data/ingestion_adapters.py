@@ -16,11 +16,7 @@ from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
 import requests  # type: ignore[import-untyped]
-try:
-    # Make aiohttp optional to avoid import errors in constrained environments/tests
-    import aiohttp  # type: ignore[import-not-found]
-except Exception:  # pragma: no cover
-    aiohttp = None  # type: ignore[assignment, unused-ignore]
+# aiohttp is optional and imported lazily inside functions to avoid mypy and runtime issues
 try:
     # Optional import: this module must be importable even if nfl_data_py is missing
     import nfl_data_py as nfl
@@ -29,6 +25,8 @@ except Exception:
 from sqlalchemy.orm import Session
 from core.data.market_mapping import normalize_team_name
 from core.database_models import DepthChart as DepthChartModel, Player as PlayerModel, Game as GameModel
+from core.database_models import PlayerRoutes as PlayerRoutesModel, UsageShares as UsageSharesModel
+from core.database_models import PlayerGameStats as PlayerGameStatsModel
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +53,7 @@ SNAPSHOT_MIN_COLUMNS: Dict[str, List[str]] = {
         "play_id","game_id","offense","defense","play_type","epa","success","air_yards","yac","pressure","blitz","personnel","formation"
     ],
     "weather.csv": [
-        "game_id","stadium","temperature","humidity","wind_speed","wind_direction","precipitation","conditions","timestamp"
+        "game_id","kickoff_utc","temp_f","wind_mph","humidity","precip_prob","conditions","roof_state","surface"
     ],
     # Roster/Status
     "depth_charts.csv": ["team","player_id","player_name","position","slot","role","package","depth_chart_rank","last_updated"],
@@ -753,8 +751,10 @@ class WeatherAdapter(BaseAdapter):
     
     async def _fetch_nws_weather(self, game_id: str, stadium: str, game_date: datetime) -> Optional[WeatherData]:
         """Fetch weather from National Weather Service API"""
-        # If aiohttp is not available, gracefully skip external weather fetch
-        if aiohttp is None:
+        # Import aiohttp lazily to keep it optional
+        try:
+            from aiohttp import ClientSession
+        except Exception:
             logger.info("aiohttp not available; skipping NWS weather fetch")
             return None
 
@@ -763,10 +763,10 @@ class WeatherAdapter(BaseAdapter):
             if team not in self.stadium_coords:
                 logger.warning(f"No coordinates found for stadium: {stadium}")
                 return None
-            
+        
             lat, lon = self.stadium_coords[team]
-            
-            async with aiohttp.ClientSession() as session:
+        
+            async with ClientSession() as session:
                 # Get grid point
                 grid_url = f"{self.base_url}/points/{lat},{lon}"
                 async with session.get(grid_url) as response:
@@ -1202,11 +1202,316 @@ class UnifiedDataIngestion:
             logger.error(f"Depth chart ingest failed: {e}")
             return results
 
+    def ingest_routes_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest routes.csv from snapshot into PlayerRoutes table. Creates minimal Player rows when missing.
+        Returns { 'rows': upserts, 'path': str(path) }.
+        """
+        import pandas as pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "routes.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = pd.read_csv(path)
+            except Exception:
+                df = pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("routes.csv", []))
+
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("routes.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                # Header-only or malformed; nothing to do
+                return results
+
+            upserts = 0
+            for _, row in df.iterrows():
+                try:
+                    season = int(row.get("season")) if not pd.isna(row.get("season")) else None
+                    week = int(row.get("week")) if not pd.isna(row.get("week")) else None
+                    team_id = str(row.get("team_id") or "").upper()
+                    player_id = str(row.get("player_id") or "")
+                    routes_run = None if pd.isna(row.get("routes_run")) else int(row.get("routes_run"))
+                    route_participation = None if pd.isna(row.get("route_participation")) else float(row.get("route_participation"))
+                    if not player_id or season is None or week is None or not team_id:
+                        continue
+                    # Ensure Player exists
+                    p = self.session.query(PlayerModel).filter(PlayerModel.player_id == player_id).first()
+                    if not p:
+                        try:
+                            p = PlayerModel(player_id=player_id, name=player_id, position="UNK", current_team=team_id, is_active=True)
+                            self.session.add(p)
+                            self.session.commit()
+                        except Exception:
+                            self.session.rollback()
+                    # Upsert PlayerRoutes
+                    existing = (
+                        self.session.query(PlayerRoutesModel)
+                        .filter(
+                            PlayerRoutesModel.season == season,
+                            PlayerRoutesModel.week == week,
+                            PlayerRoutesModel.team_id == team_id,
+                            PlayerRoutesModel.player_id == player_id,
+                        )
+                        .first()
+                    )
+                    if existing:
+                        if routes_run is not None:
+                            existing.routes_run = routes_run
+                        if route_participation is not None:
+                            existing.route_participation = route_participation
+                    else:
+                        rec = PlayerRoutesModel(
+                            season=season,
+                            week=week,
+                            team_id=team_id,
+                            player_id=player_id,
+                            routes_run=routes_run,
+                            route_participation=route_participation,
+                        )
+                        self.session.add(rec)
+                    upserts += 1
+                except Exception:
+                    self.session.rollback()
+            try:
+                self.session.commit()
+            except Exception:
+                self.session.rollback()
+            results["rows"] = upserts
+            return results
+        except Exception as e:
+            logger.error(f"Routes ingest failed: {e}")
+            return results
+
+    def ingest_usage_shares_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest usage_shares.csv snapshot into UsageShares table. Creates minimal Player rows when missing.
+        Returns { 'rows': upserts, 'path': str(path) }.
+        """
+        import pandas as pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "usage_shares.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = pd.read_csv(path)
+            except Exception:
+                df = pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("usage_shares.csv", []))
+
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("usage_shares.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+
+            upserts = 0
+            for _, row in df.iterrows():
+                try:
+                    season = int(row.get("season")) if not pd.isna(row.get("season")) else None
+                    week = int(row.get("week")) if not pd.isna(row.get("week")) else None
+                    team_id = str(row.get("team_id") or "").upper()
+                    player_id = str(row.get("player_id") or "")
+                    carry_share = None if pd.isna(row.get("carry_share")) else float(row.get("carry_share"))
+                    target_share = None if pd.isna(row.get("target_share")) else float(row.get("target_share"))
+                    rz_touch_share = None if pd.isna(row.get("rz_touch_share")) else float(row.get("rz_touch_share"))
+                    gl_carry_share = None if pd.isna(row.get("gl_carry_share")) else float(row.get("gl_carry_share"))
+                    pass_block_snaps = None if pd.isna(row.get("pass_block_snaps")) else int(row.get("pass_block_snaps"))
+                    align_slot = None if pd.isna(row.get("align_slot")) else float(row.get("align_slot"))
+                    align_wide = None if pd.isna(row.get("align_wide")) else float(row.get("align_wide"))
+                    align_inline = None if pd.isna(row.get("align_inline")) else float(row.get("align_inline"))
+                    align_backfield = None if pd.isna(row.get("align_backfield")) else float(row.get("align_backfield"))
+                    if not player_id or season is None or week is None or not team_id:
+                        continue
+                    # Ensure Player exists
+                    p = self.session.query(PlayerModel).filter(PlayerModel.player_id == player_id).first()
+                    if not p:
+                        try:
+                            p = PlayerModel(player_id=player_id, name=player_id, position="UNK", current_team=team_id, is_active=True)
+                            self.session.add(p)
+                            self.session.commit()
+                        except Exception:
+                            self.session.rollback()
+                    # Upsert UsageShares
+                    existing = (
+                        self.session.query(UsageSharesModel)
+                        .filter(
+                            UsageSharesModel.season == season,
+                            UsageSharesModel.week == week,
+                            UsageSharesModel.team_id == team_id,
+                            UsageSharesModel.player_id == player_id,
+                        )
+                        .first()
+                    )
+                    if existing:
+                        existing.carry_share = carry_share if carry_share is not None else existing.carry_share
+                        existing.target_share = target_share if target_share is not None else existing.target_share
+                        existing.rz_touch_share = rz_touch_share if rz_touch_share is not None else existing.rz_touch_share
+                        existing.gl_carry_share = gl_carry_share if gl_carry_share is not None else existing.gl_carry_share
+                        existing.pass_block_snaps = pass_block_snaps if pass_block_snaps is not None else existing.pass_block_snaps
+                        existing.align_slot = align_slot if align_slot is not None else existing.align_slot
+                        existing.align_wide = align_wide if align_wide is not None else existing.align_wide
+                        existing.align_inline = align_inline if align_inline is not None else existing.align_inline
+                        existing.align_backfield = align_backfield if align_backfield is not None else existing.align_backfield
+                    else:
+                        rec = UsageSharesModel(
+                            season=season,
+                            week=week,
+                            team_id=team_id,
+                            player_id=player_id,
+                            carry_share=carry_share,
+                            target_share=target_share,
+                            rz_touch_share=rz_touch_share,
+                            gl_carry_share=gl_carry_share,
+                            pass_block_snaps=pass_block_snaps,
+                            align_slot=align_slot,
+                            align_wide=align_wide,
+                            align_inline=align_inline,
+                            align_backfield=align_backfield,
+                        )
+                        self.session.add(rec)
+                    upserts += 1
+                except Exception:
+                    self.session.rollback()
+            try:
+                self.session.commit()
+            except Exception:
+                self.session.rollback()
+            results["rows"] = upserts
+            return results
+        except Exception as e:
+            logger.error(f"Usage shares ingest failed: {e}")
+            return results
+
+    def snapshot_weather_openmeteo(self, date_str: Optional[str] = None, days_ahead: int = 14) -> Dict[str, Any]:
+        """Create weather.csv in snapshot folder for upcoming games using Open-Meteo (no API key).
+        Writes header-only if no games or network issues.
+        """
+        import pandas as pd
+        from datetime import timezone as _tz
+        date_str = date_str or datetime.now().strftime("%Y-%m-%d")
+        out_path = self._write_snapshot_csv(pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("weather.csv", [])), "weather.csv", date_str)
+        rows_written = 0
+        try:
+            # Determine upcoming games from DB
+            now = datetime.now(_tz.utc)
+            end = now + timedelta(days=max(1, int(days_ahead)))
+            games = (
+                self.session.query(GameModel)
+                .filter(GameModel.game_date.isnot(None))
+                .filter(GameModel.game_date >= now)
+                .filter(GameModel.game_date <= end)
+                .all()
+            )
+            if not games:
+                return {"path": str(out_path), "rows": 0}
+            # Prepare write
+            import csv
+            with open(out_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=SNAPSHOT_MIN_COLUMNS.get("weather.csv", []))
+                writer.writeheader()
+                for g in games:
+                    # Lat/lon by team mapping
+                    team = (g.home_team or "").upper()
+                    latlon = WeatherAdapter(CacheManager()).stadium_coords.get(team)
+                    if not latlon:
+                        continue
+                    lat, lon = latlon
+                    try:
+                        # Query Open-Meteo hourly for the game date
+                        start_date = g.game_date.date().isoformat()
+                        end_date = start_date
+                        url = (
+                            "https://api.open-meteo.com/v1/forecast"
+                            f"?latitude={lat}&longitude={lon}"
+                            "&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation_probability"
+                            "&temperature_unit=fahrenheit&windspeed_unit=mph&timezone=UTC"
+                            f"&start_date={start_date}&end_date={end_date}"
+                        )
+                        resp = requests.get(url, timeout=10)
+                        temp_f = wind_mph = humidity = precip_prob = None
+                        if resp.ok:
+                            data = resp.json()
+                            times = data.get("hourly", {}).get("time", [])
+                            temps = data.get("hourly", {}).get("temperature_2m", [])
+                            winds = data.get("hourly", {}).get("wind_speed_10m", [])
+                            hums = data.get("hourly", {}).get("relative_humidity_2m", [])
+                            precs = data.get("hourly", {}).get("precipitation_probability", [])
+                            # Find index closest to game kickoff hour
+                            idx = None
+                            if times and g.game_date:
+                                target = g.game_date.replace(minute=0, second=0, microsecond=0, tzinfo=_tz.utc).isoformat(timespec='hours')
+                                if target in times:
+                                    idx = times.index(target)
+                                else:
+                                    # Fallback to first match on date
+                                    for i, t in enumerate(times):
+                                        if t.startswith(start_date):
+                                            idx = i
+                                            break
+                            if idx is not None:
+                                def _get(lst, i):
+                                    try:
+                                        return lst[i]
+                                    except Exception:
+                                        return None
+                                temp_f = _get(temps, idx)
+                                wind_mph = _get(winds, idx)
+                                humidity = _get(hums, idx)
+                                precip_prob = _get(precs, idx)
+                        row = {
+                            "game_id": g.game_id,
+                            "kickoff_utc": g.game_date.isoformat() if g.game_date else None,
+                            "temp_f": temp_f,
+                            "wind_mph": wind_mph,
+                            "humidity": humidity,
+                            "precip_prob": precip_prob,
+                            "conditions": "",
+                            "roof_state": getattr(g, "roof_state", None),
+                            "surface": getattr(g, "surface", None),
+                        }
+                        writer.writerow(row)
+                        rows_written += 1
+                    except Exception:
+                        continue
+            return {"path": str(out_path), "rows": rows_written}
+        except Exception as e:
+            logger.error(f"Weather snapshot failed: {e}")
+            return {"path": str(out_path), "rows": rows_written}
+    
+    def _write_snapshot_csv(self, df: pd.DataFrame, filename: str, date_str: str) -> Path:
+        """Write a DataFrame to the snapshot CSV file and return its path.
+        If df is empty or has no columns, write a header-only CSV using SNAPSHOT_MIN_COLUMNS when available.
+        """
+        snapshot_path = self._snapshot_dir(date_str) / filename
+        try:
+            min_cols = SNAPSHOT_MIN_COLUMNS.get(filename)
+            if df is not None and hasattr(df, 'columns') and len(df.columns) > 0:
+                # Always write header first to ensure correct column order
+                df.head(0).to_csv(snapshot_path, index=False)
+                if not df.empty:
+                    df.to_csv(snapshot_path, index=False)
+            else:
+                # Header-only file
+                if min_cols:
+                    pd.DataFrame(columns=min_cols).to_csv(snapshot_path, index=False)
+                else:
+                    # Fallback empty file
+                    if not snapshot_path.exists():
+                        snapshot_path.touch()
+            logger.info(f"Snapshot written: {snapshot_path}")
+        except Exception as e:
+            logger.warning(f"Failed to write snapshot {snapshot_path}: {e}")
+        return snapshot_path
+
     def ingest_schedule_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
         """Ingest schedules.csv from a snapshot directory into the Game table.
         Returns {'rows': upserts, 'path': str(path)}
         """
-        import pandas as pd
+        import pandas as _pd
         from datetime import datetime as _dt
         results: Dict[str, Any] = {"rows": 0, "path": None}
         try:
@@ -1217,29 +1522,34 @@ class UnifiedDataIngestion:
             results["path"] = str(path)
             if not path.exists():
                 return results
-            df = pd.read_csv(path)
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("schedules.csv", []))
+
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("schedules.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                # Malformed headers; nothing to ingest
+                return results
+
             upserts = 0
             for _, row in df.iterrows():
                 try:
-                    gid = str(row.get("game_id", "")).strip()
+                    gid = str(row.get("game_id") or "").strip()
                     if not gid:
                         continue
-                    season = int(row.get("season")) if pd.notna(row.get("season")) else None
-                    week = int(row.get("week")) if pd.notna(row.get("week")) else None
-                    game_type = str(row.get("season_type") or "REG")
+                    season = int(row.get("season")) if _pd.notna(row.get("season")) else None
+                    week = int(row.get("week")) if _pd.notna(row.get("week")) else None
                     home = str(row.get("home_team") or "").upper()
                     away = str(row.get("away_team") or "").upper()
-                    date_utc = row.get("kickoff_dt_utc")
+                    kickoff = str(row.get("kickoff_dt_utc") or "")
+                    stadium = str(row.get("stadium") or "").strip()
+                    roof_state = str(row.get("roof_state") or "").strip()
                     game_date = None
-                    if pd.notna(date_utc) and str(date_utc).strip():
-                        try:
-                            game_date = _dt.fromisoformat(str(date_utc).replace("Z", ""))
-                        except Exception:
-                            try:
-                                game_date = _dt.strptime(str(date_utc), "%Y-%m-%d %H:%M:%S")
-                            except Exception:
-                                game_date = None
-                    stadium = str(row.get("stadium") or "")
+                    try:
+                        game_date = _dt.fromisoformat(kickoff) if kickoff else None
+                    except Exception:
+                        game_date = None
 
                     g = self.session.query(GameModel).filter(GameModel.game_id == gid).first()
                     if not g:
@@ -1247,26 +1557,27 @@ class UnifiedDataIngestion:
                             game_id=gid,
                             season=season or 0,
                             week=week or 0,
-                            game_type=game_type,
                             home_team=home,
                             away_team=away,
                             game_date=game_date,
-                            stadium=stadium or None,
-                            game_status='scheduled',
+                            stadium=stadium,
                         )
                         self.session.add(g)
                     else:
-                        if season is not None:
-                            g.season = season
-                        if week is not None:
-                            g.week = week
-                        g.game_type = game_type
+                        g.season = season or g.season
+                        g.week = week or g.week
                         g.home_team = home or g.home_team
                         g.away_team = away or g.away_team
                         if game_date is not None:
                             g.game_date = game_date
                         if stadium:
                             g.stadium = stadium
+                    # Optional enrichments if columns/attrs exist
+                    try:
+                        if roof_state:
+                            setattr(g, "roof_state", roof_state)
+                    except Exception:
+                        pass
                     upserts += 1
                 except Exception:
                     self.session.rollback()
@@ -1279,31 +1590,425 @@ class UnifiedDataIngestion:
         except Exception as e:
             logger.error(f"Schedule ingest failed: {e}")
             return results
-    
-    def _write_snapshot_csv(self, df: pd.DataFrame, filename: str, date_str: str) -> Path:
-        """Write a DataFrame to the snapshot CSV file and return its path.
-        If df is empty, still ensure the file exists with headers when possible.
+
+    def ingest_games_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest games.csv to enrich the Game table with roof/surface and basic metadata.
+        Safe upsert: only updates known fields (roof_state, surface). Returns rows updated.
         """
-        snapshot_path = self._snapshot_dir(date_str) / filename
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
         try:
-            min_cols = SNAPSHOT_MIN_COLUMNS.get(filename)
-            if df is not None and hasattr(df, 'columns') and len(df.columns) > 0:
-                # Write header, then overwrite with rows if present
-                df.head(0).to_csv(snapshot_path, index=False)
-                if not df.empty:
-                    df.to_csv(snapshot_path, index=False)
-            else:
-                # No data/columns: write header-only if we know the minimal schema
-                if min_cols:
-                    pd.DataFrame(columns=min_cols).to_csv(snapshot_path, index=False)
-                else:
-                    # Fallback: create empty file
-                    if not snapshot_path.exists():
-                        snapshot_path.touch()
-            logger.info(f"Snapshot written: {snapshot_path}")
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "games.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("games.csv", []))
+
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("games.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+
+            updates = 0
+            for _, row in df.iterrows():
+                gid = str(row.get("game_id") or "").strip()
+                if not gid:
+                    continue
+                g = self.session.query(GameModel).filter(GameModel.game_id == gid).first()
+                if not g:
+                    # Only update existing games - schedules ingestion should create them
+                    continue
+                changed = False
+                try:
+                    rs = str(row.get("roof_state") or "").strip()
+                    if rs:
+                        if getattr(g, "roof_state", None) != rs:
+                            setattr(g, "roof_state", rs)
+                            changed = True
+                except Exception:
+                    pass
+                try:
+                    field_type = str(row.get("field_type") or "").strip()
+                    if field_type:
+                        if getattr(g, "surface", None) != field_type:
+                            setattr(g, "surface", field_type)
+                            changed = True
+                except Exception:
+                    pass
+                if changed:
+                    updates += 1
+            try:
+                self.session.commit()
+            except Exception:
+                self.session.rollback()
+            results["rows"] = updates
+            return results
         except Exception as e:
-            logger.warning(f"Failed to write snapshot {snapshot_path}: {e}")
-        return snapshot_path
+            logger.error(f"Games ingest failed: {e}")
+            return results
+
+    def _update_pgs_row(self, player_id: str, game_id: str, updates: Dict[str, Any]) -> bool:
+        """Helper to update an existing PlayerGameStats row if present. Returns True if updated."""
+        try:
+            pgs = (
+                self.session.query(PlayerGameStatsModel)
+                .filter(PlayerGameStatsModel.player_id == player_id)
+                .filter(PlayerGameStatsModel.game_id == game_id)
+                .first()
+            )
+            if not pgs:
+                return False
+            changed = False
+            for k, v in updates.items():
+                try:
+                    if hasattr(pgs, k) and v is not None:
+                        setattr(pgs, k, v)
+                        changed = True
+                except Exception:
+                    continue
+            return changed
+        except Exception:
+            return False
+
+    def ingest_box_passing_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest box_passing.csv to update PlayerGameStats passing fields when rows exist.
+        Does not create new PlayerGameStats rows.
+        """
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "box_passing.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("box_passing.csv", []))
+
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("box_passing.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+
+            updates = 0
+            for _, row in df.iterrows():
+                pid = str(row.get("player_id") or "").strip()
+                gid = str(row.get("game_id") or "").strip()
+                if not pid or not gid:
+                    continue
+                changed = self._update_pgs_row(pid, gid, {
+                    "passing_attempts": _pd.to_numeric(row.get("att"), errors="coerce"),
+                    "passing_completions": _pd.to_numeric(row.get("comp"), errors="coerce"),
+                    "passing_yards": _pd.to_numeric(row.get("yds"), errors="coerce"),
+                    "passing_touchdowns": _pd.to_numeric(row.get("td"), errors="coerce"),
+                    "passing_interceptions": _pd.to_numeric(row.get("int"), errors="coerce"),
+                    "passing_sacks": _pd.to_numeric(row.get("sacks"), errors="coerce"),
+                    "passing_sack_yards": _pd.to_numeric(row.get("sack_yards"), errors="coerce"),
+                })
+                if changed:
+                    updates += 1
+            try:
+                self.session.commit()
+            except Exception:
+                self.session.rollback()
+            results["rows"] = updates
+            return results
+        except Exception as e:
+            logger.error(f"Box passing ingest failed: {e}")
+            return results
+
+    def ingest_box_rushing_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest box_rushing.csv to update PlayerGameStats rushing fields if rows exist."""
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "box_rushing.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("box_rushing.csv", []))
+
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("box_rushing.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+
+            updates = 0
+            for _, row in df.iterrows():
+                pid = str(row.get("player_id") or "").strip()
+                gid = str(row.get("game_id") or "").strip()
+                if not pid or not gid:
+                    continue
+                changed = self._update_pgs_row(pid, gid, {
+                    "rushing_attempts": _pd.to_numeric(row.get("att"), errors="coerce"),
+                    "rushing_yards": _pd.to_numeric(row.get("yds"), errors="coerce"),
+                    "rushing_touchdowns": _pd.to_numeric(row.get("td"), errors="coerce"),
+                    "rushing_fumbles": _pd.to_numeric(row.get("fumbles"), errors="coerce"),
+                })
+                if changed:
+                    updates += 1
+            try:
+                self.session.commit()
+            except Exception:
+                self.session.rollback()
+            results["rows"] = updates
+            return results
+        except Exception as e:
+            logger.error(f"Box rushing ingest failed: {e}")
+            return results
+
+    def ingest_box_receiving_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest box_receiving.csv to update PlayerGameStats receiving fields if rows exist."""
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "box_receiving.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("box_receiving.csv", []))
+
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("box_receiving.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+
+            updates = 0
+            for _, row in df.iterrows():
+                pid = str(row.get("player_id") or "").strip()
+                gid = str(row.get("game_id") or "").strip()
+                if not pid or not gid:
+                    continue
+                changed = self._update_pgs_row(pid, gid, {
+                    "targets": _pd.to_numeric(row.get("targets"), errors="coerce"),
+                    "receptions": _pd.to_numeric(row.get("rec"), errors="coerce"),
+                    "receiving_yards": _pd.to_numeric(row.get("yds"), errors="coerce"),
+                    "receiving_touchdowns": _pd.to_numeric(row.get("td"), errors="coerce"),
+                    "yards_after_catch": _pd.to_numeric(row.get("yac"), errors="coerce"),
+                    "air_yards": _pd.to_numeric(row.get("air_yards"), errors="coerce"),
+                })
+                if changed:
+                    updates += 1
+            try:
+                self.session.commit()
+            except Exception:
+                self.session.rollback()
+            results["rows"] = updates
+            return results
+        except Exception as e:
+            logger.error(f"Box receiving ingest failed: {e}")
+            return results
+
+    def ingest_box_defense_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest box_defense.csv as a no-op (counts rows). DB does not model individual defense stat fields."""
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "box_defense.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("box_defense.csv", []))
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("box_defense.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+            results["rows"] = int(len(df))
+            return results
+        except Exception as e:
+            logger.error(f"Box defense ingest failed: {e}")
+            return results
+
+    def ingest_kicking_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest kicking.csv as a no-op (counts rows)."""
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "kicking.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("kicking.csv", []))
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("kicking.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+            results["rows"] = int(len(df))
+            return results
+        except Exception as e:
+            logger.error(f"Kicking ingest failed: {e}")
+            return results
+
+    def ingest_inactives_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest inactives.csv as a no-op (counts rows). Safe by default to avoid mass deactivation.
+        Future work can toggle Player.is_active based on policy.
+        """
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "inactives.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("inactives.csv", []))
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("inactives.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+            results["rows"] = int(len(df))
+            return results
+        except Exception as e:
+            logger.error(f"Inactives ingest failed: {e}")
+            return results
+
+    def ingest_transactions_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest transactions.csv as a no-op (counts rows)."""
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "transactions.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("transactions.csv", []))
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("transactions.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+            results["rows"] = int(len(df))
+            return results
+        except Exception as e:
+            logger.error(f"Transactions ingest failed: {e}")
+            return results
+
+    def ingest_drives_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest drives.csv as a no-op (counts rows)."""
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "drives.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("drives.csv", []))
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("drives.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+            results["rows"] = int(len(df))
+            return results
+        except Exception as e:
+            logger.error(f"Drives ingest failed: {e}")
+            return results
+
+    def ingest_team_context_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest team_context.csv as a no-op (counts rows)."""
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "team_context.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("team_context.csv", []))
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("team_context.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+            results["rows"] = int(len(df))
+            return results
+        except Exception as e:
+            logger.error(f"Team context ingest failed: {e}")
+            return results
+
+    def ingest_team_splits_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Any]:
+        """Ingest team_splits.csv as a no-op (counts rows)."""
+        import pandas as _pd
+        results: Dict[str, Any] = {"rows": 0, "path": None}
+        try:
+            snap_dir = self._snapshot_dir(date_str) if date_str else self._latest_snapshot_dir()
+            if not snap_dir:
+                return results
+            path = snap_dir / "team_splits.csv"
+            results["path"] = str(path)
+            if not path.exists():
+                return results
+            try:
+                df = _pd.read_csv(path)
+            except Exception:
+                df = _pd.DataFrame(columns=SNAPSHOT_MIN_COLUMNS.get("team_splits.csv", []))
+            required_cols = SNAPSHOT_MIN_COLUMNS.get("team_splits.csv", [])
+            if any(c not in df.columns for c in required_cols):
+                return results
+            results["rows"] = int(len(df))
+            return results
+        except Exception as e:
+            logger.error(f"Team splits ingest failed: {e}")
+            return results
+
+    def ingest_extended_weekly_from_snapshot(self, date_str: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+        """Run all extended weekly ingestions and return a summary dict keyed by component name."""
+        return {
+            "games": self.ingest_games_snapshot(date_str=date_str),
+            "box_passing": self.ingest_box_passing_snapshot(date_str=date_str),
+            "box_rushing": self.ingest_box_rushing_snapshot(date_str=date_str),
+            "box_receiving": self.ingest_box_receiving_snapshot(date_str=date_str),
+            "box_defense": self.ingest_box_defense_snapshot(date_str=date_str),
+            "kicking": self.ingest_kicking_snapshot(date_str=date_str),
+            "inactives": self.ingest_inactives_snapshot(date_str=date_str),
+            "transactions": self.ingest_transactions_snapshot(date_str=date_str),
+            "drives": self.ingest_drives_snapshot(date_str=date_str),
+            "team_context": self.ingest_team_context_snapshot(date_str=date_str),
+            "team_splits": self.ingest_team_splits_snapshot(date_str=date_str),
+        }
 
     def snapshot_odds(
         self,

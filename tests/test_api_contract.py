@@ -50,7 +50,8 @@ def test_fantasy_predictions_contract():
             for k in ("player_id", "name", "position", "team", "fantasy_points_ppr", "confidence", "model", "last_updated"):
                 assert k in row
     else:
-        assert resp.status_code in (400, 403)
+        # When models are not present, endpoint should be gated with 503
+        assert resp.status_code in (400, 403, 503)
 
 
 def test_betting_props_contract():

@@ -10,6 +10,7 @@ Welcome to the NFL Betting Analyzer. This guide helps you set up the environment
    - `python nfl_cli.py snapshot-verify`
    - `python nfl_cli.py snapshot-schedules --season 2024 --date 2024-01-01`
    - `python nfl_cli.py snapshot-depthcharts --season 2024 --week 1 --date 2024-01-01`
+   - `python nfl_cli.py weather-snapshot --days-ahead 14 --date 2024-01-01` (creates `weather.csv` using Open-Meteo)
 3. Train models:
    - `python nfl_cli.py train --target fantasy_points_ppr`
 4. Generate projections:
@@ -41,6 +42,9 @@ Snapshots are stored under `data/snapshots/YYYY-MM-DD/` and include `rosters.csv
 
 - Ingest both schedules and depth charts for a snapshot date:
   - `python nfl_cli.py ingest-snapshot --date 2024-01-01 --season 2024 --week 1`
+
+- Ingest extended weekly components (games metadata and box stats):
+  - `python nfl_cli.py extended-ingest --date 2024-01-01`
 
 ### Browsing Team Schedule Options
 

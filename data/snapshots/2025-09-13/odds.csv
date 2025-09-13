@@ -1,0 +1,11 @@
+timestamp,book,market,player_id,team_id,line,over_odds,under_odds
+2025-09-13T00:29:33.582014,draftkings,player_pass_yds,00-0026300,SF,250.6,-120,-110
+2025-09-13T00:29:33.582036,draftkings,player_rush_yds,00-0026300,SF,84.4,-105,-110
+2025-09-13T00:29:33.582045,draftkings,player_rec,00-0026300,SF,7.5,-110,-110
+2025-09-13T00:29:33.582055,draftkings,player_rec_yds,00-0026300,SF,38.8,105,-105
+2025-09-13T00:29:33.582064,draftkings,player_ints,00-0026300,SF,1.2,-115,-110
+2025-09-13T00:29:33.582074,fanduel,player_pass_yds,00-0026300,SF,222.5,-105,-110
+2025-09-13T00:29:33.582080,fanduel,player_rush_yds,00-0026300,SF,67.3,-110,-110
+2025-09-13T00:29:33.582085,fanduel,player_rec,00-0026300,SF,5.7,-105,-110
+2025-09-13T00:29:33.582090,fanduel,player_rec_yds,00-0026300,SF,43.9,-115,-110
+2025-09-13T00:29:33.582095,fanduel,player_ints,00-0026300,SF,0.8,-115,-110

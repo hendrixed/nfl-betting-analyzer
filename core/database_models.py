@@ -130,6 +130,51 @@ class HistoricalValidationReport(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
+# --- Phase 2: Minimal tables for routes and usage shares ---
+
+class PlayerRoutes(Base):
+    """Weekly player route participation."""
+    __tablename__ = 'player_routes'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    week: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    team_id: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    player_id: Mapped[str] = mapped_column(String(50), ForeignKey('players.player_id'), nullable=False, index=True)
+    routes_run: Mapped[Optional[int]] = mapped_column(Integer)
+    route_participation: Mapped[Optional[float]] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('season', 'week', 'team_id', 'player_id', name='uq_player_routes_key'),
+    )
+
+
+class UsageShares(Base):
+    """Weekly usage share metrics per player."""
+    __tablename__ = 'usage_shares'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    season: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    week: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    team_id: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    player_id: Mapped[str] = mapped_column(String(50), ForeignKey('players.player_id'), nullable=False, index=True)
+    carry_share: Mapped[Optional[float]] = mapped_column(Float)
+    target_share: Mapped[Optional[float]] = mapped_column(Float)
+    rz_touch_share: Mapped[Optional[float]] = mapped_column(Float)
+    gl_carry_share: Mapped[Optional[float]] = mapped_column(Float)
+    pass_block_snaps: Mapped[Optional[int]] = mapped_column(Integer)
+    align_slot: Mapped[Optional[float]] = mapped_column(Float)
+    align_wide: Mapped[Optional[float]] = mapped_column(Float)
+    align_inline: Mapped[Optional[float]] = mapped_column(Float)
+    align_backfield: Mapped[Optional[float]] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint('season', 'week', 'team_id', 'player_id', name='uq_usage_shares_key'),
+    )
+
+
 class Team(Base):
     """NFL Team information for 2025 season."""
     __tablename__ = 'teams'
@@ -180,6 +225,8 @@ class Game(Base):
     
     # Weather and conditions
     stadium: Mapped[Optional[str]] = mapped_column(String(100))
+    roof_state: Mapped[Optional[str]] = mapped_column(String(20))
+    surface: Mapped[Optional[str]] = mapped_column(String(20))
     weather_temperature: Mapped[Optional[int]] = mapped_column(Integer)
     weather_humidity: Mapped[Optional[int]] = mapped_column(Integer)
     weather_wind_speed: Mapped[Optional[int]] = mapped_column(Integer)
@@ -461,6 +508,12 @@ def get_db_session(database_url: str = "sqlite:///nfl_predictions.db"):
     engine = create_engine(database_url)
     try:
         Base.metadata.create_all(engine)
+        # Apply lightweight migrations for new columns when running against an existing DB
+        try:
+            migrate_database(engine)
+        except Exception:
+            # Migrations are best-effort during session creation
+            pass
     except Exception:
         pass
     Session = sessionmaker(bind=engine)
@@ -536,6 +589,21 @@ def migrate_database(engine):
                     logger.info(f"Added column {column_name} to player_game_stats table")
                 except Exception as e:
                     logger.debug(f"Could not add column {column_name}: {e}")
+                    pass
+
+        # Ensure new weather/venue columns exist on games table
+        games_columns = [
+            ("roof_state", "VARCHAR(20)"),
+            ("surface", "VARCHAR(20)"),
+        ]
+        for column_name, column_def in games_columns:
+            if not column_exists(conn, "games", column_name):
+                try:
+                    conn.execute(text(f"ALTER TABLE games ADD COLUMN {column_name} {column_def}"))
+                    conn.commit()
+                    logger.info(f"Added column {column_name} to games table")
+                except Exception as e:
+                    logger.debug(f"Could not add column {column_name} on games: {e}")
                     pass
 
 

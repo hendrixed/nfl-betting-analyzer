@@ -16,6 +16,14 @@ try:
     from core.database_models import DepthChart  # type: ignore
 except Exception:  # pragma: no cover
     DepthChart = None  # type: ignore
+try:
+    from core.database_models import PlayerRoutes as _PlayerRoutes  # type: ignore
+except Exception:  # pragma: no cover
+    _PlayerRoutes = None  # type: ignore
+try:
+    from core.database_models import UsageShares as _UsageShares  # type: ignore
+except Exception:  # pragma: no cover
+    _UsageShares = None  # type: ignore
 
 
 def _resolve_opponent_and_venue(team: str, game: Game) -> Tuple[str, str]:
@@ -80,6 +88,30 @@ def get_player_profile(session: Session, player_id: str) -> Dict[str, Any]:
             "receiving_tds": int(agg[9] or 0),
         }
 
+    # Attach latest usage metrics if available
+    usage: Dict[str, Any] = {}
+    try:
+        if _UsageShares is not None:
+            u = (
+                session.query(_UsageShares)
+                .filter(_UsageShares.player_id == player_id)
+                .order_by(desc(_UsageShares.season), desc(_UsageShares.week))
+                .first()
+            )
+            if u:
+                usage["target_share"] = float(getattr(u, "target_share", 0.0) or 0.0)
+        if _PlayerRoutes is not None:
+            r = (
+                session.query(_PlayerRoutes)
+                .filter(_PlayerRoutes.player_id == player_id)
+                .order_by(desc(_PlayerRoutes.season), desc(_PlayerRoutes.week))
+                .first()
+            )
+            if r:
+                usage["route_participation"] = float(getattr(r, "route_participation", 0.0) or 0.0)
+    except Exception:
+        pass
+
     return {
         "player_id": p.player_id,
         "name": p.name,
@@ -88,6 +120,8 @@ def get_player_profile(session: Session, player_id: str) -> Dict[str, Any]:
         "status": "active" if getattr(p, "is_active", False) else "inactive",
         "depth_chart_rank": getattr(p, "depth_chart_rank", None),
         "current_season": season_summary,
+        **({"target_share": usage.get("target_share")} if "target_share" in usage else {}),
+        **({"route_participation": usage.get("route_participation")} if "route_participation" in usage else {}),
     }
 
 
@@ -461,6 +495,17 @@ def get_leaderboard(
         Player.current_team,
         func.coalesce(func.sum(col), 0).label("value")
     ).join(PlayerGameStats, Player.player_id == PlayerGameStats.player_id)
+    # Default filters: active-only and drop invalid placeholder/nameless entries
+    try:
+        q = q.filter(
+            Player.is_active == True,  # noqa: E712
+            ~Player.player_id.ilike("%_ol%"),
+            Player.name.isnot(None),
+            func.length(func.trim(Player.name)) > 0,
+        )
+    except Exception:
+        # Fallback when ilike/trim unsupported
+        q = q.filter(Player.is_active == True, Player.name.isnot(None))  # noqa: E712
     if season is not None:
         q = q.join(Game, PlayerGameStats.game_id == Game.game_id).filter(Game.season == season)
     if position:
@@ -514,6 +559,16 @@ def get_leaderboard_paginated(
         Player.player_id.label("pid"),
         func.coalesce(func.sum(stat_col), 0).label("value"),
     ).join(PlayerGameStats, Player.player_id == PlayerGameStats.player_id)
+    # Default filters for leaderboard (active-only, drop invalid placeholders/nameless)
+    try:
+        base = base.filter(
+            Player.is_active == True,  # noqa: E712
+            ~Player.player_id.ilike("%_ol%"),
+            Player.name.isnot(None),
+            func.length(func.trim(Player.name)) > 0,
+        )
+    except Exception:
+        base = base.filter(Player.is_active == True, Player.name.isnot(None))  # noqa: E712
     if season is not None:
         base = base.join(Game, PlayerGameStats.game_id == Game.game_id).filter(Game.season == season)
     if position:
@@ -523,6 +578,16 @@ def get_leaderboard_paginated(
     # Total distinct grouped players
     try:
         total = session.query(func.count(func.distinct(Player.player_id))).join(PlayerGameStats, Player.player_id == PlayerGameStats.player_id)
+        # Apply the same default filters for totals
+        try:
+            total = total.filter(
+                Player.is_active == True,  # noqa: E712
+                ~Player.player_id.ilike("%_ol%"),
+                Player.name.isnot(None),
+                func.length(func.trim(Player.name)) > 0,
+            )
+        except Exception:
+            total = total.filter(Player.is_active == True, Player.name.isnot(None))  # noqa: E712
         if season is not None:
             total = total.join(Game, PlayerGameStats.game_id == Game.game_id).filter(Game.season == season)
         if position:
@@ -543,6 +608,15 @@ def get_leaderboard_paginated(
         Player.current_team,
         func.coalesce(func.sum(stat_col), 0).label("value"),
     ).join(PlayerGameStats, Player.player_id == PlayerGameStats.player_id)
+    try:
+        full = full.filter(
+            Player.is_active == True,  # noqa: E712
+            ~Player.player_id.ilike("%_ol%"),
+            Player.name.isnot(None),
+            func.length(func.trim(Player.name)) > 0,
+        )
+    except Exception:
+        full = full.filter(Player.is_active == True, Player.name.isnot(None))  # noqa: E712
     if season is not None:
         full = full.join(Game, PlayerGameStats.game_id == Game.game_id).filter(Game.season == season)
     if position:

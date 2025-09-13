@@ -39,8 +39,12 @@ Keep this document and the code mapping in sync. Tests assert these exact header
 
 - weather.csv
 ```
-["game_id","stadium","temperature","humidity","wind_speed","wind_direction","precipitation","conditions","timestamp"]
+["game_id","kickoff_utc","temp_f","wind_mph","humidity","precip_prob","conditions","roof_state","surface"]
 ```
+Notes:
+- This header reflects the Open-Meteo snapshot implemented by `UnifiedDataIngestion.snapshot_weather_openmeteo()` and consumed by the web UI.
+- `kickoff_utc` is an ISO-8601 timestamp for the scheduled kickoff (UTC).
+- `roof_state` and `surface` are sourced from schedule ingestion when available.
 
 - depth_charts.csv
 ```

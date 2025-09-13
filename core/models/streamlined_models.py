@@ -358,8 +358,23 @@ class StreamlinedNFLModels:
             feature_scaled = model_data['scaler'].transform(feature_array)
             prediction = model_data['model'].predict(feature_scaled)[0]
             
-            # Calculate confidence based on model performance
-            confidence = min(model_data['r2_score'], 0.95)
+            # Clamp prediction for known targets
+            try:
+                if target_stat == 'fantasy_points_ppr':
+                    # Fantasy outputs should be within a sensible range
+                    prediction = float(max(0.0, min(80.0, float(prediction))))
+                else:
+                    # Generic safety clamp for other numeric targets
+                    prediction = float(prediction)
+            except Exception:
+                pass
+            
+            # Calculate confidence based on model performance and clamp to [0, 0.99]
+            try:
+                confidence = float(model_data['r2_score']) if model_data.get('r2_score') is not None else 0.0
+            except Exception:
+                confidence = 0.0
+            confidence = float(max(0.0, min(0.99, confidence)))
             
             return PredictionResult(
                 player_id=player_id,
@@ -418,6 +433,7 @@ class StreamlinedNFLModels:
                 'r2_score': result.r2_score,
                 'features': len(feature_names),
                 'feature_names': feature_names,
+                'samples': len(X),
                 'saved_at': datetime.now().isoformat()
             }
             meta_path = filepath.with_suffix(filepath.suffix + ".meta.json")

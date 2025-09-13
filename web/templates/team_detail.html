@@ -126,16 +126,33 @@
 <div class="row mt-4">
   <div class="col-12">
     <div class="card">
-      <div class="card-header"><h5 class="mb-0"><i class="fas fa-calendar"></i> Schedule</h5></div>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-calendar"></i> Schedule</h5>
+        <form class="d-flex align-items-center" method="get" action="">
+          <div class="form-check form-switch me-3">
+            <input class="form-check-input" type="checkbox" id="include_past" name="include_past" value="true" {% if include_past %}checked{% endif %}>
+            <label class="form-check-label small" for="include_past">Include past</label>
+          </div>
+          <label for="timezone" class="me-2 small text-muted">Timezone</label>
+          <select id="timezone" name="timezone" class="form-select form-select-sm" style="width: 200px;">
+            {% set tz = timezone or 'America/Chicago' %}
+            {% for tz_opt in ['America/Chicago','America/New_York','America/Denver','America/Los_Angeles','UTC'] %}
+              <option value="{{ tz_opt }}" {% if tz_opt == tz %}selected{% endif %}>{{ tz_opt }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-outline-primary ms-2" type="submit">Apply</button>
+        </form>
+      </div>
       <div class="card-body">
         <div class="table-responsive">
           <table class="table table-sm table-striped">
             <thead>
               <tr>
-                <th>Date</th>
+                <th>Date ({{ timezone or 'America/Chicago' }})</th>
                 <th>Season</th>
                 <th>Week</th>
                 <th>Matchup</th>
+                <th class="text-center">Wx</th>
                 <th class="text-end">Score</th>
               </tr>
             </thead>
@@ -152,6 +169,15 @@
                     @ {{ g.home_team }}
                   {% else %}
                     {{ g.away_team }} @ {{ g.home_team }}
+                  {% endif %}
+                </td>
+                <td class="text-center small">
+                  {% set w = weather_map.get(g.game_id) if weather_map else None %}
+                  {% if w %}
+                    {{ (w.get('temp_f') or '') and (w.get('temp_f') | float | round(0) | int) or '—' }}°F,
+                    {{ (w.get('wind_mph') or '') and (w.get('wind_mph') | float | round(0) | int) or '—' }} mph
+                  {% else %}
+                    —
                   {% endif %}
                 </td>
                 <td class="text-end">

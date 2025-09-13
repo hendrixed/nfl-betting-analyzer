@@ -130,6 +130,199 @@ def fetch(
         raise typer.Exit(1)
 
 
+@app.command(name="extended-ingest")
+def extended_ingest(
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD); defaults to latest if omitted")] = None,
+):
+    """Ingest extended weekly components from a snapshot folder into the DB.
+    Components: games, box_passing, box_rushing, box_receiving, inactives, transactions, drives, team_context, team_splits.
+    Safe operations: only update existing records or count rows where appropriate.
+    """
+    console.print("[bold blue]Ingesting extended weekly snapshot components[/bold blue]")
+    try:
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        results = ingestion.ingest_extended_weekly_from_snapshot(date_str=date)
+        session.close()
+
+        table = Table(title="Extended Ingest Summary")
+        table.add_column("Component", style="cyan")
+        table.add_column("Rows", style="magenta")
+        table.add_column("Source", style="green")
+        for key, val in results.items():
+            table.add_row(key, str(val.get("rows", 0)), str(val.get("path")))
+        console.print(table)
+    except Exception as e:
+        console.print(f"[red]Extended ingestion failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
+@app.command(name="weather-snapshot")
+def weather_snapshot(
+    days_ahead: Annotated[int, typer.Option("--days-ahead", help="Days ahead to include for upcoming games")] = 14,
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD), defaults to today")] = None,
+):
+    """Write data/snapshots/YYYY-MM-DD/weather.csv using Open-Meteo for upcoming games.
+    Writes header-only when there are no upcoming games.
+    """
+    try:
+        from datetime import datetime as _dt
+        date_str = date or _dt.now().strftime("%Y-%m-%d")
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        res = ingestion.snapshot_weather_openmeteo(date_str=date_str, days_ahead=days_ahead)
+        session.close()
+        console.print(f"[green]Weather snapshot written:[/green] {res.get('path')}")
+        console.print(f"[green]Rows:[/green] {res.get('rows', 0)}")
+    except Exception as e:
+        console.print(f"[red]Weather snapshot failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
+@app.command(name="routes-ingest")
+def routes_ingest(
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD); defaults to latest if omitted")] = None,
+):
+    """Ingest routes.csv from a snapshot folder into the player_routes table."""
+    console.print("[bold blue]Ingesting Routes snapshot[/bold blue]")
+    try:
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        result = ingestion.ingest_routes_snapshot(date_str=date)
+        console.print(f"[green]Routes rows upserted:[/green] {result.get('rows', 0)}")
+        if result.get("path"):
+            console.print(f"[green]Source:[/green] {result['path']}")
+        session.close()
+    except Exception as e:
+        console.print(f"[red]Routes ingestion failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
+@app.command(name="usage-ingest")
+def usage_ingest(
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD); defaults to latest if omitted")] = None,
+):
+    """Ingest usage_shares.csv from a snapshot folder into the usage_shares table."""
+    console.print("[bold blue]Ingesting Usage Shares snapshot[/bold blue]")
+    try:
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        result = ingestion.ingest_usage_shares_snapshot(date_str=date)
+        console.print(f"[green]Usage shares rows upserted:[/green] {result.get('rows', 0)}")
+        if result.get("path"):
+            console.print(f"[green]Source:[/green] {result['path']}")
+        session.close()
+    except Exception as e:
+        console.print(f"[red]Usage shares ingestion failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
+@app.command(name="snapshot-and-ingest-week")
+def snapshot_and_ingest_week(
+    season: Annotated[int, typer.Option("--season", help="Season year")] = 2024,
+    week: Annotated[Optional[int], typer.Option("--week", help="Week number (optional)")] = None,
+    date: Annotated[Optional[str], typer.Option("--date", help="Snapshot date (YYYY-MM-DD), defaults to today")] = None,
+):
+    """Snapshot schedules + depth charts for a given season/week, then ingest both into the DB."""
+    from datetime import datetime as _dt
+    import pandas as pd
+    try:
+        session = get_db_session(f"sqlite:///{state['database']}")
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        date_str = date or _dt.now().strftime("%Y-%m-%d")
+
+        console.print(f"[bold blue]Snapshotting schedules and depth charts ({season}{' W'+str(week) if week else ''}) to {date_str}[/bold blue]")
+        # Schedules snapshot
+        try:
+            sch_df = asyncio.run(ingestion.nfl_adapter.fetch_schedules(season))
+        except Exception:
+            sch_df = pd.DataFrame(columns=[])
+        ingestion._write_snapshot_csv(sch_df, "schedules.csv", date_str)
+
+        # Depth charts snapshot
+        try:
+            dc_df = asyncio.run(ingestion.nfl_adapter.fetch_depth_charts(season, week=week))
+        except Exception:
+            dc_df = pd.DataFrame(columns=[])
+        ingestion._write_snapshot_csv(dc_df, "depth_charts.csv", date_str)
+
+        # Ingest both
+        sch_res = ingestion.ingest_schedule_snapshot(date_str=date_str)
+        dc_res = ingestion.ingest_depth_chart_snapshot(date_str=date_str, season=season, week=week)
+
+        console.print(f"[green]Ingest complete:[/green] schedules={sch_res.get('rows',0)} rows, depth_charts={dc_res.get('rows',0)} rows")
+        if sch_res.get("path"):
+            console.print(f"[green]Schedules:[/green] {sch_res['path']}")
+        if dc_res.get("path"):
+            console.print(f"[green]Depth charts:[/green] {dc_res['path']}")
+        session.close()
+    except Exception as e:
+        console.print(f"[red]snapshot-and-ingest-week failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
+@app.command(name="daily-ingest")
+def daily_ingest(
+    timezone: Annotated[str, typer.Option("--timezone", help="Timezone for determining current season/week")] = "America/Chicago",
+):
+    """Detect current season/week, snapshot schedules + depth charts, and ingest both.
+    Season heuristic: if current month >= Sep, use current year; else previous year. Week is left None by default.
+    """
+    from datetime import datetime as _dt
+    import pandas as pd
+    try:
+        now = _dt.now()
+        season = now.year if now.month >= 9 else (now.year - 1)
+        # Week detection heuristic: try DB for max upcoming week; else None
+        session = get_db_session(f"sqlite:///{state['database']}")
+        try:
+            # Attempt to infer current week from Game table
+            q = session.query(Game.week).filter(Game.season == season).order_by(Game.week.desc()).limit(1)
+            inferred_week = q.scalar()
+        except Exception:
+            inferred_week = None
+        from core.data.ingestion_adapters import UnifiedDataIngestion
+        ingestion = UnifiedDataIngestion(session)
+        date_str = now.strftime("%Y-%m-%d")
+
+        console.print(f"[bold blue]Daily ingest for season {season}{' W'+str(inferred_week) if inferred_week else ''}[/bold blue]")
+        # Snapshot schedules
+        try:
+            sch_df = asyncio.run(ingestion.nfl_adapter.fetch_schedules(season))
+        except Exception:
+            sch_df = pd.DataFrame(columns=[])
+        ingestion._write_snapshot_csv(sch_df, "schedules.csv", date_str)
+        # Snapshot depth charts
+        try:
+            dc_df = asyncio.run(ingestion.nfl_adapter.fetch_depth_charts(season, week=inferred_week))
+        except Exception:
+            dc_df = pd.DataFrame(columns=[])
+        ingestion._write_snapshot_csv(dc_df, "depth_charts.csv", date_str)
+
+        # Ingest
+        sch_res = ingestion.ingest_schedule_snapshot(date_str=date_str)
+        dc_res = ingestion.ingest_depth_chart_snapshot(date_str=date_str, season=season, week=inferred_week)
+
+        console.print(f"[green]Daily ingest complete:[/green] schedules={sch_res.get('rows',0)} rows, depth_charts={dc_res.get('rows',0)} rows")
+        session.close()
+    except Exception as e:
+        console.print(f"[red]daily-ingest failed: {e}[/red]")
+        if state['debug']:
+            console.print_exception()
+        raise typer.Exit(1)
+
+
 @app.command(name="snapshot-depthcharts")
 def snapshot_depthcharts(
     season: Annotated[int, typer.Option("--season", help="Season year")] = 2024,

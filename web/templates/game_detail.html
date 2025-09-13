@@ -44,6 +44,55 @@
     </div>
 </div>
 
+{% if weather %}
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-cloud-sun"></i> Weather</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-6">
+            <div class="small text-muted">Kickoff (UTC)</div>
+            <div class="fw-bold">{{ weather.kickoff_utc or '' }}</div>
+          </div>
+          <div class="col-6">
+            <div class="small text-muted">Conditions</div>
+            <div class="fw-bold">{{ weather.conditions or '—' }}</div>
+          </div>
+        </div>
+        <div class="row mt-2">
+          <div class="col-3 text-center">
+            <div class="small text-muted">Temp</div>
+            <div class="fw-bold">{{ weather.temp_f is not none and weather.temp_f|round(0)|int or '—' }}°F</div>
+          </div>
+          <div class="col-3 text-center">
+            <div class="small text-muted">Wind</div>
+            <div class="fw-bold">{{ weather.wind_mph is not none and weather.wind_mph|round(0)|int or '—' }} mph</div>
+          </div>
+          <div class="col-3 text-center">
+            <div class="small text-muted">Humidity</div>
+            <div class="fw-bold">{{ weather.humidity is not none and weather.humidity|round(0)|int or '—' }}%</div>
+          </div>
+          <div class="col-3 text-center">
+            <div class="small text-muted">Precip</div>
+            <div class="fw-bold">{{ weather.precip_prob is not none and weather.precip_prob|round(0)|int or '—' }}%</div>
+          </div>
+        </div>
+        <div class="mt-3 small text-muted">
+          <span class="me-3"><strong>Roof:</strong> {{ weather.roof_state or (game.roof_state or '—') }}</span>
+          <span><strong>Surface:</strong> {{ weather.surface or (game.surface or '—') }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <!-- spacer to keep grid balanced; future: odds/weather charts -->
+  </div>
+  </div>
+{% endif %}
+
 {% if prediction %}
 <div class="row mb-4">
     <div class="col-md-6">

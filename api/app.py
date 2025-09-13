@@ -715,7 +715,8 @@ async def get_player_fantasy_predictions(
 ):
     """Get fantasy (PPR) predictions using streamlined trained models"""
     if not models_available():
-        raise HTTPException(status_code=403, detail="Prediction models not available")
+        # Gate predictions strictly on presence of models/streamlined/*.pkl
+        raise HTTPException(status_code=503, detail="Prediction models not available")
 
     # Ensure we have a model instance
     local_models = None
@@ -813,7 +814,8 @@ async def get_betting_insights(
     db: Session = Depends(get_db)
 ):
     """Get betting insights and value opportunities"""
-    if not models:
+    # Gate based on saved streamlined artifacts presence
+    if not models_available():
         raise HTTPException(status_code=503, detail="Prediction models not available")
     
     # Mock betting insights - replace with actual logic
@@ -869,58 +871,95 @@ async def get_props(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid market/book: {e}")
 
-    # Attempt to read odds snapshot
+    # Attempt to read odds snapshot (search newest directory that actually has odds.csv)
     offers = []
-    snap_dir = latest_snapshot_dir()
-    if snap_dir is not None:
-        odds_path = snap_dir / "odds.csv"
-        if odds_path.exists():
-            try:
-                import csv
-                with open(odds_path, newline="", encoding="utf-8") as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        row_book = (row.get("book") or "").lower()
-                        row_market = (row.get("market") or "").lower()
-                        if canonical_book and row_book != canonical_book:
-                            continue
-                        if canonical_market and row_market != canonical_market:
-                            continue
-                        if team:
-                            from core.data.market_mapping import normalize_team_name
-                            # Prefer canonical abbreviation equality; then fallback to substring
-                            team_abbr = normalize_team_name(team)
-                            row_team_abbr = normalize_team_name(row.get("team_id") or "")
-                            if team_abbr and row_team_abbr:
-                                if team_abbr != row_team_abbr:
-                                    continue
-                            else:
-                                team_q = (team or "").strip().lower()
-                                row_team = (row.get("team_id") or "").strip().lower()
-                                if team_q and team_q not in row_team:
-                                    continue
-                        if player:
-                            player_q = (player or "").strip().lower()
-                            row_player = (row.get("player_id") or "").strip().lower()
-                            if player_q and player_q not in row_player:
+    def _find_recent_odds_file() -> Optional[Path]:
+        try:
+            base = Path("data/snapshots")
+            if not base.exists():
+                return None
+            dirs = [p for p in base.iterdir() if p.is_dir()]
+            # First pass: return newest file that has at least one data row
+            for d in sorted(dirs, key=lambda p: p.name, reverse=True):
+                p = d / "odds.csv"
+                if p.exists():
+                    try:
+                        import csv
+                        with open(p, newline="", encoding="utf-8") as fh:
+                            r = csv.reader(fh)
+                            next(r, None)  # header
+                            for _ in r:
+                                return p
+                    except Exception:
+                        continue
+            # Second pass: any header-only file
+            for d in sorted(dirs, key=lambda p: p.name, reverse=True):
+                p = d / "odds.csv"
+                if p.exists():
+                    return p
+            return None
+        except Exception:
+            return None
+
+    # Prefer the latest_snapshot_dir() (supports test monkeypatch), else fallback to scanning
+    odds_path = None
+    try:
+        snap_dir = latest_snapshot_dir()
+        if snap_dir is not None:
+            candidate = snap_dir / "odds.csv"
+            if candidate.exists():
+                odds_path = candidate
+    except Exception:
+        odds_path = None
+    if odds_path is None:
+        odds_path = _find_recent_odds_file()
+    if odds_path and odds_path.exists():
+        try:
+            import csv
+            with open(odds_path, newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    row_book = (row.get("book") or "").lower()
+                    row_market = (row.get("market") or "").lower()
+                    if canonical_book and row_book != canonical_book:
+                        continue
+                    if canonical_market and row_market != canonical_market:
+                        continue
+                    if team:
+                        from core.data.market_mapping import normalize_team_name
+                        # Prefer canonical abbreviation equality; then fallback to substring
+                        team_abbr = normalize_team_name(team)
+                        row_team_abbr = normalize_team_name(row.get("team_id") or "")
+                        if team_abbr and row_team_abbr:
+                            if team_abbr != row_team_abbr:
                                 continue
-                        # Basic typing
-                        try:
-                            offer = {
-                                "timestamp": row.get("timestamp"),
-                                "book": row_book,
-                                "market": row_market,
-                                "player_id": row.get("player_id"),
-                                "team_id": row.get("team_id"),
-                                "line": float(row.get("line")) if row.get("line") else None,
-                                "over_odds": int(row.get("over_odds")) if row.get("over_odds") else None,
-                                "under_odds": int(row.get("under_odds")) if row.get("under_odds") else None,
-                            }
-                            offers.append(offer)
-                        except Exception:
+                        else:
+                            team_q = (team or "").strip().lower()
+                            row_team = (row.get("team_id") or "").strip().lower()
+                            if team_q and team_q not in row_team:
+                                continue
+                    if player:
+                        player_q = (player or "").strip().lower()
+                        row_player = (row.get("player_id") or "").strip().lower()
+                        if player_q and player_q not in row_player:
                             continue
-            except Exception as e:
-                logger.warning(f"Failed to read odds snapshot: {e}")
+                    # Basic typing
+                    try:
+                        offer = {
+                            "timestamp": row.get("timestamp"),
+                            "book": row_book,
+                            "market": row_market,
+                            "player_id": row.get("player_id"),
+                            "team_id": row.get("team_id"),
+                            "line": float(row.get("line")) if row.get("line") else None,
+                            "over_odds": int(row.get("over_odds")) if row.get("over_odds") else None,
+                            "under_odds": int(row.get("under_odds")) if row.get("under_odds") else None,
+                        }
+                        offers.append(offer)
+                    except Exception:
+                        continue
+        except Exception as e:
+            logger.warning(f"Failed to read odds snapshot: {e}")
 
     return {
         "book": canonical_book or (book or "").lower(),
@@ -1207,8 +1246,8 @@ async def web_insights(request: Request):
 async def web_leaderboards(
     request: Request,
     stat: str = Query("fantasy_points_ppr", description="Aggregate stat"),
-    season: Optional[int] = Query(None, description="Season year"),
-    position: Optional[str] = Query(None, description="Position filter"),
+    season: Optional[str] = Query(None, description="Season year (blank for current)"),
+    position: Optional[str] = Query(None, description="Position filter (blank for all)"),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=1, le=200),
     sort: str = Query("value"),
@@ -1217,11 +1256,22 @@ async def web_leaderboards(
 ):
     """Leaderboards page with pagination and sorting."""
     try:
+        # Normalize optional filters similar to JSON API endpoint
+        season_norm: Optional[int]
+        if season is None or (isinstance(season, str) and season.strip() == ""):
+            season_norm = None
+        else:
+            try:
+                season_norm = int(season)  # type: ignore[arg-type]
+            except Exception:
+                season_norm = None
+        position_norm = (position or "").strip().upper() or None
+
         data = get_leaderboard_paginated(
             db,
             stat=stat,
-            season=season,
-            position=position,
+            season=season_norm,
+            position=position_norm,
             page=page,
             page_size=page_size,
             sort=sort,
@@ -1238,8 +1288,8 @@ async def web_leaderboards(
                 "sort": data.get("sort", sort),
                 "order": data.get("order", order),
                 "stat": stat,
-                "season": season,
-                "position": (position or "").upper() or None,
+                "season": season_norm,
+                "position": position_norm,
             },
         )
     except Exception as e:
@@ -1254,8 +1304,14 @@ async def favicon():
     return HTMLResponse(status_code=204)
 
 @app.get("/team/{team_id}", response_class=HTMLResponse)
-async def web_team_detail(team_id: str, request: Request, db: Session = Depends(get_db)):
-    """Team detail page rendering roster grouped by position."""
+async def web_team_detail(
+    team_id: str,
+    request: Request,
+    include_past: bool = Query(False, description="Include past games in schedule"),
+    timezone: str = Query("America/Chicago", description="Timezone for upcoming schedule cutoff"),
+    db: Session = Depends(get_db),
+):
+    """Team detail page rendering roster grouped by position with depth chart and schedule filters."""
     try:
         players = db.query(Player).filter(Player.current_team == team_id.upper()).all()
         by_pos: Dict[str, List[Any]] = {}
@@ -1266,7 +1322,24 @@ async def web_team_detail(team_id: str, request: Request, db: Session = Depends(
             by_pos[k] = sorted(by_pos[k], key=lambda x: (x.position or '', x.name or ''))
         # Depth chart and schedule
         depth = get_team_depth_chart(db, team_id)
-        sched = get_team_schedule(db, team_id)
+        sched = get_team_schedule(db, team_id, season=None, since_date=None, timezone_name=timezone, include_past=include_past)
+        # Weather map (from latest snapshot)
+        weather_map: Dict[str, Any] = {}
+        try:
+            snap_dir = latest_snapshot_dir()
+            if snap_dir is not None:
+                weather_path = snap_dir / "weather.csv"
+                if weather_path.exists():
+                    import csv
+                    with open(weather_path, newline="", encoding="utf-8") as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            gid = row.get("game_id") or ""
+                            if not gid:
+                                continue
+                            weather_map[gid] = row
+        except Exception:
+            weather_map = {}
         return templates.TemplateResponse(
             request,
             "team_detail.html",
@@ -1275,6 +1348,9 @@ async def web_team_detail(team_id: str, request: Request, db: Session = Depends(
                 "players_by_position": by_pos,
                 "depth_chart": depth,
                 "schedule": sched,
+                "include_past": include_past,
+                "timezone": timezone,
+                "weather_map": weather_map,
             },
         )
     except HTTPException:
@@ -1320,8 +1396,9 @@ async def web_game_detail(game_id: str, request: Request, db: Session = Depends(
             "rushing_yards": _leaders(PGS.rushing_yards),
             "receiving_yards": _leaders(PGS.receiving_yards),
         }
-        # Odds summary (if snapshot exists)
+        # Odds summary (if snapshot exists) and weather
         offers = []
+        weather: Optional[Dict[str, Any]] = None
         try:
             snap_dir = latest_snapshot_dir()
             if snap_dir is not None:
@@ -1334,12 +1411,37 @@ async def web_game_detail(game_id: str, request: Request, db: Session = Depends(
                             team_id = (row.get("team_id") or "").upper()
                             if team_id in {game.home_team, game.away_team}:
                                 offers.append(row)
+                # Weather
+                weather_path = snap_dir / "weather.csv"
+                if weather_path.exists():
+                    import csv
+                    with open(weather_path, newline="", encoding="utf-8") as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            if (row.get("game_id") or "") == game_id:
+                                # Minimal typing
+                                def _float(x):
+                                    try:
+                                        return float(x)
+                                    except Exception:
+                                        return None
+                                weather = {
+                                    "kickoff_utc": row.get("kickoff_utc"),
+                                    "temp_f": _float(row.get("temp_f")),
+                                    "wind_mph": _float(row.get("wind_mph")),
+                                    "humidity": _float(row.get("humidity")),
+                                    "precip_prob": _float(row.get("precip_prob")),
+                                    "conditions": row.get("conditions"),
+                                    "roof_state": row.get("roof_state") or getattr(game, 'roof_state', None),
+                                    "surface": row.get("surface") or getattr(game, 'surface', None),
+                                }
+                                break
         except Exception:
             pass
         return templates.TemplateResponse(
             request,
             "game_detail.html",
-            {"game": game, "prediction": prediction, "leaders": leaders, "offers": offers[:10]},
+            {"game": game, "prediction": prediction, "leaders": leaders, "offers": offers[:10], "weather": weather},
         )
     except HTTPException:
         raise

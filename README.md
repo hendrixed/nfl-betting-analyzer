@@ -68,9 +68,33 @@ python nfl_cli.py depthchart-ingest --date 2024-01-01 --season 2024 --week 1
 # Snapshot writers
 python nfl_cli.py snapshot-schedules --season 2024 --date 2024-01-01
 python nfl_cli.py snapshot-depthcharts --season 2024 --week 1 --date 2024-01-01
+python nfl_cli.py weather-snapshot --days-ahead 14 --date 2024-01-01
+
+# Snapshot + Ingest helpers
+python nfl_cli.py snapshot-and-ingest-week --season 2024 --week 1 --date 2024-01-01
+python nfl_cli.py daily-ingest  # detects current season/week and snapshots+ingests
 
 # Ingest both schedules and depth charts for a snapshot date
 python nfl_cli.py ingest-snapshot --date 2024-01-01 --season 2024 --week 1
+
+# Ingest extended weekly snapshot components (games, box scores, etc.)
+python nfl_cli.py extended-ingest --date 2024-01-01
+
+## Extended Weekly Ingestion Details
+
+The `extended-ingest` command processes additional snapshot CSVs under `data/snapshots/YYYY-MM-DD/` with safe, idempotent behavior:
+
+- __games.csv__: Upserts only `Game.roof_state` and `Game.surface` for existing games.
+- __box_passing.csv__: Safely updates `PlayerGameStats` passing fields (e.g., attempts, completions, yards, TDs, INTs) when a matching row exists. No new rows are created.
+- __box_rushing.csv__: Safely updates rushing fields on `PlayerGameStats` if a matching row exists.
+- __box_receiving.csv__: Safely updates receiving fields on `PlayerGameStats` if a matching row exists.
+- __inactives.csv, transactions.csv, drives.csv, team_context.csv, team_splits.csv, box_defense.csv, kicking.csv__: Currently no-ops (count-only) to avoid unintended changes. Included for completeness and reporting.
+
+Notes:
+
+- __Idempotent__: Re-running `extended-ingest` will not duplicate data and only updates existing records.
+- __Selective__: Missing files are skipped gracefully and reported in the summary.
+- __Date selection__: If `--date` is omitted, the latest snapshot directory is used.
 
 # Generate mock odds snapshot (for /betting/props)
 python nfl_cli.py odds-snapshot --max-offers 200
@@ -141,6 +165,7 @@ Web pages:
 - Odds: http://localhost:8000/web/odds
 - Insights: http://localhost:8000/web/insights
 - Backtests: http://localhost:8000/web/backtests
+  - Backs off `/reports/backtests` API to list saved runs; artifacts are served from `/reports/`.
 
 Players JSON API:
 
@@ -179,6 +204,10 @@ Team-centric JSON endpoints:
 - Team info + roster: `/api/browse/team/{team_id}`
 - Depth chart: `/api/browse/team/{team_id}/depth-chart`
 - Schedule: `/api/browse/team/{team_id}/schedule?season=YYYY&include_past=false&timezone=America/Chicago`
+
+Team web page controls:
+
+- Navigate to `/team/{TEAM_ID}` and use the Include Past toggle and Timezone selector to adjust the upcoming schedule view.
 
 Schedule params:
 
