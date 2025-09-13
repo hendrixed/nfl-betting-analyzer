@@ -142,7 +142,10 @@ curl "http://localhost:8000/health"
 curl "http://localhost:8000/models"
 
 # Props from latest snapshot with canonical filters
+# You can also filter by team or player name substring
 curl "http://localhost:8000/betting/props?book=DK&market=Passing%20Yards"
+curl "http://localhost:8000/betting/props?book=DraftKings&market=h2h&team=Chiefs"
+curl "http://localhost:8000/betting/props?book=fanduel&player_name=mahomes"
 
 # Players (optionally filter)
 curl "http://localhost:8000/players?team=KC&position=QB"

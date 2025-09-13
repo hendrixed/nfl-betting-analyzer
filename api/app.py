@@ -856,7 +856,8 @@ async def get_props(
     book: Optional[str] = Query(None, description="Sportsbook name (e.g., 'DraftKings')"),
     week: Optional[int] = Query(None, description="Week number"),
     team: Optional[str] = Query(None, description="Team filter"),
-    player: Optional[str] = Query(None, description="Player filter"),
+    player: Optional[str] = Query(None, description="Player filter (player_id contains)"),
+    player_name: Optional[str] = Query(None, description="Player name filter (substring match)"),
     db: Session = Depends(get_db)
 ):
     """Get prop betting opportunities with edge analysis.
@@ -870,6 +871,14 @@ async def get_props(
             canonical_book, canonical_market = to_internal(book or "", market)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid market/book: {e}")
+
+    # If only book was provided (no market canonicalization path), still normalize it
+    if canonical_book is None and book:
+        try:
+            from core.data.market_mapping import normalize_book
+            canonical_book = normalize_book(book)
+        except Exception:
+            canonical_book = (book or "").strip().lower()
 
     # Attempt to read odds snapshot (search newest directory that actually has odds.csv)
     offers = []
@@ -918,6 +927,15 @@ async def get_props(
             import csv
             with open(odds_path, newline="", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
+                # Pre-compute allowed player_ids when filtering by player_name (uses DB)
+                allowed_player_ids: Optional[Set[str]] = None
+                if player_name:
+                    try:
+                        name_q = f"%{player_name.strip()}%"
+                        q = db.query(Player.player_id).filter(Player.name.ilike(name_q))
+                        allowed_player_ids = {pid for (pid,) in q.all()}
+                    except Exception:
+                        allowed_player_ids = set()
                 for row in reader:
                     row_book = (row.get("book") or "").lower()
                     row_market = (row.get("market") or "").lower()
@@ -942,6 +960,9 @@ async def get_props(
                         player_q = (player or "").strip().lower()
                         row_player = (row.get("player_id") or "").strip().lower()
                         if player_q and player_q not in row_player:
+                            continue
+                    if player_name and allowed_player_ids is not None:
+                        if (row.get("player_id") or "") not in allowed_player_ids:
                             continue
                     # Basic typing
                     try:
@@ -1590,13 +1611,23 @@ async def run_simulation(
 # MODEL ENDPOINTS
 
 @app.get("/models", response_model=List[PerformanceMetrics])
-async def get_models():
+async def get_models(db: Session = Depends(get_db)):
     """Get available models and their performance metrics"""
     results: List[PerformanceMetrics] = []
     try:
-        if models_available() and models:
-            summary = models.get_model_summary() or {}
-            for position, info in summary.items():
+        if models_available():
+            # Prefer using global models if initialized, else instantiate a local one
+            summary = {}
+            try:
+                if models:
+                    summary = models.get_model_summary() or {}
+                else:
+                    from core.models.streamlined_models import StreamlinedNFLModels
+                    local_models = StreamlinedNFLModels(db)
+                    summary = local_models.get_model_summary() or {}
+            except Exception as _e:
+                summary = {}
+            for position, info in (summary or {}).items():
                 model_name = f"{info.get('model_type','unknown')}_{info.get('target_stat','fantasy_points_ppr')}"
                 results.append(PerformanceMetrics(
                     model_name=model_name,

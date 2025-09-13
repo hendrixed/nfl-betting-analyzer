@@ -20,38 +20,27 @@ pip install -r requirements.txt
 python verify_environment.py
 ```
 
-### 2. Run System Test
+### 2. Verify Build
 ```bash
-# Comprehensive system validation
-python test_complete_system.py
+# Comprehensive verification: prepares minimal artifacts, runs tests, lint, and mypy
+make verify
 ```
 
-### 3. Start Web Interface
+### 3. Start API Server
 ```bash
-# Simple Flask interface (recommended for testing)
-python web/web_server.py
-# Access at: http://localhost:5000
-
-# Or Enhanced FastAPI (production)
-python api/enhanced_prediction_api.py
+# Start unified FastAPI server (serves JSON APIs and web pages)
+python nfl_cli.py run-api --host 0.0.0.0 --port 8000
 # Access at: http://localhost:8000
 ```
 
-## API Endpoints
+## API Endpoints (FastAPI)
 
-### Flask Web Interface (Port 5000)
-- `GET /` - Web interface
-- `GET /api/predict/{player_id}` - Single prediction
-- `POST /api/batch-predict` - Batch predictions
-- `GET /api/players` - List available players
-- `GET /api/health` - Health check
-
-### Enhanced FastAPI (Port 8000)
-- `GET /api/v2/predictions/enhanced/{player_id}` - Enhanced predictions
-- `POST /api/v1/batch-predictions` - Batch processing
-- `GET /api/v2/betting/live-opportunities` - Live betting opportunities
-- `GET /api/v2/analytics/market-intelligence` - Market analysis
-- `GET /api/v2/real-time/dashboard` - Real-time dashboard
+- `GET /health` and `GET /health/detailed` - Health checks
+- `GET /players`, `GET /players/{player_id}` - Player browsing
+- `GET /predictions/players/fantasy` - Fantasy predictions (requires trained models)
+- `GET /predictions/games` - Game-level predictions (when models available)
+- `GET /betting/props` - Odds snapshot filtering with canonical market/book mapping
+- `GET /web/...` - Web pages (players, teams, games, leaderboards, insights, odds, backtests)
 - `WebSocket /ws` - Real-time updates
 
 ## Usage Examples
@@ -149,7 +138,7 @@ gunicorn -w 4 -b 0.0.0.0:5000 web.web_server:app
 ### Option 2: FastAPI (Advanced)
 ```bash
 # Production ASGI server
-uvicorn api.enhanced_prediction_api:app --host 0.0.0.0 --port 8000 --workers 1
+uvicorn api.app:app --host 0.0.0.0 --port 8000 --workers 1
 ```
 
 ### Docker Deployment
